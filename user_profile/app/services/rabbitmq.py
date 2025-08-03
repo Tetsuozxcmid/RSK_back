@@ -45,7 +45,7 @@ async def consume_user_created_events(rabbitmq_url: str):
                                     
                                     await session.execute(stmt)
                                     await session.commit()
-                                    print(f"Saved user {user_id} to profile DB")
+                                    print(f"Saved user {user_id} to profile DB back")
                                     await message.ack()  
                                     
                                 except Exception as e:
