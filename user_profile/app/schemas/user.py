@@ -13,3 +13,17 @@ class ProfileCreateSchema(BaseModel):
     Organization_id: Optional[int] = None
     team_id: Optional[int] = None
     team: Optional[str] = None
+
+
+class ProfileUpdate(BaseModel):
+    id: Optional[int]
+    NameIRL: Optional[str] = None
+    Surname: Optional[str] = None
+    Patronymic: Optional[str] = None
+    Description: Optional[str] = None
+    Region: Optional[str] = None
+    Type: Optional[UserEnum] = None
+    Organization: Optional[str] = None
+    Organization_id: Optional[int] = None
+    team_id: Optional[int] = None
+    team: Optional[str] = None
