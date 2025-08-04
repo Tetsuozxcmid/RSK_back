@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   rsk_teams_app:
     build: .
@@ -7,23 +5,25 @@ services:
       rsk_teams_db:
         condition: service_healthy
     ports:
-      - "8001:8001"
+      - "8004:8004"
     restart: on-failure
     env_file:
       - .env
     volumes:
       - .:/app
     networks:
-      - app_network
+      - shared_network
 
   rsk_teams_db:
     image: postgres:17-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - .env
+      - profile_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2305
+      POSTGRES_DB: rsk_teams
     ports:
-      - "5433:5432"
+      - "5436:5432"
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -31,11 +31,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - app_network
+      - shared_network
 
 volumes:
-  postgres_data:
+  profile_postgres_data:
 
 networks:
-  app_network:
-    driver: bridge
+  shared_network:
+    external: true 

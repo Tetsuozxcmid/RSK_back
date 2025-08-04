@@ -1,4 +1,5 @@
 
+import aio_pika
 from fastapi import APIRouter,HTTPException,Response,status,Depends
 from schemas.user_schemas.user_register import UserRegister
 from schemas.user_schemas.user_password import ChangePasswordSchema
@@ -17,16 +18,32 @@ from schemas.user_schemas.user_register import UserRegister
 
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
-
+from services.rabbitmq import get_rabbitmq_connection
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from aio_pika.abc import AbstractRobustConnection
 
 
 router = APIRouter(prefix='/users_interaction',tags=['AuthSystem'])
 
 @router.post('/register/')
-async def register_user(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
+async def register_user(user_data: UserRegister, db: AsyncSession = Depends(get_db),rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection)):
     user = await UserCRUD.create_user(db, user_data)
+
+    try:
+        channel = await rabbitmq.channel()
+        exchange = await channel.declare_exchange("user_events",type="direct",durable=True)
+        message = aio_pika.Message(
+            body=str(user.id).encode(),
+            headers={"event_type": "user_created"},
+            delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+        )
+        await exchange.publish(
+            message,
+            routing_key="user.created"
+        )
+    except Exception as e:     
+        print(f"Failed to send RabbitMQ message: {e}")
+
     return {
         "message": "User registered successfully",
         "user_id": user.id

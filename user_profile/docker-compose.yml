@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   rsk_profile_app:
@@ -14,14 +14,16 @@ services:
     volumes:
       - .:/app
     networks:
-      - app_network
+      - shared_network
 
   rsk_profile_db:
     image: postgres:17-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - .env
+      - profile_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2305
+      POSTGRES_DB: rsk_profile
     ports:
       - "5435:5432"
     restart: always
@@ -31,11 +33,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - app_network
+      - shared_network
 
 volumes:
-  postgres_data:
+  profile_postgres_data:
 
 networks:
-  app_network:
-    driver: bridge
+  shared_network:
+    external: true 

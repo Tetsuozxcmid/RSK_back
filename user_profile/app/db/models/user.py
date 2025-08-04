@@ -8,17 +8,17 @@ class User(Base):
     __tablename__ = 'user_profile'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True,unique=True)
-    NameIRL: Mapped[str] = mapped_column(String(100))  
-    Surname: Mapped[str] = mapped_column(String(100))
-    Patronymic: Mapped[str] = mapped_column(String(100))
-    Description: Mapped[str] = mapped_column(String(500))
-    Region: Mapped[str] = mapped_column(String(100))
-    Type: Mapped[UserEnum] = mapped_column(SQLEnum(UserEnum), nullable=False)
-    Organization: Mapped[str] = mapped_column(String(100))
-    Organization_id: Mapped[int] = mapped_column(Integer)
+    NameIRL: Mapped[str] = mapped_column(String(100),nullable=True)  
+    Surname: Mapped[str] = mapped_column(String(100),nullable=True)
+    Patronymic: Mapped[str] = mapped_column(String(100),nullable=True)
+    Description: Mapped[str] = mapped_column(String(500),nullable=True)
+    Region: Mapped[str] = mapped_column(String(100),nullable=True)
+    Type: Mapped[UserEnum] = mapped_column(SQLEnum(UserEnum),nullable=True)
+    Organization: Mapped[str] = mapped_column(String(100),nullable=True)
+    Organization_id: Mapped[int] = mapped_column(Integer,nullable=True)
 
-    team: Mapped[str] = mapped_column(String(100))
-    team_id: Mapped[int] = mapped_column(Integer)
+    team: Mapped[str] = mapped_column(String(100),nullable=True)
+    team_id: Mapped[int] = mapped_column(Integer,nullable=True)
     
 
     

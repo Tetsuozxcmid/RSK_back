@@ -1,10 +1,10 @@
-version: '3.8'
-
 services:
   rsk_auth_app:
     build: .
     depends_on:
       rsk_auth_db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - "8002:8002"
@@ -14,12 +14,16 @@ services:
     volumes:
       - .:/app
     networks:
-      - app_network
+      - shared_network
 
   rsk_auth_db:
     image: postgres:17-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2305
+      POSTGRES_DB: rsk_back
     env_file:
       - .env
     ports:
@@ -31,11 +35,30 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - app_network
+      - shared_network
+      
+  rabbitmq:
+    image: rabbitmq:3.12-management  
+    ports:
+      - "5672:5672" 
+      - "15672:15672"  
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: yourstrongpassword
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    networks:
+      - shared_network  
 
 volumes:
   postgres_data:
 
 networks:
-  app_network:
-    driver: bridge
+  shared_network:
+    external: true
+
+    
