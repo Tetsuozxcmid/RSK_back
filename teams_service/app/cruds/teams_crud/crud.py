@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 class TeamCRUD:
     @staticmethod
-    async def create_team(db: AsyncSession, team_data):
+    async def create_team(db: AsyncSession, team_data, leader_id: int):
         exiting_team = await db.execute(
             select(Team).where(Team.name == team_data.name)
         )
@@ -23,7 +23,7 @@ class TeamCRUD:
             city=team_data.city,
             region=team_data.region,
             organization_id=team_data.organization_id,
-            leader_id=team_data.leader_id,
+            leader_id=leader_id,
             
         )
 
