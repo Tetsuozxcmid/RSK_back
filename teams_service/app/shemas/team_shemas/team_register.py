@@ -8,4 +8,4 @@ class TeamRegister(BaseModel):
     city: str = Field(..., title="Город")
     region: str = Field(..., title="Регион")
     organization_id: int = Field(..., title="ID организации")
-    leader_id: int = Field(..., title="ID лидера")
+    

@@ -1,19 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from shemas.team_shemas.team_register import TeamRegister
 from cruds.teams_crud.crud import TeamCRUD
 from shemas.team_shemas.team_update import TeamUpdate
 from db.session import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
+from services.grabber import get_current_user
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
 
 @router.post("/register")
-async def register_team(team_data: TeamRegister, db: AsyncSession = Depends(get_db)):
-    team = await TeamCRUD.create_team(db, team_data)
+async def register_team(team_data: TeamRegister,request: Request, db: AsyncSession = Depends(get_db)):
+    leader_id = await get_current_user(request)
+    team = await TeamCRUD.create_team(db, team_data, leader_id=leader_id)
     return {
         "message": "Team registered successfully",
-        "team_id": team.id
+        "team_id": team.id,
+        "leader_id" : leader_id
     }
 
 @router.get('/all_teams/')
