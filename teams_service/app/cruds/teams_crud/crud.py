@@ -1,6 +1,6 @@
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from services.db_checker import OrgsClient
 from db.models.teams import Team
 from fastapi import HTTPException
 
@@ -16,6 +16,10 @@ class TeamCRUD:
                 status_code=400,
                 detail="Team already exists"
             )
+        
+        org_exists = await OrgsClient.check_organization_exists(team_data.organization_name)
+        if not org_exists:
+            raise HTTPException(status_code=400,detail=f"Orgs {team_data.organization_name} does not exists, try other team or contact us")
 
         new_team = Team(
             name=team_data.name,
