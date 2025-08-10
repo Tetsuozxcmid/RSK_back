@@ -1,0 +1,41 @@
+services:
+  rsk_orgs_app:
+    build: .
+    depends_on:
+      test_orgs_db:
+        condition: service_healthy
+    ports:
+      - "8005:8005"
+    restart: on-failure
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    networks:
+      - shared_network
+
+  test_orgs_db:
+    image: postgres:17-alpine
+    volumes:
+      - profile_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2305
+      POSTGRES_DB: test_orgs
+    ports:
+      - "5437:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared_network
+
+volumes:
+  profile_postgres_data:
+
+networks:
+  shared_network:
+    external: true 

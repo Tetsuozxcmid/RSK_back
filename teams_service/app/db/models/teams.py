@@ -12,4 +12,5 @@ class Team(Base):
     city = Column(String)
     region = Column(String)
     organization_id = Column(Integer)
+    organization_name = Column(String)
     leader_id = Column(Integer)
