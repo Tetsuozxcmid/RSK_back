@@ -24,6 +24,7 @@ class TeamCRUD:
             region=team_data.region,
             organization_id=team_data.organization_id,
             leader_id=leader_id,
+            organization_name=team_data.organization_name,
             
         )
 
