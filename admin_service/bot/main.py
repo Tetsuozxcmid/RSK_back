@@ -14,7 +14,7 @@ from aiogram.types import (
 from config import settings
 from admin_config import settings as admin_settings
 from handlers.routes.start_router import router as start_router
-
+from aiogram.filters import Command
 
 bot = Bot(token=settings.BOT_TOKEN)
 dp = Dispatcher()
@@ -42,6 +42,28 @@ async def handle_team_request(request: Request):
         required_fields = ["leader_id", "team_name", "org_name"]
         if not all(field in data for field in required_fields):
             raise HTTPException(status_code=400, detail="Missing required fields")
+        
+        group_message = await bot.send_message(
+            chat_id=admin_settings.GROUP_CHAT_ID,
+            text=f"🆕 Запрос на добавление организации:\n\n"
+                 f"👤 User ID: {data['leader_id']}\n"
+                 f"🏷 Team: {data['team_name']}\n"
+                 f"🏢 Org: {data['org_name']}",
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="✅ Approve",
+                            callback_data=f"approve:{data['team_name']}:{data['org_name']}:{data['leader_id']}",
+                        ),
+                        InlineKeyboardButton(
+                            text="❌ Reject",
+                            callback_data=f"reject:{data['team_name']}",
+                        )
+                    ]
+                ]
+            )
+        )
 
         for admin_id in admin_settings.admin_ids:
             try:
@@ -94,6 +116,8 @@ async def approve_team_request(callback: CallbackQuery):
                 raise Exception(f"Organization creation failed: {org_response.text}")
 
         await callback.answer("✅ Одобрено администратором")
+        await callback.message.reply("добавлено")
+
 
     except Exception as e:
         logging.error(f"Error in approve_team_request: {str(e)}")
@@ -113,6 +137,30 @@ async def reject_team_request(callback: CallbackQuery):
     except Exception as e:
         logging.error(f"Error in reject_team_request: {str(e)}")
         await callback.answer("❌ Ошибка при обработке запроса")
+
+@dp.message(Command("chat_id"))
+async def cmd_chat_id(message: Message):
+    chat = message.chat
+    if chat.type == "private":
+        chat_type = "личные сообщения"
+    elif chat.type == "group":
+        chat_type = "обычная группа"
+    elif chat.type == "supergroup":
+        chat_type = "супергруппа"
+    elif chat.type == "channel":
+        chat_type = "канал"
+    else:
+        chat_type = "неизвестный тип чата"
+        
+    response = (
+        f"📌 Информация о чате:\n\n"
+        f"🆔 ID чата: <code>{chat.id}</code>\n"
+        f"📛 Тип: {chat_type}\n"
+        f"🏷 Название: {chat.title if chat.title else 'нет'}\n"
+        f"👤 Ваш ID: <code>{message.from_user.id}</code>"
+    )
+    
+    await message.reply(response, parse_mode="HTML")
 
 
 async def run_api():
