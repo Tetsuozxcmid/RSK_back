@@ -9,6 +9,7 @@ class OrgsCRUD:
     async def get_org_by_name(db: AsyncSession,org_name: str):
         result = await db.execute(select(Orgs).where(Orgs.name == org_name))
         org = result.scalar_one_or_none()
+        return org
 
         if not org:
             raise HTTPException(
@@ -31,7 +32,6 @@ class OrgsCRUD:
 
         new_org = Orgs(
             name=data.name,
-            
         )
 
         db.add(new_org)

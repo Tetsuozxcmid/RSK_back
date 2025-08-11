@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from services.db_checker import OrgsClient
 from db.models.teams import Team
 from fastapi import HTTPException
-
+from services.bot_client import BotClient
 
 class TeamCRUD:
     @staticmethod
@@ -19,7 +19,17 @@ class TeamCRUD:
         
         org_exists = await OrgsClient.check_organization_exists(team_data.organization_name)
         if not org_exists:
-            raise HTTPException(status_code=400,detail=f"Orgs {team_data.organization_name} does not exists, try other team or contact us")
+            await BotClient.send_team_request_to_bot(
+                leader_id=leader_id,
+                team_name=team_data.name,
+                org_name=team_data.organization_name
+            )
+
+            raise HTTPException(
+            status_code=400,
+            detail="Organization doesn't exist. Admin notification sent"
+            )
+            
 
         new_team = Team(
             name=team_data.name,
