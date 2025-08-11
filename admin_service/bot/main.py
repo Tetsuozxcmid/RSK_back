@@ -84,7 +84,7 @@ async def approve_team_request(callback: CallbackQuery):
         async with httpx.AsyncClient() as client:
 
             org_response = await client.post(
-                "http://rsk_orgs_app:8005/organizations/create/",
+                f"{admin_settings.RSK_ORGS_URL}/organizations/create/",
                 json={"name": org_name},
                 headers={"X-Admin-Token": admin_settings.ADMIN_SECRET_KEY},
                 timeout=10.0,

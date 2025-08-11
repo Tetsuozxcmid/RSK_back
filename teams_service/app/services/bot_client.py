@@ -9,7 +9,7 @@ class BotClient:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    "http://admin_bot:8009/team-requests",
+                    f"{settings.RSK_BOT_URL}/team-requests",
                     json={
                         "leader_id": leader_id,
                         "team_name": team_name,
