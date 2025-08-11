@@ -8,7 +8,7 @@ class OrgsClient:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"http://rsk_orgs_app:8005/organizations/exists/{org_name}",
+                    f"{settings.RSK_ORGS_URL}/organizations/exists/{org_name}",
                     timeout=5.0  
                 )
                 

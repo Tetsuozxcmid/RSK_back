@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASS: int
     DB_NAME: str
+    RSK_BOT_URL: str
+    RSK_ORGS_URL: str
 
     SECRET_KEY: str
     ALGORITHM: str

@@ -5,6 +5,7 @@ from typing import List
 class Settings(BaseSettings):
     ADMIN_IDS: str
     ADMIN_SECRET_KEY: str
+    RSK_ORGS_URL: str
 
     @property
     def admin_ids(self) -> List[int]:
