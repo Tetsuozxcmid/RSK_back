@@ -15,38 +15,41 @@
 >| **teams_service** | Сервис команд<br><br>Позволяет создавать команды<br><br>Использует JWT для определения leader_id (текущего пользователя)<br><br>Интегрируется с orgs_service для проверки организаций на их существование в бд |
 
 ## Поднятие контейнеров ( будет общий контейнер )
-```
+
+> Должны быть на пк установлены Docker, Docker desktop
+```sh
 git clone https://github.com/Tetsuozxcmid/RSK_back
 ```
-```
+```sh
 cd rsk_back
 ```
 
 - Запуск сервиса авторизации
-```
+```sh
 cd auth_service
 docker compose up -d --build
 ```
 - Запуск сервиса профилей
-```
+```sh
 cd user_profile
 docker compose up -d --build
 ```
 - Запуск сервиса команд
-```
+```sh
 cd teams_service
 docker compose up -d --build
 ```
 - Запуск сервиса организаций
-```
+```sh
 cd orgs_service
 docker compose up -d --build
 ```
 - Запуск админки ( тг бот + серверная часть fastapi ) 
-```
+```sh
 cd admin_service
 docker compose up -d --build
 ```
+
 
 
 
