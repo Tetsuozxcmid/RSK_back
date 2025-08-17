@@ -27,7 +27,7 @@ class TeamCRUD:
 
             raise HTTPException(
             status_code=400,
-            detail="Organization doesn't exist. Admin notification sent"
+            detail="Organization doesn't exist. Admin notification sent, check later"
             )
             
 

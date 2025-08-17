@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     DB_PASS: int
     DB_NAME: str
     RABBITMQ_URL: str
+    SECRET_KEY: str
+    ALGORITHM: str
     
 
 
@@ -21,4 +23,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+def get_auth_data():
+    return {"secret_key" : settings.SECRET_KEY,"algorithm" : settings.ALGORITHM}
 

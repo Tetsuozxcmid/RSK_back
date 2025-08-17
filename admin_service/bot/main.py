@@ -47,8 +47,8 @@ async def handle_team_request(request: Request):
             chat_id=admin_settings.GROUP_CHAT_ID,
             text=f"🆕 Запрос на добавление организации:\n\n"
                  f"👤 User ID: {data['leader_id']}\n"
-                 f"🏷 Team: {data['team_name']}\n"
-                 f"🏢 Org: {data['org_name']}",
+                 f"🏷 хочет создать команду - : {data['team_name']}\n"
+                 f"🏢 Но нет такой организации в бд - Org: {data['org_name']} добавить ли такую в бд ?",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
                     [
