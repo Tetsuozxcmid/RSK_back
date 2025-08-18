@@ -115,7 +115,7 @@ async def approve_team_request(callback: CallbackQuery):
             if org_response.status_code not in (200, 201):
                 raise Exception(f"Organization creation failed: {org_response.text}")
 
-        await callback.answer("✅ Одобрено администратором")
+        await callback.message.edit_text("✅ Одобрено администратором")
         await callback.message.reply("добавлено")
 
 
