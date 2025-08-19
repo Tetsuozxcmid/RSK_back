@@ -6,11 +6,14 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASS: int
     DB_NAME: str
+    
     RSK_BOT_URL: str
     RSK_ORGS_URL: str
+    USER_PROFILE_URL: str
 
     SECRET_KEY: str
     ALGORITHM: str
+    
 
     @property
     def DATABASE_URL(self):

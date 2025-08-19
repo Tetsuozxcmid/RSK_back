@@ -9,6 +9,7 @@ from config import settings
 from db.base import Base
 
 from db.models.teams import Team
+from db.models.team_members import TeamMember
 
 
 # this is the Alembic Config object, which provides
