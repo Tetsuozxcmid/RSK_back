@@ -41,6 +41,8 @@ class ProfileCRUD:
                 status_code=500, detail=f"Error while registering team: {str(e)}"
             )
         
+    
+        
     @staticmethod
     async def get_my_profile(db:AsyncSession, user_id: int):
         existing_profile = await db.execute(select(User).where(User.id == user_id))

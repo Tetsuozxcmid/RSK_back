@@ -19,6 +19,57 @@ async def register_team(team_data: TeamRegister,request: Request, db: AsyncSessi
         "leader_id" : leader_id
     }
 
+@router.get('/team_members/{team_id}')
+async def get_team_members(
+    team_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        members = await TeamCRUD.get_team_members_with_profiles(db, team_id)
+        return members
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server error: {str(e)}"
+        )
+    
+@router.post('/join_team/{team_id}')
+async def join_team(
+    team_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    user_id = await get_current_user(request)
+    try:
+        result = await TeamCRUD.join_team(db, team_id, user_id)
+        return result
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server error: {str(e)}"
+        )
+    
+@router.get('/my_teams/')
+async def get_my_teams(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    user_id = await get_current_user(request)
+    try:
+        teams = await TeamCRUD.get_user_teams(db, user_id)
+        return teams
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server error: {str(e)}"
+        )
+    
 @router.get('/all_teams/')
 async def get_all_teams(db: AsyncSession = Depends(get_db)):
     teams = await TeamCRUD.get_all_teams(db)
