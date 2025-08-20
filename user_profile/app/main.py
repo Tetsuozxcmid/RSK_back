@@ -5,8 +5,17 @@ from services.rabbitmq import consume_user_created_events
 from config import settings
 from db.base import Base
 from db.session import engine
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title='User Profile Service', docs_url='/')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(router)
 
