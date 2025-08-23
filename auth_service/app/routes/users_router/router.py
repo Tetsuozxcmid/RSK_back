@@ -1,4 +1,5 @@
 
+import json
 import aio_pika
 from fastapi import APIRouter,HTTPException,Response,status,Depends
 from schemas.user_schemas.user_register import UserRegister
@@ -32,8 +33,14 @@ async def register_user(user_data: UserRegister, db: AsyncSession = Depends(get_
     try:
         channel = await rabbitmq.channel()
         exchange = await channel.declare_exchange("user_events",type="direct",durable=True)
+
+        user_data_message = {
+            "user_id": user.id,
+            "email": user.email,  
+            "username": user.name  
+        }
         message = aio_pika.Message(
-            body=str(user.id).encode(),
+            body=json.dumps(user_data_message).encode(),
             headers={"event_type": "user_created"},
             delivery_mode=aio_pika.DeliveryMode.PERSISTENT
         )
@@ -46,7 +53,9 @@ async def register_user(user_data: UserRegister, db: AsyncSession = Depends(get_
 
     return {
         "message": "User registered successfully",
-        "user_id": user.id
+        "user_id": user.id,
+        "email" : user.email,
+        "username" : user.name
     }
     
 @router.post('/login/')

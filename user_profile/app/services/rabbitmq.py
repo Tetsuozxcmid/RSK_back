@@ -6,6 +6,7 @@ from db.models.user import User
 from db.models.user_enum import UserEnum
 from db.session import async_session_maker
 from sqlalchemy import insert, select
+import json
 
 async def consume_user_created_events(rabbitmq_url: str):
     while True:
@@ -20,7 +21,10 @@ async def consume_user_created_events(rabbitmq_url: str):
                 async with queue.iterator() as queue_iter:
                     async for message in queue_iter:
                         try:
-                            user_id = int(message.body.decode())
+                            data = json.loads(message.body.decode())
+                            user_id = data["user_id"]
+                            email = data["email"]
+                            username = data["username"]
                             async with async_session_maker() as session:
                                 
                                 result = await session.execute(select(User).where(User.id == user_id))
@@ -30,10 +34,10 @@ async def consume_user_created_events(rabbitmq_url: str):
                                     
                                     new_profile = User(
                                         id=user_id,
-                                        NameIRL="",
+                                        NameIRL=username,
+                                        email=email,
                                         Surname="",
                                         Type=UserEnum.Student
-                                        
                                     )
                                     session.add(new_profile)
                                     await session.commit()

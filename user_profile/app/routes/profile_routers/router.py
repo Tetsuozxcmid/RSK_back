@@ -56,6 +56,8 @@ async def get_users_batch(
         for user in users:
             users_data[user.id] = {
                 "id": user.id,
+                "username":user.username,
+                "email" : user.email,
                 "NameIRL": user.NameIRL,
                 "Surname": user.Surname,
                 "Patronymic": user.Patronymic,

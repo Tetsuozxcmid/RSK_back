@@ -17,7 +17,10 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer,primary_key=True,index=True)
     name: Mapped[str] = mapped_column(String(50),nullable=False)
+    email: Mapped[str] = mapped_column(String(100), nullable=True)  
     hashed_password: Mapped[str] = mapped_column(String(255),nullable=False)
+    auth_provider: Mapped[str] = mapped_column(String(20),nullable=True)
+    provider_id: Mapped[str] = mapped_column(String(100), nullable=True,unique=True)
 
     @classmethod
     async def check_user(cls, name: str, password: str, db: AsyncSession):

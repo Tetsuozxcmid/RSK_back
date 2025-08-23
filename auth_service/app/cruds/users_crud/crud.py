@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models.user import User
 from routes.users_router.auth_logic import pass_settings
-
+from schemas.user_schemas.user_get import UserOut
 from fastapi import HTTPException
 
 class UserCRUD:
@@ -28,6 +28,7 @@ class UserCRUD:
         new_user = User(
             name=user_data.name,
             hashed_password=hashed_password,
+            email=user_data.email
             
         )
         
@@ -52,7 +53,7 @@ class UserCRUD:
             if not users:  
                 return []
                 
-            return users
+            return [UserOut.from_orm(User) for User in users]
         except Exception as e:
             raise HTTPException(
                 status_code=500,
