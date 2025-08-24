@@ -1,3 +1,4 @@
+import uuid
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +12,9 @@ class UserCRUD:
     async def create_user(db: AsyncSession, user_data):
         
         existing_user = await db.execute(
-            select(User).where(User.name == user_data.name)
+            select(User).where(
+                (User.name == user_data.name) 
+            )
         )
         
         if existing_user.scalar_one_or_none():
@@ -25,11 +28,15 @@ class UserCRUD:
         hashed_password = pass_settings.get_password_hash(password_str)
 
         
+        confirmation_token = str(uuid.uuid4())
+        
+        
         new_user = User(
             name=user_data.name,
             hashed_password=hashed_password,
-            email=user_data.email
-            
+            email=user_data.email.lower(),  
+            verified=False,  
+            confirmation_token=confirmation_token  
         )
         
         db.add(new_user)
@@ -37,12 +44,47 @@ class UserCRUD:
         try:
             await db.commit()
             await db.refresh(new_user)
-            return new_user
+            return new_user, confirmation_token  
         except Exception as e:
             await db.rollback()
             raise HTTPException(
                 status_code=500,
-                detail=f"Error while registering user: {str(e)},user registration failed with error {str(e)}"
+                detail=f"Error while registering user: {str(e)}"
+            )
+    
+    # Добавляем метод для подтверждения email
+    @staticmethod
+    async def confirm_user_email(db: AsyncSession, token: str):
+        result = await db.execute(
+            select(User).where(User.confirmation_token == token)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="Invalid confirmation token"
+            )
+        
+        if user.verified:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already confirmed"
+            )
+        
+        # Подтверждаем email
+        user.verified = True
+        user.confirmation_token = None  # удаляем токен после подтверждения
+        
+        try:
+            await db.commit()
+            await db.refresh(user)
+            return user
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error confirming email: {str(e)}"
             )
         
     async def get_all_users(db: AsyncSession):

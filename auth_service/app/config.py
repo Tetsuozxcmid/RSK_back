@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     ALGORITHM: str
     RABBITMQ_URL: str
 
+    SMTP_USERNAME: str
+    SMTP_PASSWORD: str
+    SMTP_PORT: int
+    SMTP_SERVER: str
+    SENDER_EMAIL: str
+
+    URL_FOR_TOKEN: str
 
     @property
     def DATABASE_URL(self):
@@ -20,6 +27,10 @@ class Settings(BaseSettings):
     @property
     def RABBIT_URL(self):
         return f"{self.RABBITMQ_URL}"
+    
+    @property
+    def URL_TOKEN(self):
+        return f"{self.URL_FOR_TOKEN}"
         
     model_config = SettingsConfigDict(env_file='.env',env_file_encoding='utf-8')
 
