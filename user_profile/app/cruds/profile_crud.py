@@ -21,11 +21,7 @@ class ProfileCRUD:
             Patronymic=profile_data.Patronymic,
             Description=profile_data.Description,
             Region=profile_data.Region,
-            Type=profile_data.Type,
-            Organization=profile_data.Organization,
-            Organization_id=profile_data.Organization_id,
-            team_id=profile_data.team_id,
-            team=profile_data.team,
+            Type=profile_data.Type
         )
 
         db.add(new_profile)

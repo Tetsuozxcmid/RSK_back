@@ -12,8 +12,7 @@ class ProfileResponse(BaseModel):
     Description: Optional[str] = None
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
-    Organization: Optional[str] = None
-    team: Optional[str] = None
+    
 
     class Config:
         from_attributes = True
@@ -27,10 +26,7 @@ class ProfileCreateSchema(BaseModel):
     Description: Optional[str] = None
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
-    Organization: Optional[str] = None
-    Organization_id: Optional[int] = None
-    team_id: Optional[int] = None
-    team: Optional[str] = None
+    
 
 
 class ProfileUpdate(BaseModel):
@@ -42,5 +38,4 @@ class ProfileUpdate(BaseModel):
     Description: Optional[str] = None
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
-    Organization: Optional[str] = None
-    team: Optional[str] = None
+    

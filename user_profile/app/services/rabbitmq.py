@@ -34,7 +34,8 @@ async def consume_user_created_events(rabbitmq_url: str):
                                     
                                     new_profile = User(
                                         id=user_id,
-                                        NameIRL=username,
+                                        username=username,
+                                        NameIRL="",
                                         email=email,
                                         Surname="",
                                         Type=UserEnum.Student
