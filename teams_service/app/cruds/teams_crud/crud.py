@@ -10,71 +10,76 @@ from services.bot_client import BotClient
 class TeamCRUD:
     @staticmethod
     async def create_team(db: AsyncSession, team_data, leader_id: int):
-
-        existing_member = await db.execute(select(TeamMember).where(TeamMember.user_id == Team.leader_id))
-        if existing_member.scalar_one_or_none():
-            raise HTTPException(
-                status_code=400,
-                detail="You already got a team, leave from current team for create a new one"
-            )
-
-        exiting_team = await db.execute(
-            select(Team).where(Team.name == team_data.name)
-        )
-        if exiting_team.scalar_one_or_none():
-            raise HTTPException(
-                status_code=400,
-                detail="Team already exists"
-            )
-        
-        org_exists = await OrgsClient.check_organization_exists(team_data.organization_name)
-        if not org_exists:
-            await BotClient.send_team_request_to_bot(
-                leader_id=leader_id,
-                team_name=team_data.name,
-                org_name=team_data.organization_name
-            )
-
-            raise HTTPException(
-            status_code=400,
-            detail="Organization doesn't exist. Admin notification sent, check later"
-            )
-            
-
-        new_team = Team(
-            name=team_data.name,
-            direction=team_data.direction,
-            city=team_data.city,
-            region=team_data.region,
-            organization_id=team_data.organization_id,
-            leader_id=leader_id,
-            organization_name=team_data.organization_name,
-            
-        )
-
-        db.add(new_team)
-
         try:
+            existing_member = await db.execute(
+            select(TeamMember).where(TeamMember.user_id == leader_id)
+        )
+            if existing_member.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=400,
+                    detail="You already got a team, leave from current team to create a new one"
+                )
+
+        
+            existing_team = await db.execute(
+                select(Team).where(Team.name == team_data.name)
+            )
+            if existing_team.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Team already exists"
+                )
+        
+        
+            org_exists = await OrgsClient.check_organization_exists(team_data.organization_name)
+            if not org_exists:
+                await BotClient.send_team_request_to_bot(
+                    leader_id=leader_id,
+                    team_name=team_data.name,
+                    org_name=team_data.organization_name
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail="Organization doesn't exist. Admin notification sent, check later"
+                )
+        
+       
+            new_team = Team(
+                name=team_data.name,
+                direction=team_data.direction,
+                city=team_data.city,
+                region=team_data.region,
+                organization_id=team_data.organization_id,
+                leader_id=leader_id,
+                organization_name=team_data.organization_name,
+            )
+            db.add(new_team)
             await db.commit()
             await db.refresh(new_team)
 
+            
             team_member = TeamMember(
                 team_id=new_team.id,
                 user_id=leader_id,
                 is_leader=True
             )
-
             db.add(team_member)
             await db.commit()
 
             return new_team
 
+        except HTTPException:
+            
+            raise
         except Exception as e:
+            
             await db.rollback()
             raise HTTPException(
                 status_code=500,
                 detail=f"Error while registering team: {str(e)}"
-            )
+            ) from e
+
+        
     
     @staticmethod
     async def join_team(db: AsyncSession, team_id: int, user_id: int):
