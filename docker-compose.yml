@@ -1,0 +1,193 @@
+version: '3.8'
+
+services:
+  # RabbitMQ (общий для всех сервисов)
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: yourstrongpassword
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    networks:
+      - shared_network
+
+  # Auth Service
+  rsk_auth_app:
+    build: ./auth_service
+    depends_on:
+      rsk_auth_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+    restart: on-failure
+    env_file:
+      - ./auth_service/.env
+    volumes:
+      - ./auth_service:/app
+    networks:
+      - shared_network
+
+  rsk_auth_db:
+    image: postgres:17-alpine
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2305
+      POSTGRES_DB: rsk_back
+    ports:
+      - "5432:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared_network
+
+
+  rsk_profile_app:
+    build: ./user_profile
+    depends_on:
+      rsk_profile_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8003:8003"
+    restart: on-failure
+    env_file:
+      - ./user_profile/.env
+    volumes:
+      - ./user_profile:/app
+    networks:
+      - shared_network
+
+  rsk_profile_db:
+    image: postgres:17-alpine
+    volumes:
+      - profile_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2305
+      POSTGRES_DB: rsk_profile
+    ports:
+      - "5435:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared_network
+
+ 
+  rsk_teams_app:
+    build: ./teams_service
+    depends_on:
+      rsk_teams_db:
+        condition: service_healthy
+      rsk_profile_app:
+        condition: service_started
+      rsk_orgs_app:
+        condition: service_started
+    ports:
+      - "8004:8004"
+    restart: on-failure
+    env_file:
+      - ./teams_service/.env
+    volumes:
+      - ./teams_service:/app
+    networks:
+      - shared_network
+
+  rsk_teams_db:
+    image: postgres:17-alpine
+    volumes:
+      - teams_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2305
+      POSTGRES_DB: rsk_teams
+    ports:
+      - "5436:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared_network
+
+  
+  rsk_orgs_app:
+    build: ./orgs_service
+    depends_on:
+      test_orgs_db:
+        condition: service_healthy
+    ports:
+      - "8005:8005"
+    restart: on-failure
+    env_file:
+      - ./orgs_service/.env
+    volumes:
+      - ./orgs_service:/app
+    networks:
+      - shared_network
+
+  test_orgs_db:
+    image: postgres:17-alpine
+    volumes:
+      - orgs_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2305
+      POSTGRES_DB: test_orgs
+    ports:
+      - "5437:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared_network
+
+
+  admin_bot:
+    build: ./admin_service
+    container_name: admin_bot
+    depends_on:
+      rsk_orgs_app:
+        condition: service_started
+    env_file:
+      - ./admin_service/.env
+    networks:
+      - shared_network
+    ports:
+      - "8009:8009"
+    restart: unless-stopped
+
+volumes:
+  auth_postgres_data:
+  profile_postgres_data:
+  teams_postgres_data:
+  orgs_postgres_data:
+
+networks:
+  shared_network:
+    driver: bridge
