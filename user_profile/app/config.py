@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASS: int
     DB_NAME: str
+
     RABBITMQ_URL: str
     SECRET_KEY: str
     ALGORITHM: str
