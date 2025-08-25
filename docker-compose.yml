@@ -1,6 +1,8 @@
 version: '3.8'
 
 services:
+
+  
   
   rabbitmq:
     image: rabbitmq:3.12-management
@@ -176,6 +178,23 @@ services:
     networks:
       - shared_network
     
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./frontend:/var/www/frontend  
+    depends_on:
+      - rsk_auth_app
+      - rsk_profile_app
+      - rsk_teams_app
+      - rsk_orgs_app
+    networks:
+      - shared_network
     restart: unless-stopped
 
 volumes:
