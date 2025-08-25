@@ -1,15 +1,14 @@
 version: '3.8'
 
 services:
-  # RabbitMQ (общий для всех сервисов)
+  
   rabbitmq:
     image: rabbitmq:3.12-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+    
+      
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: yourstrongpassword
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
@@ -19,7 +18,7 @@ services:
     networks:
       - shared_network
 
-  # Auth Service
+  
   rsk_auth_app:
     build: ./auth_service
     depends_on:
@@ -27,8 +26,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    ports:
-      - "8002:8002"
+    
+      
     restart: on-failure
     env_file:
       - ./auth_service/.env
@@ -42,11 +41,11 @@ services:
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 2305
-      POSTGRES_DB: rsk_back
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_AUTH_NAME}
+    
+      
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -64,8 +63,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    ports:
-      - "8003:8003"
+    
+      
     restart: on-failure
     env_file:
       - ./user_profile/.env
@@ -79,11 +78,11 @@ services:
     volumes:
       - profile_postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 2305
-      POSTGRES_DB: rsk_profile
-    ports:
-      - "5435:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_PROFILE_NAME}
+    
+      
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -103,8 +102,8 @@ services:
         condition: service_started
       rsk_orgs_app:
         condition: service_started
-    ports:
-      - "8004:8004"
+    
+      
     restart: on-failure
     env_file:
       - ./teams_service/.env
@@ -118,11 +117,11 @@ services:
     volumes:
       - teams_postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 2305
-      POSTGRES_DB: rsk_teams
-    ports:
-      - "5436:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_TEAMS_NAME}
+    
+      
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -138,8 +137,8 @@ services:
     depends_on:
       test_orgs_db:
         condition: service_healthy
-    ports:
-      - "8005:8005"
+    
+      
     restart: on-failure
     env_file:
       - ./orgs_service/.env
@@ -153,11 +152,11 @@ services:
     volumes:
       - orgs_postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 2305
-      POSTGRES_DB: test_orgs
-    ports:
-      - "5437:5432"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_ORGS_NAME}
+    
+      
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -178,8 +177,8 @@ services:
       - ./admin_service/.env
     networks:
       - shared_network
-    ports:
-      - "8009:8009"
+    
+      
     restart: unless-stopped
 
 volumes:
