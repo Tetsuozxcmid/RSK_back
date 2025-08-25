@@ -4,9 +4,7 @@ services:
   
   rabbitmq:
     image: rabbitmq:3.12-management
-    ports:
-      - "5672:5672" 
-      - "15672:15672" 
+    
     
       
     environment:
@@ -29,8 +27,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    ports:
-      - "8002:8002"
+    
       
     restart: on-failure
     env_file:
@@ -48,8 +45,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_AUTH_NAME}
-    ports:
-      - "5432:5432"
+    
       
     restart: always
     healthcheck:
@@ -68,8 +64,7 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    ports:
-      - "8003:8003"
+    
       
     restart: on-failure
     env_file:
@@ -85,10 +80,9 @@ services:
       - profile_postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_PROFILE_NAME}
-    ports:
-      - "5435:5432"
+    
     
       
     restart: always
@@ -110,8 +104,7 @@ services:
         condition: service_started
       rsk_orgs_app:
         condition: service_started
-    ports:
-      - "8004:8004"
+    
     restart: on-failure
     env_file:
       - ./teams_service/.env
@@ -128,8 +121,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_TEAMS_NAME}
-    ports:
-     - "5436:5432"
+    
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -145,8 +137,7 @@ services:
     depends_on:
       test_orgs_db:
         condition: service_healthy
-    ports:
-      - "8005:8005"
+    
     restart: on-failure
     env_file:
       - ./orgs_service/.env
@@ -163,8 +154,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_ORGS_NAME}
-    ports:
-      - "5437:5432"
+    
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -185,8 +175,7 @@ services:
       - ./admin_service/.env
     networks:
       - shared_network
-    ports:
-      - "8009:8009"
+    
     restart: unless-stopped
 
 volumes:
