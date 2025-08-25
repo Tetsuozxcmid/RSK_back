@@ -13,7 +13,7 @@ class ProfileCRUD:
             select(User).where(User.NameIRL == profile_data.NameIRL)
         )
         if exiting_profile.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="Team already exists")
+            raise HTTPException(status_code=400, detail="Profile already exists")
 
         new_profile = User(
             NameIRL=profile_data.NameIRL,

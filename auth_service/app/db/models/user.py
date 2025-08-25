@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import List, TYPE_CHECKING
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from db.base import Base
@@ -35,5 +36,13 @@ class User(Base):
             plain_password=password, hashed_password=user.hashed_password
         ):
             return None
+        
+        if not user.verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email not verified. Please check your email for confirmation."
+            )
 
-        return {"id": user.id, "name": user.name}
+        return {"id": user.id, "name": user.name,"verified":user.verified}
+    
+    
