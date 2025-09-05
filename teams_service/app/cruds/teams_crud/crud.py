@@ -98,6 +98,12 @@ class TeamCRUD:
         if not team:
             raise HTTPException(status_code=404, detail="Team not found")
         
+        if team.number_of_members >= 4:
+            raise HTTPException(
+                status_code=400,
+                detail="Team is full. Maximum 4 members allowed."
+            )
+        
         
         team_member = TeamMember(
             team_id=team_id,
@@ -106,6 +112,8 @@ class TeamCRUD:
         )
 
         db.add(team_member)
+        
+        team.number_of_members += 1
         
         try:
             await db.commit()
