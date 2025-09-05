@@ -15,3 +15,4 @@ class Team(Base):
     organization_name = Column(String)
     leader_id = Column(Integer)
     members = relationship("TeamMember", backref="team", cascade="all, delete-orphan")
+    number_of_members = Column(Integer,nullable=True)
