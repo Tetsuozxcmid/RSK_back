@@ -44,7 +44,7 @@ services:
       - "15672:15672"  
     environment:
       RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: yourstrongpassword
+      RABBITMQ_DEFAULT_PASS: myStrongPasswordRSKTEAM
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
