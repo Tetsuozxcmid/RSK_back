@@ -52,7 +52,7 @@ class UserCRUD:
                 detail=f"Error while registering user: {str(e)}"
             )
     
-    # Добавляем метод для подтверждения email
+    
     @staticmethod
     async def confirm_user_email(db: AsyncSession, token: str):
         result = await db.execute(
@@ -72,9 +72,9 @@ class UserCRUD:
                 detail="Email already confirmed"
             )
         
-        # Подтверждаем email
+       
         user.verified = True
-        user.confirmation_token = None  # удаляем токен после подтверждения
+        user.confirmation_token = None  
         
         try:
             await db.commit()
