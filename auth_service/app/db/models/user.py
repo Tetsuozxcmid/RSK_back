@@ -5,12 +5,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from db.base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Boolean, Integer, String
+from sqlalchemy import Boolean, Integer, String, Enum  as sqlEnum
 from routes.users_router.auth_logic import pass_settings
-
+from enum import Enum 
 from db.base import Base
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer, String
+
+
+class UserRole(str, Enum):
+    STUDENT = "student"
+    TEACHER = "teacher"
 
 
 class User(Base):
@@ -19,6 +24,12 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str] = mapped_column(String(100), nullable=True)
+
+    role: Mapped[UserRole] = mapped_column(
+    sqlEnum(UserRole, name="user_role_enum"),
+    nullable=True, 
+    default=UserRole.STUDENT
+    )
 
     verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     confirmation_token: Mapped[str] = mapped_column(String(100), unique=True, nullable=True)
@@ -43,6 +54,6 @@ class User(Base):
                 detail="Email not verified. Please check your email for confirmation."
             )
 
-        return {"id": user.id, "name": user.name,"verified":user.verified}
+        return {"id": user.id, "name": user.name,"verified":user.verified,"role": user.role.value}
     
     
