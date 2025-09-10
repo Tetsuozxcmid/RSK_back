@@ -63,7 +63,8 @@ async def register_user(
                 "email": user.email,  
                 "username": user.name,
                 "verified": False,
-                "event_type": "user_registered"
+                "event_type": "user_registered",
+                "role" : user.role
             }
 
             message = aio_pika.Message(
@@ -80,7 +81,8 @@ async def register_user(
             "message": "User registered successfully. Please check your email for verification.",
             "user_id": user.id,
             "email": user.email,
-            "username": user.name
+            "username": user.name,
+            "role":user.role
         }
         
     except HTTPException as e:
