@@ -2,7 +2,7 @@ import uuid
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.user import User
+from db.models.user import User, UserRole
 from routes.users_router.auth_logic import pass_settings
 from schemas.user_schemas.user_get import UserOut
 from fastapi import HTTPException
@@ -36,7 +36,8 @@ class UserCRUD:
             hashed_password=hashed_password,
             email=user_data.email.lower(),  
             verified=False,  
-            confirmation_token=confirmation_token  
+            confirmation_token=confirmation_token,
+            role=user_data.role if hasattr(user_data, 'role') else UserRole.STUDENT
         )
         
         db.add(new_user)
