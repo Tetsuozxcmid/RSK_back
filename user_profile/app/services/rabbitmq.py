@@ -25,6 +25,7 @@ async def consume_user_created_events(rabbitmq_url: str):
                             user_id = data["user_id"]
                             email = data["email"]
                             username = data["username"]
+                            role = data["role"]
                             async with async_session_maker() as session:
                                 
                                 result = await session.execute(select(User).where(User.id == user_id))
@@ -38,8 +39,9 @@ async def consume_user_created_events(rabbitmq_url: str):
                                         NameIRL="",
                                         email=email,
                                         Surname="",
-                                        Type=UserEnum.Student
+                                        Role=role
                                     )
+
                                     session.add(new_profile)
                                     await session.commit()
                                     await message.ack()
