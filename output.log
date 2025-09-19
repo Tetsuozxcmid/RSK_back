@@ -1,0 +1,229 @@
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"RABBITMQ_USER\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"RABBITMQ_PASS\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_AUTH_NAME\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_USER\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_USER\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_PROFILE_NAME\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_USER\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_TEAMS_NAME\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_USER\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_PASSWORD\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="The \"DB_ORGS_NAME\" variable is not set. Defaulting to a blank string."
+time="2025-09-11T23:49:15+03:00" level=warning msg="/root/RSK_back/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.33kB done
+#1 DONE 0.0s
+
+#2 [rsk_orgs_app internal] load build definition from dockerfile
+#2 transferring dockerfile: 359B done
+#2 DONE 0.0s
+
+#3 [rsk_teams_app internal] load build definition from dockerfile
+#3 transferring dockerfile: 376B done
+#3 DONE 0.0s
+
+#4 [rsk_profile_app internal] load build definition from dockerfile
+#4 transferring dockerfile: 526B done
+#4 DONE 0.0s
+
+#5 [admin_bot internal] load build definition from dockerfile
+#5 transferring dockerfile: 257B done
+#5 DONE 0.0s
+
+#6 [rsk_auth_app internal] load build definition from dockerfile
+#6 transferring dockerfile: 526B done
+#6 DONE 0.0s
+
+#7 [admin_bot internal] load metadata for docker.io/library/python:3.12-slim
+#7 DONE 0.4s
+
+#8 [rsk_profile_app internal] load metadata for docker.io/library/python:3.11-slim
+#8 DONE 0.4s
+
+#9 [rsk_orgs_app internal] load .dockerignore
+#9 transferring context: 91B done
+#9 DONE 0.0s
+
+#10 [admin_bot internal] load .dockerignore
+#10 transferring context: 91B done
+#10 DONE 0.0s
+
+#11 [rsk_teams_app 1/5] FROM docker.io/library/python:3.12-slim@sha256:31551bd80310d95ed82a4a14dba8c908c85098f07457e8a5b6a946385cfd86c8
+#11 DONE 0.0s
+
+#12 [rsk_teams_app internal] load .dockerignore
+#12 transferring context: 97B done
+#12 DONE 0.0s
+
+#13 [rsk_auth_app internal] load .dockerignore
+#13 transferring context: 97B done
+#13 DONE 0.0s
+
+#14 [rsk_profile_app internal] load .dockerignore
+#14 transferring context: 2B done
+#14 DONE 0.0s
+
+#15 [rsk_orgs_app internal] load build context
+#15 transferring context: 2.53kB done
+#15 DONE 0.0s
+
+#16 [rsk_profile_app 1/8] FROM docker.io/library/python:3.11-slim@sha256:91e9d01cf4bd56be7128c603506b6fe367ef7506f9f2ad8f3a908aeec8941bb9
+#16 DONE 0.0s
+
+#17 [rsk_orgs_app 3/5] COPY requirements.txt .
+#17 CACHED
+
+#18 [rsk_orgs_app 4/5] RUN pip install --no-cache-dir --upgrade pip &&     pip install --no-cache-dir -r requirements.txt &&     pip install --no-cache-dir alembic
+#18 CACHED
+
+#19 [rsk_orgs_app 5/5] COPY . .
+#19 CACHED
+
+#20 [admin_bot internal] load build context
+#20 transferring context: 938B done
+#20 DONE 0.0s
+
+#21 [rsk_teams_app internal] load build context
+#21 transferring context: 4.31kB done
+#21 DONE 0.0s
+
+#22 [rsk_orgs_app] exporting to image
+#22 exporting layers done
+#22 writing image sha256:0b727871831a66cf3211248d07323a293ac75d97b8483c85880f21d733eacc0f done
+#22 naming to docker.io/library/rsk_back-rsk_orgs_app done
+#22 DONE 0.0s
+
+#23 [rsk_profile_app internal] load build context
+#23 transferring context: 3.95kB done
+#23 DONE 0.0s
+
+#24 [rsk_auth_app internal] load build context
+#24 transferring context: 6.48kB done
+#24 DONE 0.0s
+
+#25 [admin_bot 4/5] RUN pip install --no-cache-dir --upgrade pip &&     pip install --no-cache-dir -r requirements.txt
+#25 CACHED
+
+#26 [admin_bot 3/5] COPY requirements.txt .
+#26 CACHED
+
+#27 [admin_bot 2/5] WORKDIR /bot
+#27 CACHED
+
+#28 [admin_bot 5/5] COPY . .
+#28 CACHED
+
+#29 [rsk_teams_app 4/5] RUN pip install --no-cache-dir --upgrade pip &&     pip install --no-cache-dir -r requirements.txt &&     pip install --no-cache-dir alembic
+#29 CACHED
+
+#30 [rsk_teams_app 2/5] WORKDIR /app
+#30 CACHED
+
+#31 [rsk_teams_app 3/5] COPY requirements.txt .
+#31 CACHED
+
+#32 [rsk_teams_app 5/5] COPY . .
+#32 CACHED
+
+#33 [rsk_profile_app 7/8] RUN pip install --no-cache-dir alembic
+#33 CACHED
+
+#34 [rsk_profile_app 4/8] COPY requirements.txt .
+#34 CACHED
+
+#35 [rsk_profile_app 5/8] RUN pip install --no-cache-dir --upgrade pip &&     pip install --no-cache-dir -r requirements.txt
+#35 CACHED
+
+#36 [rsk_profile_app 6/8] COPY . .
+#36 CACHED
+
+#37 [admin_bot] exporting to image
+#37 exporting layers done
+#37 writing image sha256:13150861b9f3b6d628efaa643ff5bb09d64b669675726c19c9f72be673f4a814 done
+#37 naming to docker.io/library/rsk_back-admin_bot done
+#37 DONE 0.0s
+
+#38 [rsk_auth_app 3/8] RUN apt-get update &&     apt-get install -y --no-install-recommends gcc python3-dev libpq-dev &&     rm -rf /var/lib/apt/lists/*
+#38 CACHED
+
+#39 [rsk_auth_app 4/8] COPY requirements.txt .
+#39 CACHED
+
+#40 [rsk_auth_app 6/8] COPY . .
+#40 CACHED
+
+#41 [rsk_auth_app 2/8] WORKDIR /app
+#41 CACHED
+
+#42 [rsk_auth_app 5/8] RUN pip install --no-cache-dir --upgrade pip &&     pip install --no-cache-dir -r requirements.txt
+#42 CACHED
+
+#43 [rsk_auth_app 7/8] RUN pip install --no-cache-dir alembic
+#43 CACHED
+
+#44 [rsk_auth_app 8/8] WORKDIR /app
+#44 CACHED
+
+#45 [rsk_profile_app 8/8] WORKDIR /app
+#45 CACHED
+
+#46 [rsk_teams_app] exporting to image
+#46 exporting layers done
+#46 writing image sha256:81a400411735e835e0f4b12a341a29aed4cffef83bcd3994a8d2bdc2829d9b9f done
+#46 naming to docker.io/library/rsk_back-rsk_teams_app done
+#46 DONE 0.0s
+
+#47 [rsk_orgs_app] resolving provenance for metadata file
+#47 DONE 0.0s
+
+#48 [rsk_auth_app] exporting to image
+#48 exporting layers done
+#48 writing image sha256:52b2834d61b60aa10e69e67e8500b76453824c3d997c4f1f484d135c7ef7014a done
+#48 naming to docker.io/library/rsk_back-rsk_auth_app done
+#48 DONE 0.0s
+
+#49 [rsk_profile_app] exporting to image
+#49 exporting layers done
+#49 writing image sha256:5172bc4ba070e5237f1e13102113020e0046dc4fefddc6cfc48799696cca92ad done
+#49 naming to docker.io/library/rsk_back-rsk_profile_app done
+#49 DONE 0.0s
+
+#50 [admin_bot] resolving provenance for metadata file
+#50 DONE 0.0s
+
+#51 [rsk_auth_app] resolving provenance for metadata file
+#51 DONE 0.0s
+
+#52 [rsk_teams_app] resolving provenance for metadata file
+#52 DONE 0.0s
+
+#53 [rsk_profile_app] resolving provenance for metadata file
+#53 DONE 0.0s
+ rsk_back-rsk_auth_app  Built
+ rsk_back-rsk_orgs_app  Built
+ rsk_back-rsk_profile_app  Built
+ rsk_back-rsk_teams_app  Built
+ rsk_back-admin_bot  Built
+ Container rsk_back-rabbitmq-1  Running
+ Container rsk_back-rsk_profile_db-1  Starting
+ Container rsk_back-rsk_teams_db-1  Starting
+ Container rsk_back-rsk_auth_db-1  Starting
+ Container rsk_back-test_orgs_db-1  Starting
+ Container rsk_back-rsk_profile_db-1  Started
+ Container rsk_back-rabbitmq-1  Waiting
+ Container rsk_back-rsk_profile_db-1  Waiting
+ Container rsk_back-rsk_auth_db-1  Started
+ Container rsk_back-rsk_teams_db-1  Started
+ Container rsk_back-test_orgs_db-1  Started
+ Container rsk_back-rsk_auth_db-1  Waiting
+ Container rsk_back-rabbitmq-1  Waiting
+ Container rsk_back-test_orgs_db-1  Waiting
+ Container rsk_back-test_orgs_db-1  Error
+ Container rsk_back-rabbitmq-1  Healthy
+ Container rsk_back-rsk_profile_db-1  Error
+ Container rsk_back-rsk_auth_db-1  Error
+ Container rsk_back-rabbitmq-1  Healthy
+dependency failed to start: container rsk_back-test_orgs_db-1 is unhealthy

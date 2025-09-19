@@ -8,7 +8,12 @@ services:
       - .env
     networks:
       - shared_network
-    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin_bot.rule=Host(`api.rosdk.ru`) && PathPrefix(`/admin_bot`)"
+      - "traefik.http.routers.admin_bot.entrypoints=websecure"
+      - "traefik.http.routers.admin_bot.tls.certresolver=le"
+      - "traefik.http.services.admin_bot.loadbalancer.server.port=8009"
 
 networks:
   shared_network:

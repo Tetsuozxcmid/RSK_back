@@ -17,9 +17,10 @@ from services.jwt import create_access_token
 from services.emailsender import send_confirmation_email
 
 from fastapi import APIRouter,Depends
-
+from fastapi.responses import HTMLResponse
+import os
 from schemas.user_schemas.user_register import UserRegister,EmailSchema
-
+from pathlib import Path
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
 from services.rabbitmq import get_rabbitmq_connection
@@ -107,7 +108,7 @@ async def auth_user(response: Response, user_data: UserAuth, db: AsyncSession = 
     return "Access successed"
 
 
-@email_router.get('/confirm-email/')
+@email_router.get('/confirm-email')
 async def confirm_email(
     token: str, 
     db: AsyncSession = Depends(get_db),
@@ -134,11 +135,14 @@ async def confirm_email(
         await exchange.publish(message, routing_key="user.verified")
     except Exception as e:     
         print(f"Failed to send RabbitMQ message: {e}")
-
-    return {
-        "message": "Email verified successfully! You can now login.",
-        "username": user.name
-    }
+    current_dir = Path(__file__).parent
+    html_file_path = current_dir / "mailsend.html"
+    if html_file_path.exists():
+        html_content=html_file_path.read_text(encoding="utf-8")
+        html_content= html_content.replace("{User_NAME}",user.name)
+        return HTMLResponse(content=html_content,status_code=200)
+    else:
+        return HTMLResponse(content="<h1>confirmed</h1>",status_code=200)
 
 @email_router.post('/resend-confirmation/')
 async def resend_confirmation(

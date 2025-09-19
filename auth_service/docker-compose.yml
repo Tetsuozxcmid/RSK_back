@@ -22,7 +22,7 @@ services:
       - "traefik.http.routers.rsk_auth_app.entrypoints=websecure"
       - "traefik.http.routers.rsk_auth_app.tls.certresolver=le"
       - "traefik.http.services.rsk_auth_app.loadbalancer.server.port=8002"
-
+      
   # === PostgreSQL ===
   rsk_auth_db:
     image: postgres:17-alpine
@@ -47,8 +47,8 @@ services:
   rabbitmq:
     image: rabbitmq:3.12-management
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: myStrongPasswordRSKTEAM
+      RABBITMQ_DEFAULT_USER:admin
+      RABBITMQ_DEFAULT_PASS:myStrongPasswordRSKTEAM
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s

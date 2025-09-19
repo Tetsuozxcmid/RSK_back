@@ -16,7 +16,7 @@ async def send_confirmation_email(recipient_email: str, token: str):
         message['To'] = recipient_email
         message['Subject'] = 'Подтверждение email — РСК'
 
-        confirmation_url = f"{settings.URL_FOR_TOKEN}/users_interaction/confirm-email?token={token}"
+        confirmation_url = f"{settings.URL_FOR_TOKEN}/confirm-email?token={token}"
         
         html_body = f"""
 <!DOCTYPE html>

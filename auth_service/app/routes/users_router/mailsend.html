@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Подтверждение почты — РСК</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet" />
+        <style>
+            body {
+                margin: 0;
+                height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: "Inter", sans-serif;
+                background: linear-gradient(135deg, #3a6bff, #1e293b);
+                overflow: hidden;
+            }
+            .card {
+                position: relative;
+                background: #fff;
+                padding: 40px 50px;
+                border-radius: 20px;
+                text-align: center;
+                max-width: 500px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+                z-index: 2;
+                animation: fadeInUp 0.8s ease;
+            }
+            .card h1 {
+                font-size: 24px;
+                margin-bottom: 15px;
+                color: #1e293b;
+            }
+            .card p {
+                font-size: 16px;
+                color: #475569;
+            }
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            canvas {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>✅ Почта подтверждена</h1>
+            <p>
+                <strong>{User_NAME}</strong>, теперь ты верифицированный участник РСК.<br />
+                Мы будем информировать тебя об обновлениях!
+            </p>
+        </div>
+        <canvas id="confetti"></canvas>
+
+        <script>
+            // Конфетти
+            const canvas = document.getElementById("confetti");
+            const ctx = canvas.getContext("2d");
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const confetti = [];
+            const colors = ["#3A6BFF", "#28a745", "#facc15", "#ef4444", "#8b5cf6"];
+
+            function ConfettiPiece() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height - canvas.height;
+                this.size = Math.random() * 8 + 4;
+                this.speed = Math.random() * 3 + 2;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.rotation = Math.random() * 360;
+                this.opacity = Math.random() * 0.8 + 0.2;
+
+                this.update = function () {
+                    this.y += this.speed;
+                    if (this.y > canvas.height) {
+                        this.y = -10;
+                        this.x = Math.random() * canvas.width;
+                    }
+                };
+
+                this.draw = function () {
+                    ctx.globalAlpha = this.opacity;
+                    ctx.fillStyle = this.color;
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate((this.rotation * Math.PI) / 180);
+                    ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                    ctx.restore();
+                };
+            }
+
+            for (let i = 0; i < 150; i++) {
+                confetti.push(new ConfettiPiece());
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                confetti.forEach((p) => {
+                    p.update();
+                    p.draw();
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+
+            window.addEventListener("resize", () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        </script>
+    </body>
+</html>

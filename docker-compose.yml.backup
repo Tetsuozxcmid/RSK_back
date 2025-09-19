@@ -1,9 +1,14 @@
 version: '3.8'
 
 services:
-  # RabbitMQ (один для всех)
+
+  
+  
   rabbitmq:
     image: rabbitmq:3.12-management
+    
+    
+      
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
@@ -16,7 +21,7 @@ services:
     networks:
       - shared_network
 
-  # Auth Service
+  
   rsk_auth_app:
     build: ./auth_service
     depends_on:
@@ -24,156 +29,166 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    
+      
     restart: on-failure
     env_file:
       - ./auth_service/.env
+    volumes:
+      - ./auth_service:/app
     networks:
       - shared_network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.auth.rule=Host(`api.rosdk.ru`) && PathPrefix(`/auth`)"
-      - "traefik.http.routers.auth.entrypoints=websecure"
-      - "traefik.http.routers.auth.tls.certresolver=le"
-      - "traefik.http.services.auth.loadbalancer.server.port=8002"
 
   rsk_auth_db:
     image: postgres:17-alpine
-    ports:
-      - "5432:5432"
+
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DB_AUTH_USER}
       POSTGRES_PASSWORD: ${DB_AUTH_PASSWORD}
       POSTGRES_DB: ${DB_AUTH_NAME}
+    
+      
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - shared_network
+    
 
-  # Profile Service
+
+
   rsk_profile_app:
     build: ./user_profile
     depends_on:
       rsk_profile_db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    
+      
     restart: on-failure
     env_file:
       - ./user_profile/.env
+    volumes:
+      - ./user_profile:/app
     networks:
       - shared_network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.profile.rule=Host(`api.rosdk.ru`) && PathPrefix(`/users`)"
-      - "traefik.http.routers.profile.entrypoints=websecure"
-      - "traefik.http.routers.profile.tls.certresolver=le"
-      - "traefik.http.services.profile.loadbalancer.server.port=8003"
 
   rsk_profile_db:
     image: postgres:17-alpine
+    
     volumes:
       - profile_postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DB_PROFILE_USER}
       POSTGRES_PASSWORD: ${DB_PROFILE_PASSWORD}
       POSTGRES_DB: ${DB_PROFILE_NAME}
+    
+    
+      
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - shared_network
+    
 
-  # Teams Service
+
   rsk_teams_app:
     build: ./teams_service
     depends_on:
       rsk_teams_db:
         condition: service_healthy
+      rsk_profile_app:
+        condition: service_started
+      rsk_orgs_app:
+        condition: service_started
+    
     restart: on-failure
     env_file:
       - ./teams_service/.env
+    volumes:
+      - ./teams_service:/app
     networks:
       - shared_network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.teams.rule=Host(`api.rosdk.ru`) && PathPrefix(`/teams`)"
-      - "traefik.http.routers.teams.entrypoints=websecure"
-      - "traefik.http.routers.teams.tls.certresolver=le"
-      - "traefik.http.services.teams.loadbalancer.server.port=8004"
 
   rsk_teams_db:
     image: postgres:17-alpine
+    
     volumes:
       - teams_postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DB_TEAMS_USER}
       POSTGRES_PASSWORD: ${DB_TEAMS_PASSWORD}
       POSTGRES_DB: ${DB_TEAMS_NAME}
+    
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - shared_network
+    
 
-  # Orgs Service
+
+  
   rsk_orgs_app:
     build: ./orgs_service
     depends_on:
-      rsk_orgs_db:
+      test_orgs_db:
         condition: service_healthy
+    
     restart: on-failure
     env_file:
       - ./orgs_service/.env
+    volumes:
+      - ./orgs_service:/app
     networks:
       - shared_network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.orgs.rule=Host(`api.rosdk.ru`) && PathPrefix(`/orgs`)"
-      - "traefik.http.routers.orgs.entrypoints=websecure"
-      - "traefik.http.routers.orgs.tls.certresolver=le"
-      - "traefik.http.services.orgs.loadbalancer.server.port=8005"
 
-  rsk_orgs_db:
+  test_orgs_db:
     image: postgres:17-alpine
+  
     volumes:
       - orgs_postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DB_ORGS_USER}
       POSTGRES_PASSWORD: ${DB_ORGS_PASSWORD}
       POSTGRES_DB: ${DB_ORGS_NAME}
+    
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - shared_network
-
-  # Admin Bot
+    
   admin_bot:
     build: ./admin_service
     container_name: admin_bot
+    depends_on:
+      rsk_orgs_app:
+        condition: service_started
     env_file:
       - ./admin_service/.env
     networks:
       - shared_network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.admin_bot.rule=Host(`api.rosdk.ru`) && PathPrefix(`/admin_bot`)"
-      - "traefik.http.routers.admin_bot.entrypoints=websecure"
-      - "traefik.http.routers.admin_bot.tls.certresolver=le"
-      - "traefik.http.services.admin_bot.loadbalancer.server.port=8009"
+    
+    restart: unless-stopped
+
+  
 
 volumes:
   auth_postgres_data:
@@ -183,4 +198,5 @@ volumes:
 
 networks:
   shared_network:
-    external: true
+    driver: bridge
+
