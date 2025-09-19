@@ -1,17 +1,16 @@
 from fastapi import APIRouter
-
-from clients.projects.projects_client import ProjectsClient
+from app.clients.projects.projects_client import ProjectsClient
+import json
 
 router = APIRouter(prefix="/admin/projects")
-project_client = ProjectsClient()
+projects_client = ProjectsClient()
 
 @router.get("/")
 async def get_all():
-    response = await project_client.get_all_projects()
-    return response
+    response = await projects_client.call("projects.get_all", json.dumps({}))
+    return json.loads(response)
 
 @router.get("/{project_id}")
 async def get_project(project_id: int):
-    response = await project_client.get_project(project_id)
-    return response
-
+    response = await projects_client.call("projects.get", json.dumps({"project_id": project_id}))
+    return json.loads(response)

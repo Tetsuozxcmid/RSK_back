@@ -1,31 +1,23 @@
-import httpx
+import json
 from fastapi import HTTPException
-from config import settings
+
+from app.services.rabbitmq_rpc_client import RabbitMQRPCClient
+
 
 class ProjectsClient:
     def __init__(self):
-        self.url = f"{settings.WORKSHOP_URL}/projects"
+        self.rabbit_rpc_client = RabbitMQRPCClient()
 
     async def get_all_projects(self):
-        async with httpx.AsyncClient() as client:
-            response = await client.get(self.url)
-
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail="Failed to fetch projects"
-                )
-            
-            return response.json()
+        try:
+            response = await self.rabbit_rpc_client.call("projects.get_all", json.dumps({}))
+            return json.loads(response)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error fetching projects: {str(e)}")
 
     async def get_project(self, project_id: int):
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{self.url}/{project_id}")
-            
-            if response.status_code!= 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail="Failed to fetch project"
-                )
-            
-            return response.json()
+        try:
+            response = await self.rabbit_rpc_client.call("projects.get", json.dumps({"project_id": project_id}))
+            return json.loads(response)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error fetching project {project_id}: {str(e)}")

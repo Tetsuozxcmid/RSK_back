@@ -1,46 +1,33 @@
-import httpx
+import json
 from fastapi import HTTPException
 from config import settings
 
+from app.services.rabbitmq_rpc_client import RabbitMQRPCClient
+
 class TasksClient:
     def __init__(self):
-        self.url = f"{settings.WORKSHOP_URL}/tasks"
+        self.rabbit_rpc_client = RabbitMQRPCClient()
 
     async def get_all_tasks(self):
-        async with httpx.AsyncClient() as client:
-            response = await client.get(self.url)
-
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail="Failed to fetch tasks"
-                )
-            
-            return response.json()
+        try:
+            response = await self.rabbit_rpc_client.call("tasks.get_all", json.dumps({}))
+            return json.loads(response)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error fetching tasks: {str(e)}")
         
     async def get_task_by_id(self, task_id: int):
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{self.url}/{task_id}")
-            
-            if response.status_code!= 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail="Failed to fetch task"
-                )
-            
-            return response.json()
-
+        try:
+            response = await self.rabbit_rpc_client.call("tasks.get", json.dumps({"task_id": task_id}))
+            return json.loads(response)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error fetching task {task_id}: {str(e)}")
+        
     async def change_status(self, task_id: int, status: str):
-        async with httpx.AsyncClient() as client:
-            response = await client.put(
-                f"{self.url}/{task_id}",
-                json={"status": status}
-            )
-            
-            if response.status_code!= 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail="Failed to change task status"
-                )
-            
-            return response.json()
+        try:
+            response = await self.rabbit_rpc_client.call("tasks.update", json.dumps({"task_id": task_id, "status": status}))
+            return json.loads(response)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error changing status of task {task_id}: {str(e)}")
+        
+
+    
