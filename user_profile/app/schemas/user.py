@@ -30,7 +30,6 @@ class ProfileCreateSchema(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
-    id: Optional[int]
     NameIRL: Optional[str] = None
     email: Optional[str] = None
     Surname: Optional[str] = None
