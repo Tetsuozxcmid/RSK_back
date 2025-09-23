@@ -12,6 +12,7 @@ class ProfileResponse(BaseModel):
     Description: Optional[str] = None
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
+    Organization: Optional[str] = None
     
 
     class Config:
@@ -26,6 +27,7 @@ class ProfileCreateSchema(BaseModel):
     Description: Optional[str] = None
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
+    Organization: Optional[str] = None
     
 
 
@@ -37,4 +39,5 @@ class ProfileUpdate(BaseModel):
     Description: Optional[str] = None
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
+    Organization: Optional[str] = None
     

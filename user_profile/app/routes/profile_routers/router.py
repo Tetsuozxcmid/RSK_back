@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +8,8 @@ from db.models.user import User
 from db.session import get_db
 from cruds.profile_crud import ProfileCRUD
 from services.grabber import get_current_user
-
+from services.parser import org_parser
+import json
 
 router = APIRouter(prefix='/profile_interaction')
 
@@ -29,9 +30,13 @@ async def get_my_profile(
 async def update_my_profile(
     update_data: ProfileUpdate,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user)
-):
+    user_id: int = Depends(get_current_user)):
+
     return await ProfileCRUD.update_my_profile(db, update_data, user_id)
+
+@profile_management_router.get("/get_orgs/")
+async def get_orgs(skip: int = 0,limit: int = 50,search: str = None):
+    return org_parser.get_organizations(skip=skip,limit=limit,search=search)
 
 
 @profile_batch_router.post("/get_users_batch")

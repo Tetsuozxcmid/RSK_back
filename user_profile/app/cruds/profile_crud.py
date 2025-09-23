@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.models.user import User
 from fastapi import HTTPException
 from schemas.user import ProfileResponse, ProfileUpdate
+from services.parser import org_parser
 
 
 class ProfileCRUD:
@@ -21,7 +22,8 @@ class ProfileCRUD:
             Patronymic=profile_data.Patronymic,
             Description=profile_data.Description,
             Region=profile_data.Region,
-            Type=profile_data.Type
+            Type=profile_data.Type,
+            Organization=profile_data.Organization
         )
 
         db.add(new_profile)
@@ -60,9 +62,12 @@ class ProfileCRUD:
             raise HTTPException(
                 status_code=404, detail="Profile not found"
             )
+    
         
         update_dict = update_data.dict(exclude_unset=True)
-        for field in ["NameIRL", "Surname", "Patronymic", "Description", "Region"]:
+        
+        
+        for field in ["NameIRL", "Surname", "Patronymic", "Description", "Region","Organization","email"]:
             if field in update_dict:
                 setattr(existing_profile, field, update_dict[field])
 
