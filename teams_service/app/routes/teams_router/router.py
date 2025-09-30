@@ -123,6 +123,24 @@ async def get_team_by_org(org_id: int, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"not found")
 
+@team_membership_router.delete('/leave_team/{team_id}')
+async def leave_team(
+    team_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    user_id = await get_current_user(request)
+    try:
+        result = await TeamCRUD.leave_team(db, team_id, user_id)
+        return result
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server error: {str(e)}"
+        )
+
 
 router.include_router(team_management_router)
 router.include_router(team_membership_router)

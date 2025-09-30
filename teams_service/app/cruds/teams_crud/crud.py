@@ -109,6 +109,9 @@ class TeamCRUD:
         if not team:
             raise HTTPException(status_code=404, detail="Team not found")
         
+        if team.number_of_members is None:
+            team.number_of_members = 0
+
         if team.number_of_members >= 4:
             raise HTTPException(
                 status_code=400,
