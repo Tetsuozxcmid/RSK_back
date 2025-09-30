@@ -8,8 +8,10 @@ class Team(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    direction = Column(Enum(DirectionEnum), nullable=False)
-    city = Column(String)
+    direction = Column(Enum(DirectionEnum), nullable=True)
+    Description = Column(String,nullable=True)
+    points = Column(String,nullable=True)
+    task_completed = Column(String,nullable=True)
     region = Column(String)
     organization_id = Column(Integer)
     organization_name = Column(String)
