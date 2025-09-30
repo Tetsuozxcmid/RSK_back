@@ -4,9 +4,7 @@ from db.models.teams_enums.enums import DirectionEnum
 
 class TeamRegister(BaseModel):
     name: str = Field(..., title="Название команды")
-    description: str = Field(...,title="Описание команды")
-    points: str = Field(...,title="Очки команды")
-    task_completed: int = Field(...,title="Количество сделанных задач")
+    direction: DirectionEnum = Field(..., title="Направление команды")
     region: str = Field(..., title="Регион")
     organization_name: str = Field(...,title="Организация")
     
