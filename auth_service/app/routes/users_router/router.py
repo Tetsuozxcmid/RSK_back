@@ -119,13 +119,15 @@ async def confirm_email(
     try:
         channel = await rabbitmq.channel()
         exchange = await channel.declare_exchange("user_events", type="direct", durable=True)
+        role_value=user.role.value if hasattr(user.role,"value") else str(user.role)
 
         user_data_message = {
             "user_id": user.id,
             "email": user.email,  
             "username": user.name,
             "is_verified": True,
-            "event_type": "user_verified"
+            "event_type": "user_verified",
+            "role":role_value
         }
         message = aio_pika.Message(
             body=json.dumps(user_data_message).encode(),

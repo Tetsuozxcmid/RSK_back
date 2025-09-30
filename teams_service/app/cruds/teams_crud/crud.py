@@ -6,33 +6,39 @@ from db.models.teams import Team
 from db.models.team_members import TeamMember
 from fastapi import HTTPException
 from services.bot_client import BotClient
+import logging
 
 class TeamCRUD:
     @staticmethod
     async def create_team(db: AsyncSession, team_data, leader_id: int):
+        logging.info(f"User {leader_id} is trying to create team '{team_data.name}' in org '{team_data.organization_name}'")
         try:
+            
             existing_member = await db.execute(
-            select(TeamMember).where(TeamMember.user_id == leader_id)
-        )
+                select(TeamMember).where(TeamMember.user_id == leader_id)
+            )
             if existing_member.scalar_one_or_none():
+                logging.info(f"User {leader_id} already belongs to a team")
                 raise HTTPException(
                     status_code=400,
-                    detail="You already got a team, leave from current team to create a new one"
+                    detail="You already have a team. Leave your current team to create a new one"
                 )
 
-        
+            
             existing_team = await db.execute(
                 select(Team).where(Team.name == team_data.name)
             )
             if existing_team.scalar_one_or_none():
+                logging.info(f"Team '{team_data.name}' already exists")
                 raise HTTPException(
                     status_code=400,
                     detail="Team already exists"
                 )
-        
-        
+
+            
             org_exists = await OrgsClient.check_organization_exists(team_data.organization_name)
             if not org_exists:
+                logging.info(f"Organization '{team_data.organization_name}' does not exist. Sending request to admin bot.")
                 await BotClient.send_team_request_to_bot(
                     leader_id=leader_id,
                     team_name=team_data.name,
@@ -42,12 +48,11 @@ class TeamCRUD:
                     status_code=400,
                     detail="Organization doesn't exist. Admin notification sent, check later"
                 )
-        
-       
+
+            
             new_team = Team(
                 name=team_data.name,
                 direction=team_data.direction,
-                city=team_data.city,
                 region=team_data.region,
                 leader_id=leader_id,
                 organization_name=team_data.organization_name,
@@ -55,6 +60,7 @@ class TeamCRUD:
             db.add(new_team)
             await db.commit()
             await db.refresh(new_team)
+            logging.info(f"Team '{new_team.name}' successfully created with ID {new_team.id}")
 
             
             team_member = TeamMember(
@@ -64,19 +70,24 @@ class TeamCRUD:
             )
             db.add(team_member)
             await db.commit()
+            logging.info(f"User {leader_id} added as leader to team '{new_team.name}'")
 
             return new_team
 
-        except HTTPException:
+        except HTTPException as he:
             
-            raise
+            await db.rollback()
+            logging.warning(f"HTTPException during team creation: {he.detail}")
+            raise he
+
         except Exception as e:
             
             await db.rollback()
+            logging.error(f"Failed to create team due to unexpected error: {str(e)}", exc_info=True)
             raise HTTPException(
                 status_code=500,
                 detail=f"Error while registering team: {str(e)}"
-            ) from e
+            )
 
         
     

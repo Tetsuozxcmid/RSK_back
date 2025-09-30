@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     ADMIN_IDS: str
     ADMIN_SECRET_KEY: str
     RSK_ORGS_URL: str
-    GROUP_CHAT_ID: str
+    
 
     @property
     def admin_ids(self) -> List[int]:

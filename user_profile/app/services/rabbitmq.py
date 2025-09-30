@@ -8,6 +8,11 @@ from db.session import async_session_maker
 from sqlalchemy import insert, select
 import json
 
+ROLE_MAPPING = {
+        "student":UserEnum.Student,
+        "teacher":UserEnum.Teacher,
+}
+
 async def consume_user_created_events(rabbitmq_url: str):
     while True:
         try:
@@ -22,10 +27,17 @@ async def consume_user_created_events(rabbitmq_url: str):
                     async for message in queue_iter:
                         try:
                             data = json.loads(message.body.decode())
-                            user_id = data["user_id"]
-                            email = data["email"]
-                            username = data["username"]
-                            role = data["role"]
+                            user_id = data.get("user_id")
+                            email = data.get("email","")
+                            username = data.get("username","")
+                            role_raw = data.get("role","")
+                            if not isinstance(role_raw,str):
+                                role_str = str(role_raw).lower()
+                            else:
+                                role_str = role_raw.lower()
+                            if role_str not in ROLE_MAPPING:
+                                continue
+                            user_role = ROLE_MAPPING[role_str]
                             async with async_session_maker() as session:
                                 
                                 result = await session.execute(select(User).where(User.id == user_id))
@@ -39,7 +51,7 @@ async def consume_user_created_events(rabbitmq_url: str):
                                         NameIRL="",
                                         email=email,
                                         Surname="",
-                                        Role=role
+                                        Type=user_role
                                     )
 
                                     session.add(new_profile)
