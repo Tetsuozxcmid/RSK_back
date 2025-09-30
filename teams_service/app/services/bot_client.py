@@ -1,23 +1,27 @@
+# services/bot_client.py
 import httpx
-from fastapi import HTTPException
-from config import settings
-
+import logging
+import asyncio
 
 class BotClient:
+    BOT_URL = "http://admin_bot:8009/team-requests"  # контейнерное имя и порт
+
     @staticmethod
     async def send_team_request_to_bot(leader_id: int, team_name: str, org_name: str):
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{settings.RSK_BOT_URL}/team-requests",
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post(
+                    BotClient.BOT_URL,
                     json={
                         "leader_id": leader_id,
                         "team_name": team_name,
-                        "org_name": org_name,
-                    },
-                    timeout=5.0,
+                        "org_name": org_name
+                    }
                 )
-                return response.status_code == 200
+                if resp.status_code == 200:
+                    logging.info(f"✅ Team request sent to bot successfully: {team_name}, org: {org_name}")
+                else:
+                    logging.error(f"❌ Failed to send team request: {resp.status_code} - {resp.text}")
         except Exception as e:
-            print(f"Error sending request to bot: {str(e)}")
-            return False
+            logging.error(f"Exception sending team request to bot: {e}")
+
