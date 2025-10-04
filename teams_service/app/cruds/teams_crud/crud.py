@@ -56,6 +56,9 @@ class TeamCRUD:
                 region=team_data.region,
                 leader_id=leader_id,
                 organization_name=team_data.organization_name,
+                points=team_data.points,
+                description=team_data.description,
+                tasks_completed=team_data.tasks_completed
             )
             db.add(new_team)
             await db.commit()

@@ -5,19 +5,29 @@ import enum
 from db.base import Base
 
 class TaskStatus(enum.Enum):
-    NOT_STARTED = "not_started"
-    IN_PROGRESS = "in_progress"
-    SUBMITTED = "submitted"    
-    ACCEPTED = "accepted"      
-    REJECTED = "rejected"
+    NOT_STARTED = "NOT_STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    SUBMITTED = "SUBMITTED"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
 
 class CategoryEnum(enum.Enum):
-    KNOWLEDGE = "Знания"
-    INTERACTION = "Взаимодействие"
-    ENVIRONMENT = "Среда"
-    PROTECTION = "Защита"
-    DATA = "Данные"
-    AUTOMATION = "Автоматизация"
+    KNOWLEDGE = "KNOWLEDGE"
+    INTERACTION = "INTERACTION"
+    ENVIRONMENT = "ENVIRONMENT"
+    PROTECTION = "PROTECTION"
+    DATA = "DATA"
+    AUTOMATION = "AUTOMATION"
+
+
+CATEGORY_LABELS = {
+    CategoryEnum.KNOWLEDGE: "Знания",
+    CategoryEnum.INTERACTION: "Взаимодействие",
+    CategoryEnum.ENVIRONMENT: "Среда",
+    CategoryEnum.PROTECTION: "Защита",
+    CategoryEnum.DATA: "Данные",
+    CategoryEnum.AUTOMATION: "Автоматизация"
+}
 
 
 
@@ -27,16 +37,17 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
+
     description = Column(Text)
     organization_name = Column(String)
 
-
     star_index = Column(Integer, nullable=False, default=0)
-    star_category = Column(Enum(CategoryEnum), nullable=False)
-
+    star_category = Column(
+    Enum(CategoryEnum, name="categoryenum"),  
+    nullable=False
+)
 
     level_number = Column(Integer, nullable=False, default=1)
-
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
 
 class Task(Base):

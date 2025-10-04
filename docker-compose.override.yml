@@ -168,6 +168,39 @@ services:
       - ./admin_service/.env
     networks:
       - shared_network
+
+  rsk_projects_app:
+    build: ./projects_service
+    depends_on:
+      rsk_projects_db:
+        condition: service_healthy
+    restart: on-failure
+    ports:
+      - "8010:8010"
+    env_file:
+      - ./projects_service/.env
+    networks:
+      - shared_network
+    
+
+  rsk_projects_db:
+    image: postgres:17-alpine
+    volumes:
+      - projects_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5437:5432"
+    environment:
+      POSTGRES_USER: ${DB_PROJECTS_USER}
+      POSTGRES_PASSWORD: ${DB_PROJECTS_PASSWORD}
+      POSTGRES_DB: ${DB_PROJECTS_NAME}
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared_network
     
 
 volumes:
@@ -175,6 +208,7 @@ volumes:
   profile_postgres_data:
   teams_postgres_data:
   orgs_postgres_data:
+  projects_postgres_data:
 
 networks:
   shared_network:
