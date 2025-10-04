@@ -4,7 +4,7 @@ import logging
 import asyncio
 
 class BotClient:
-    BOT_URL = "http://admin_bot:8009/team-requests"  # контейнерное имя и порт
+    BOT_URL = "http://admin_bot:8009/team-requests"  
 
     @staticmethod
     async def send_team_request_to_bot(leader_id: int, team_name: str, org_name: str):
