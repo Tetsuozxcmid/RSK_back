@@ -7,7 +7,10 @@ class Settings(BaseSettings):
     DB_PASS: int
     DB_NAME: str
     
-    
+    SECRET_KEY: str
+    ALGORITHM: str
+
+    TEAMS_SERVICE_URL: str
 
     @property
     def DATABASE_URL(self):

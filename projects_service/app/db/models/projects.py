@@ -30,8 +30,6 @@ CATEGORY_LABELS = {
 }
 
 
-
-
 class Project(Base):
     __tablename__ = "projects"
 

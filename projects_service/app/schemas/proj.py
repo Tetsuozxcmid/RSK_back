@@ -68,9 +68,6 @@ class TaskBase(BaseModel):
     materials: Optional[List[dict]] = []
 
 
-class TaskCreate(TaskBase):
-    project_id: int
-
 
 class TaskRead(TaskBase):
     id: int
@@ -110,6 +107,25 @@ class TaskSubmissionRead(TaskSubmissionBase):
 class TaskStartRequest(BaseModel):
     team_id: int
     leader_id: int
+
+class TaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    prize_points: Optional[int] = 0
+    materials: Optional[List[dict]] = []
+
+class TaskOut(BaseModel):
+    id: int
+    project_id: int
+    title: str
+    description: Optional[str]
+    prize_points: int
+    materials: list
+    status: str
+
+    class Config:
+        from_attributes = True
+    
 
 
 
