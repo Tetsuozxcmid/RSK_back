@@ -1,6 +1,6 @@
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.models.course import Course
+from app.db.models.course import Course
 from typing import List, Optional
 
 
@@ -21,4 +21,7 @@ class CourseCRUD:
         await db.commit()
         await db.refresh(course)
         return course
+
+
+course_crud = CourseCRUD()
 
