@@ -12,4 +12,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(courses_router)
+app.include_router(courses_router, prefix="/learning")
