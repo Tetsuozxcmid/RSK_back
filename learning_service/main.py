@@ -3,7 +3,7 @@ from app.routes.coures_routes.route import router as courses_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
-app = FastAPI(title="Learning Service", version="1.0.0", docs_url="/learning/docs")
+app = FastAPI(title="Learning Service", version="1.0.0", docs_url="/learning/docs", openapi_url="/learning/openapi.json")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],  
