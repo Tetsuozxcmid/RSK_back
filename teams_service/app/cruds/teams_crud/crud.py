@@ -24,7 +24,6 @@ class TeamCRUD:
                     detail="You already have a team. Leave your current team to create a new one"
                 )
 
-            
             existing_team = await db.execute(
                 select(Team).where(Team.name == team_data.name)
             )
@@ -35,8 +34,8 @@ class TeamCRUD:
                     detail="Team already exists"
                 )
 
-            
             org_exists = await OrgsClient.check_organization_exists(team_data.organization_name)
+            org_id = await OrgsClient.get_organization_info(team_data.organization_name)
             if not org_exists:
                 logging.info(f"Organization '{team_data.organization_name}' does not exist. Sending request to admin bot.")
                 await BotClient.send_team_request_to_bot(
@@ -49,17 +48,18 @@ class TeamCRUD:
                     detail="Organization doesn't exist. Admin notification sent, check later"
                 )
 
-            
             new_team = Team(
                 name=team_data.name,
                 direction=team_data.direction,
                 region=team_data.region,
                 leader_id=leader_id,
                 organization_name=team_data.organization_name,
+                organization_id=org_id["id"],
                 points=team_data.points,
                 description=team_data.description,
                 tasks_completed=team_data.tasks_completed
             )
+            
             db.add(new_team)
             await db.commit()
             await db.refresh(new_team)
@@ -166,7 +166,7 @@ class TeamCRUD:
             raise HTTPException(status_code=400, detail="You are not a member of this team")
         
         try:
-            
+
             if team and team.number_of_members is not None and team.number_of_members > 0:
                 team.number_of_members -= 1
 

@@ -3,6 +3,43 @@ from fastapi import HTTPException
 from config import settings
 
 class OrgsClient:
+
+    @staticmethod
+    async def get_organization_info(org_name: str):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{settings.RSK_ORGS_URL}/organizations/info/{org_name}",
+                    timeout=5.0
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    return {
+                        "id": data.get("id"),
+                        "name": data.get("name"),
+                        "exists": True
+                    }
+
+                if response.status_code == 404:
+                    return {"id": None, "name": org_name, "exists": False}
+
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Organization service error: {response.text}"
+                )
+
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=503,
+                detail="Organization service is unavailable"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error retrieving organization info: {str(e)}"
+            )
+        
     @staticmethod
     async def check_organization_exists(org_name: str):
         try:
