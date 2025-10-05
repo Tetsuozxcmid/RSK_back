@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer, String, Boolean
-from db.base import Base
+from app.db.base import Base
 
 
 class Course(Base):
