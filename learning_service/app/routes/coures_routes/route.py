@@ -5,7 +5,7 @@ from app.crud.course_crud.crud import course_crud
 from app.schemas.course import CourseResponse, CourseUpdate
 from typing import List
 
-router = APIRouter(prefix="/courses", tags=["courses"])
+router = APIRouter(tags=["courses"])
 
 @router.get("/", response_model=List[CourseResponse])
 async def get_courses(db: AsyncSession = Depends(get_db)):
