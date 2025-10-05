@@ -166,6 +166,10 @@ class TeamCRUD:
             raise HTTPException(status_code=400, detail="You are not a member of this team")
         
         try:
+            
+            if team and team.number_of_members is not None and team.number_of_members > 0:
+                team.number_of_members -= 1
+
             await db.delete(team_member)
             await db.commit()
             return {"message": "Successfully left the team"}
