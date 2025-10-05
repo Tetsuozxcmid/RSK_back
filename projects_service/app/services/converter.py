@@ -1,5 +1,6 @@
 from db.models.projects import CategoryEnum
 
+'''мапа категорий для енума проекта'''
 
 CATEGORY_MAP = {
     "Знания": CategoryEnum.KNOWLEDGE,
