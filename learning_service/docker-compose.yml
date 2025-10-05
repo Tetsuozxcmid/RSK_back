@@ -3,7 +3,7 @@ services:
   rsk_learning_app:
     build: .
     depends_on:
-      rsk_learning_app:
+      rsk_learning_db:
         condition: service_healthy
     restart: on-failure
     env_file:
