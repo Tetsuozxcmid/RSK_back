@@ -31,7 +31,3 @@ class User(Base):
     team: Mapped[str] = mapped_column(String(100), nullable=True, default="")
     team_id: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
     
-
-    
-
-    
