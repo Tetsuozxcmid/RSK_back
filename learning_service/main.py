@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.routes.coures_routes.route import router as courses_router
-from learning_service.app.routes.submissons_routes.route import router as submissions_router
+from app.routes.submissons_routes.route import router as submissions_router
+
 from fastapi.middleware.cors import CORSMiddleware
 
 
