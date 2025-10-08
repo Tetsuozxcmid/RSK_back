@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from app.routes.coures_routes.route import router as courses_router
+from app.routes.submissons_routes.route import router as submissions_router
+
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -13,3 +15,4 @@ app.add_middleware(
 )
 
 app.include_router(courses_router, prefix="/learning")
+app.include_router(submissions_router, prefix="/learning")
