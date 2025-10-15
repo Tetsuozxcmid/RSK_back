@@ -9,6 +9,8 @@ from app.config import settings
 from app.db.base import Base
 
 from app.db.models.course import Course
+from app.db.models.submission import Submission
+from app.db.models.user_progress import UserProgress
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
