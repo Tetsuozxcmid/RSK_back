@@ -105,6 +105,7 @@ services:
       - "traefik.http.routers.teams.entrypoints=websecure"
       - "traefik.http.routers.teams.tls.certresolver=le"
       - "traefik.http.services.teams.loadbalancer.server.port=8004"
+    
 
   rsk_teams_db:
     image: postgres:17-alpine
