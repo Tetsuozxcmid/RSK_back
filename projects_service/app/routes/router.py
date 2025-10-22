@@ -1,12 +1,13 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
+from services.teams_client import TeamsClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db
 from cruds.crud import ZvezdaCRUD
 from services.service import get_current_user
 from schemas.proj import (
     ProjectCreate, ProjectRead, TaskCreate, TaskOut,
-    TaskRead, TaskStartRequest, TaskSubmissionRead
+    TaskRead, TaskStartRequest, TaskSubmissionRead, TaskSubmitRequest
 )
 
 router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
@@ -67,12 +68,19 @@ async def start_task(task_id: int, request: Request, db: AsyncSession = Depends(
 @router.post("/tasks/{task_id}/submit")
 async def submit_task(
     task_id: int,
-    data: TaskSubmissionRead,
-    db: AsyncSession = Depends(get_db)
+    request: Request,  
+    data: TaskSubmitRequest,  
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)  
 ):
+    is_leader, team_id = await TeamsClient.is_user_team_leader(request)
+    if not is_leader:
+        raise HTTPException(status_code=403, detail="Only team leaders can submit tasks")
+    
     submission = await ZvezdaCRUD.submit_task(
-        db, task_id,
-        team_id=data.team_id,
+        db, 
+        task_id=task_id,
+        team_id=team_id,
         text_description=data.text_description,
         result_url=data.result_url
     )

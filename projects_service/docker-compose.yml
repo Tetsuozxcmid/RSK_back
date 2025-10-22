@@ -25,9 +25,9 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 2305
-      POSTGRES_DB: test_orgs
+      POSTGRES_DB: rsk_projects
     ports:
-      - "5437:5432"
+      - "5438:5432"
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]

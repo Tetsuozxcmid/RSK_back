@@ -31,6 +31,11 @@ CATEGORY_MAP = {
     "Автоматизация": CategoryEnum.AUTOMATION
 }
 
+class TaskSubmitRequest(BaseModel):
+    team_id: int
+    text_description: Optional[str] = None
+    result_url: Optional[str] = None
+
 
 class ProjectBase(BaseModel):
     title: str

@@ -8,7 +8,6 @@ from db.models.projects import Project, Task, TaskSubmission, TaskStatus
 
 class ZvezdaCRUD:
 
-    # === PROJECTS ===
     @staticmethod
     async def create_project(db: AsyncSession, project_data):
         project = Project(
@@ -50,7 +49,7 @@ class ZvezdaCRUD:
         result = await db.execute(query)
         return result.scalars().all()
 
-    # === TASKS ===
+    
     @staticmethod
     async def create_task(db: AsyncSession, task_data, project_id: int):
         project = await ZvezdaCRUD.get_project(db, project_id)
@@ -121,6 +120,7 @@ class ZvezdaCRUD:
             result_url=result_url,
             status=TaskStatus.SUBMITTED
         )
+        
         task.status = TaskStatus.SUBMITTED
         db.add(submission)
         db.add(task)

@@ -38,8 +38,6 @@ services:
 
   rsk_auth_db:
     image: postgres:17-alpine
-    ports:
-      - "5432:5432"
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
     environment:
