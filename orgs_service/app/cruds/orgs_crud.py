@@ -1,5 +1,6 @@
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func
 from db.models.orgs import Orgs
 from fastapi import HTTPException
 from schemas import OrgCreateSchema
@@ -8,39 +9,21 @@ from schemas import OrgCreateSchema
 class OrgsCRUD:
     @staticmethod
     async def get_org_by_name(db: AsyncSession, org_name: str):
-        result = await db.execute(select(Orgs).where(Orgs.name == org_name))
-        org = result.scalar_one_or_none()
+        
+        result = await db.execute(
+            select(Orgs).where(func.lower(func.trim(Orgs.name)) == org_name.lower().strip())
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_org(db: AsyncSession, org_name: str):
+        org = await OrgsCRUD.get_org_by_name(db, org_name)
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
         return org
 
-        if not org:
-            raise HTTPException(status_code=404, detail="Org not found")
+    @staticmethod
+    async def get_orgs_paginated(db: AsyncSession, skip: int = 0, limit: int = 10):
+        result = await db.execute(select(Orgs).offset(skip).limit(limit))
+        return result.scalars().all()
 
-        return {"name": Orgs.name}
-
-    async def add_org_by_name(db: AsyncSession, data: OrgCreateSchema):
-
-        existing_org = await db.execute(select(Orgs).where(Orgs.name == data.name))
-        if existing_org.scalar_one_or_none():
-            raise HTTPException(
-                status_code=400, detail="Organization with this name already exists"
-            )
-
-        new_org = Orgs(
-            name=data.name,
-        )
-
-        db.add(new_org)
-
-        try:
-            await db.commit()
-            await db.refresh(new_org)
-            return new_org
-        except Exception as e:
-            await db.rollback()
-            raise HTTPException(
-                status_code=500,
-                detail=f"Database error while creating organization: {str(e)}",
-            )
-        except Exception as e:
-            await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")

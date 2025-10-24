@@ -143,13 +143,14 @@ services:
     image: postgres:17-alpine
     volumes:
       - orgs_postgres_data:/var/lib/postgresql/data
+      - ./orgs_service/initdb:/docker-entrypoint-initdb.d  
     ports:
       - "5436:5432"
     environment:
       POSTGRES_USER: ${DB_ORGS_USER}
       POSTGRES_PASSWORD: ${DB_ORGS_PASSWORD}
       POSTGRES_DB: ${DB_ORGS_NAME}
-    restart: always
+    restart: on-failure
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
