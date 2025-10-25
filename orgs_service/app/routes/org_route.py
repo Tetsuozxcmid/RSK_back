@@ -1,4 +1,3 @@
-# routers/orgs_router.py
 from http.client import HTTPException
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +19,7 @@ async def get_organization(org_name: str, db: AsyncSession = Depends(get_db)):
     org = await OrgsCRUD.get_org(db, org_name)
     return {"id": org.id, "name": org.name}
 
-@router.get("/{org_id}")
+@router.get("/org-id/{org_id}")
 async def get_organization_by_id(org_id: int, db: AsyncSession = Depends(get_db)):
     org = await OrgsCRUD.get_org_by_id(db, org_id)
     return {"id": org.id, "name": org.name}
