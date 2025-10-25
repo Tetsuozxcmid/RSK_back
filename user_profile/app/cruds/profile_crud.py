@@ -1,9 +1,10 @@
+import logging
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models.user import User
 from fastapi import HTTPException
-from schemas.user import ProfileResponse, ProfileUpdate
+from schemas.user import ProfileResponse, ProfileUpdate,ProfileJoinedTeamUpdate
 from services.parser import org_parser
 
 
@@ -108,3 +109,33 @@ class ProfileCRUD:
             raise HTTPException(
                 status_code=500, detail=f"Error while updating profile: {str(e)}"
             )
+        
+
+    @staticmethod
+    async def update_profile_joined_team(db: AsyncSession, user_id: int, team_name: str, team_id: int):
+        
+        
+        result = await db.execute(select(User).where(User.id == user_id))
+        existing_profile = result.scalar_one_or_none()
+
+        if not existing_profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+
+        existing_profile.team = team_name
+        existing_profile.team_id = team_id
+
+        try:
+            await db.commit()
+            await db.refresh(existing_profile)
+            logging.info(f"User {user_id} joined team '{team_name}' (ID: {team_id})")
+            return existing_profile
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500, detail=f"Error while updating profile: {str(e)}"
+            )
+        
+
+
+
+        

@@ -13,6 +13,8 @@ class ProfileResponse(BaseModel):
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
     Organization: Optional[str] = None
+    team: Optional[str] = None  
+    team_id: Optional[int] = None  
     
 
     class Config:
@@ -40,4 +42,10 @@ class ProfileUpdate(BaseModel):
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
     Organization: Optional[str] = None
+
+class ProfileJoinedTeamUpdate(BaseModel):
+    user_id: int  
+    team: Optional[str] = None
+    team_id: Optional[int] = None
+
     

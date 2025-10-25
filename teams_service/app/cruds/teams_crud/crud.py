@@ -13,7 +13,6 @@ class TeamCRUD:
     async def create_team(db: AsyncSession, team_data, leader_id: int):
         logging.info(f"User {leader_id} is trying to create team '{team_data.name}' in org '{team_data.organization_name}'")
         try:
-            
             existing_member = await db.execute(
                 select(TeamMember).where(TeamMember.user_id == leader_id)
             )
@@ -66,7 +65,6 @@ class TeamCRUD:
             await db.refresh(new_team)
             logging.info(f"Team '{new_team.name}' successfully created with ID {new_team.id}")
 
-            
             team_member = TeamMember(
                 team_id=new_team.id,
                 user_id=leader_id,
@@ -76,16 +74,20 @@ class TeamCRUD:
             await db.commit()
             logging.info(f"User {leader_id} added as leader to team '{new_team.name}'")
 
+
+            await UserProfileClient.update_user_team(
+                user_id=leader_id,
+                team_name=new_team.name,
+                team_id=new_team.id
+            )
+
             return new_team
 
         except HTTPException as he:
-            
             await db.rollback()
             logging.warning(f"HTTPException during team creation: {he.detail}")
             raise he
-
         except Exception as e:
-            
             await db.rollback()
             logging.error(f"Failed to create team due to unexpected error: {str(e)}", exc_info=True)
             raise HTTPException(
@@ -100,7 +102,7 @@ class TeamCRUD:
         existing_membership = await db.execute(
             select(TeamMember).where(TeamMember.user_id == user_id)
         )
-    
+
         if existing_membership.scalar_one_or_none():
             raise HTTPException(
                 status_code=400,
@@ -122,7 +124,6 @@ class TeamCRUD:
                 detail="Team is full. Maximum 4 members allowed."
             )
         
-        
         team_member = TeamMember(
             team_id=team_id,
             user_id=user_id,
@@ -130,11 +131,16 @@ class TeamCRUD:
         )
 
         db.add(team_member)
-        
         team.number_of_members += 1
         
         try:
             await db.commit()
+            await UserProfileClient.update_user_team(
+                user_id=user_id,
+                team_name=team.name,
+                team_id=team_id
+            )
+            
             return {"message": "Successfully joined the team"}
         except Exception as e:
             await db.rollback()
@@ -144,7 +150,7 @@ class TeamCRUD:
             )
         
     @staticmethod
-    async def leave_team(db: AsyncSession, team_id: int ,user_id: int ):
+    async def leave_team(db: AsyncSession, team_id: int, user_id: int):
         team_result = await db.execute(select(Team).where(Team.id == team_id))
         team = team_result.scalar_one_or_none()
         
@@ -153,7 +159,6 @@ class TeamCRUD:
                 status_code=400,
                 detail="Team leader cannot leave the team. Transfer leadership first or delete the team."
             )
-        
         
         result = await db.execute(
             select(TeamMember).where(
@@ -167,12 +172,18 @@ class TeamCRUD:
             raise HTTPException(status_code=400, detail="You are not a member of this team")
         
         try:
-
             if team and team.number_of_members is not None and team.number_of_members > 0:
                 team.number_of_members -= 1
 
             await db.delete(team_member)
             await db.commit()
+            
+            await UserProfileClient.update_user_team(
+                user_id=user_id,
+                team_name="",  
+                team_id=0      
+            )
+            
             return {"message": "Successfully left the team"}
         except Exception as e:
             await db.rollback()
@@ -251,23 +262,31 @@ class TeamCRUD:
 
     @staticmethod
     async def delete_team(db: AsyncSession, team_id: int): 
-        
-        result = await db.execute(
-            select(Team).where(Team.id == team_id)  
-        )
+        result = await db.execute(select(Team).where(Team.id == team_id))
         team = result.scalar_one_or_none()
         
-        
-        if team is None:  
+        if team is None:
             raise HTTPException(
                 status_code=404,
                 detail=f"Team with id {team_id} not found"
             )
         
-        
         try:
+            members_result = await db.execute(
+                select(TeamMember).where(TeamMember.team_id == team_id)
+            )
+            members = members_result.scalars().all()
+
             await db.delete(team)
             await db.commit()
+            
+            for member in members:
+                await UserProfileClient.update_user_team(
+                    user_id=member.user_id,
+                    team_name="",
+                    team_id=0
+                )
+            
             return True
         except Exception as e:
             await db.rollback()
