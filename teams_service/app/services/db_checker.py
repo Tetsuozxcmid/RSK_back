@@ -40,6 +40,8 @@ class OrgsClient:
                 detail=f"Error retrieving organization info: {str(e)}"
             )
         
+    
+        
     @staticmethod
     async def check_organization_exists(org_name: str):
         try:

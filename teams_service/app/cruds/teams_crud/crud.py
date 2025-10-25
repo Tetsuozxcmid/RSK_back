@@ -27,6 +27,7 @@ class TeamCRUD:
             existing_team = await db.execute(
                 select(Team).where(Team.name == team_data.name)
             )
+            
             if existing_team.scalar_one_or_none():
                 logging.info(f"Team '{team_data.name}' already exists")
                 raise HTTPException(

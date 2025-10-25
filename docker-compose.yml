@@ -146,6 +146,7 @@ services:
     image: postgres:17-alpine
     volumes:
       - orgs_postgres_data:/var/lib/postgresql/data
+      - ./orgs_service/initdb:/docker-entrypoint-initdb.d  
     environment:
       POSTGRES_USER: ${DB_ORGS_USER}
       POSTGRES_PASSWORD: ${DB_ORGS_PASSWORD}

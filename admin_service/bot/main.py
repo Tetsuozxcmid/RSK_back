@@ -71,23 +71,50 @@ async def handle_team_request(request: Request):
 async def approve_team_request(callback: CallbackQuery):
     try:
         _, team_name, org_name, leader_id = callback.data.split(":")
+        
+        logging.info(f"Creating organization: '{org_name}' for team '{team_name}'")
+        
         async with httpx.AsyncClient() as client:
+           
+            url = f"{admin_settings.RSK_ORGS_URL}/organizations/create"
+            logging.info(f"Making request to: {url}")
+            
             resp = await client.post(
-                f"{admin_settings.RSK_ORGS_URL}/organizations/create/",
+                url,  
                 json={"name": org_name},
                 headers={"X-Admin-Token": admin_settings.ADMIN_SECRET_KEY},
                 timeout=10.0
             )
+            
+            logging.info(f"Response status: {resp.status_code}")
+            logging.info(f"Response text: {resp.text}")
+            
             if resp.status_code not in (200, 201):
-                raise Exception(f"Organization creation failed: {resp.text}")
+                error_detail = resp.text
+                try:
+                    error_data = resp.json()
+                    error_detail = error_data.get("detail", error_data)
+                except:
+                    pass
+                raise Exception(f"Organization creation failed: {error_detail}")
 
-        await callback.message.edit_text("✅ Одобрено администратором")
-        await callback.message.reply("Организация добавлена в БД")
+            
+            org_data = resp.json()
+            logging.info(f"Organization created successfully: {org_data}")
+
+        await callback.message.edit_text(
+            f"✅ Запрос одобрен!\n"
+            f"🏢 Организация: {org_name}\n"
+            f"🏷 Команда: {team_name}\n"
+            f"👤 Лидер: {leader_id}"
+        )
+        
+        
 
     except Exception as e:
-        logging.error(f"Error in approve_team_request: {str(e)}")
+        logging.error(f"Error in approve_team_request: {str(e)}", exc_info=True)
         await callback.answer("❌ Ошибка при обработке запроса")
-        await callback.message.reply("Произошла ошибка при обработке вашего запроса")
+        await callback.message.edit_text(f"❌ Ошибка: {str(e)}")
 
 @dp.callback_query(lambda c: c.data.startswith("reject:"))
 async def reject_team_request(callback: CallbackQuery):
