@@ -13,6 +13,7 @@ class ProfileResponse(BaseModel):
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
     Organization: Optional[str] = None
+    Organization_id: Optional[int] = None
     team: Optional[str] = None  
     team_id: Optional[int] = None  
     
