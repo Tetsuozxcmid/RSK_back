@@ -5,6 +5,7 @@ from sqlalchemy import func
 from db.models.orgs import Orgs
 from fastapi import HTTPException
 from schemas import OrgCreateSchema
+import logging
 
 
 class OrgsCRUD:
@@ -32,8 +33,8 @@ class OrgsCRUD:
         return org
     
     @staticmethod
-    async def get_org_by_id(db: AsyncSession, id: int):
-        result = await db.execute(select(Orgs).where(Orgs.id == id))
+    async def get_org_by_id(db: AsyncSession, org_id: int):
+        result = await db.execute(select(Orgs).where(Orgs.id == org_id))
         org = result.scalar_one_or_none()
         if not org:
             raise HTTPException(status_code=404, detail="Organization not found")
