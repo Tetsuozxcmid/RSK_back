@@ -81,6 +81,12 @@ class TeamCRUD:
                 team_id=new_team.id
             )
 
+            await UserProfileClient.update_user_org(
+                user_id=leader_id,
+                organization_name=new_team.organization_name,
+                organization_id=new_team.organization_id
+            )
+
             return new_team
 
         except HTTPException as he:
@@ -140,6 +146,11 @@ class TeamCRUD:
                 team_name=team.name,
                 team_id=team_id
             )
+            await UserProfileClient.update_user_org(
+                user_id=user_id,
+                organization_name=team.organization_name,
+                organization_id=team.organization_id
+            )
             
             return {"message": "Successfully joined the team"}
         except Exception as e:
@@ -182,6 +193,12 @@ class TeamCRUD:
                 user_id=user_id,
                 team_name="",  
                 team_id=0      
+            )
+
+            await UserProfileClient.update_user_org(
+                user_id=user_id,
+                organization_name="",
+                organization_id=0
             )
             
             return {"message": "Successfully left the team"}

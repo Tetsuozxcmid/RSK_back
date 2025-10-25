@@ -48,4 +48,9 @@ class ProfileJoinedTeamUpdate(BaseModel):
     team: Optional[str] = None
     team_id: Optional[int] = None
 
+class ProfileJoinedOrg(BaseModel):
+    user_id: int
+    Organization: Optional[str] = None
+    Organization_id: Optional[int] = None
+
     

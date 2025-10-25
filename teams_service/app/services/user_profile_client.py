@@ -71,4 +71,37 @@ class UserProfileClient:
             logging.error(f"Error updating user team: {str(e)}")
             return None
         
+
+    @staticmethod
+    async def update_user_org(user_id: int, organization_name: str, organization_id: int):
+        try:
+            async with httpx.AsyncClient() as client:
+                url = f"{settings.USER_PROFILE_URL}/profile_interaction/update_user_profile_joined_org/"
+                logging.info(f"Calling profile service: {url}")
+                
+                response = await client.post(
+                    url,
+                    json={
+                        "user_id": user_id,  
+                        "Organization": organization_name,
+                        "Organization_id": organization_id
+                    },
+                    timeout=5.0,
+                )
+                
+                logging.info(f"Profile service response: {response.status_code} - {response.text}")
+                
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    logging.error(f"Failed to update user team: {response.status_code} - {response.text}")
+                    return None
+                    
+        except Exception as e:
+            logging.error(f"Error updating user team: {str(e)}")
+            return None
+        
+
+        
+        
     

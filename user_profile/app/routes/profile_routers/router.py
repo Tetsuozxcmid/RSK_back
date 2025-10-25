@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, Body
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from schemas.user import ProfileCreateSchema, ProfileResponse, ProfileUpdate, ProfileJoinedTeamUpdate
+from schemas.user import ProfileCreateSchema, ProfileResponse, ProfileUpdate, ProfileJoinedTeamUpdate,ProfileJoinedOrg
 from schemas.user_batch import UserBatchRequest
 from db.models.user import User
 from db.session import get_db
@@ -37,6 +37,20 @@ async def update_user_profile_joined_team(
         user_id=update_data.user_id,  
         team_name=update_data.team,
         team_id=update_data.team_id
+    )
+
+@profile_management_router.post('/update_user_profile_joined_org/')
+async def update_user_profile_joined_org(
+    update_data: ProfileJoinedOrg,  
+    db: AsyncSession = Depends(get_db)
+):
+    
+    logging.info(f" Updating org for user {update_data.user_id}: {update_data}")
+    return await ProfileCRUD.update_profile_joined_org(
+        db=db, 
+        user_id=update_data.user_id,  
+        organization_name=update_data.Organization,
+        organization_id=update_data.Organization_id
     )
 
 @profile_management_router.patch("/update_my_profile/")

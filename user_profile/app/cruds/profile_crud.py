@@ -135,6 +135,30 @@ class ProfileCRUD:
                 status_code=500, detail=f"Error while updating profile: {str(e)}"
             )
         
+    @staticmethod
+    async def update_profile_joined_org(db: AsyncSession, user_id: int, organization_name: str, organization_id: int):
+        
+        
+        result = await db.execute(select(User).where(User.id == user_id))
+        existing_profile = result.scalar_one_or_none()
+
+        if not existing_profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+
+        existing_profile.Organization = organization_name
+        existing_profile.Organization_id = organization_id
+
+        try:
+            await db.commit()
+            await db.refresh(existing_profile)
+            logging.info(f"User {user_id} team is in org '{organization_name}' (ID: {organization_id})")
+            return existing_profile
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500, detail=f"Error while updating profile: {str(e)}"
+            )
+        
 
 
 
