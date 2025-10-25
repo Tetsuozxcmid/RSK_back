@@ -32,6 +32,14 @@ class OrgsCRUD:
         return org
     
     @staticmethod
+    async def get_org_by_id(db: AsyncSession, id: int):
+        result = await db.execute(select(Orgs).where(Orgs.id == id))
+        org = result.scalar_one_or_none()
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        return org
+        
+    @staticmethod
     async def create_org_by_name(db: AsyncSession, org_name: str):
         new_org = Orgs(
                 name=org_name,
