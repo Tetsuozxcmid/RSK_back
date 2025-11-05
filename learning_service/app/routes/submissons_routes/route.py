@@ -3,25 +3,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.crud.submission_crud.crud import submission_crud
 from app.schemas.submission import SubmissionCreate, SubmissionResponse, SubmissionReview
+from app.services.grabber import get_current_user  
 from typing import List
 
 router = APIRouter(tags=["submissions"])
 
-
 @router.post("/submit", response_model=SubmissionResponse)
 async def submit_task(
     submission: SubmissionCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)  
 ):
+    
     return await submission_crud.create_submission(
-        db, submission.user_id, submission.course_id, submission.file_url
+        db, user_id, submission.course_id, submission.file_url
     )
-
 
 @router.get("/pending", response_model=List[SubmissionResponse])
 async def get_pending_submissions(db: AsyncSession = Depends(get_db)):
     return await submission_crud.get_pending_submissions(db)
-
 
 @router.patch("/{submission_id}/review", response_model=SubmissionResponse)
 async def review_submission(
@@ -35,3 +35,11 @@ async def review_submission(
         raise HTTPException(status_code=404, detail="Submission not found")
     
     return submission
+
+@router.get("/my-submissions", response_model=List[SubmissionResponse])
+async def get_my_submissions(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    return await submission_crud.get_user_submissions(db, user_id)
+

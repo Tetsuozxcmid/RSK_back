@@ -30,6 +30,22 @@ class SubmissionCRUD:
         await db.commit()
         await db.refresh(submission)
         return submission
+    
+
+    async def get_user_submissions(self, db: AsyncSession, user_id: int) -> List[Submission]:
+        result = await db.execute(
+            select(Submission).where(Submission.user_id == user_id)
+        )
+        return result.scalars().all()
+
+    async def get_user_submission_by_course(self, db: AsyncSession, user_id: int, course_id: int) -> Optional[Submission]:
+        result = await db.execute(
+            select(Submission).where(
+                Submission.user_id == user_id,
+                Submission.course_id == course_id
+            )
+        )
+        return result.scalar_one_or_none()
 
 
 submission_crud = SubmissionCRUD()

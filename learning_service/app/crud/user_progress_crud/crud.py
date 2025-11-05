@@ -27,6 +27,12 @@ class UserProgressCRUD:
         await db.commit()
         await db.refresh(progress)
         return progress
+    
+    async def get_user_progress_list(self, db: AsyncSession, user_id: int) -> List[UserProgress]:
+        result = await db.execute(
+            select(UserProgress).where(UserProgress.user_id == user_id)
+        )
+        return result.scalars().all()
 
 
 user_progress_crud = UserProgressCRUD()
