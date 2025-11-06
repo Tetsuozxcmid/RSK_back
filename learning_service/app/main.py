@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from app.routes.coures_routes.route import router as courses_router
-from app.routes.submissons_routes.route import router as submissions_router
+from routes.coures_routes.route import router as courses_router
+from routes.submissons_routes.route import router as submissions_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,5 +14,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(courses_router, prefix="/learning")
-app.include_router(submissions_router, prefix="/learning")
+app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
+app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])

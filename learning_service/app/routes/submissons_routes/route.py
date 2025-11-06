@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.session import get_db
-from app.crud.submission_crud.crud import submission_crud
-from app.schemas.submission import SubmissionCreate, SubmissionResponse, SubmissionReview
-from app.services.grabber import get_current_user  
+from db.session import get_db
+from crud.submission_crud.crud import submission_crud
+from schemas.submission import SubmissionCreate, SubmissionResponse, SubmissionReview
+from services.grabber import get_current_user  
 from typing import List
 
 router = APIRouter(tags=["submissions"])

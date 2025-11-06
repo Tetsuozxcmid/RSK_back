@@ -1,6 +1,6 @@
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models.submission import Submission, SubmissionStatus
+from db.models.submission import Submission, SubmissionStatus
 from typing import List, Optional
 
 

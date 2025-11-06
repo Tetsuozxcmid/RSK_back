@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.session import get_db
-from app.crud.course_crud.crud import course_crud
-from app.crud.user_progress_crud.crud import user_progress_crud
-from app.schemas.course import CourseResponse, CourseCreate, CourseUpdate
-from app.schemas.user_progress import UserProgressUpdate, UserProgressResponse
-from app.services.grabber import get_current_user
+from db.session import get_db
+from crud.course_crud.crud import course_crud
+from crud.user_progress_crud.crud import user_progress_crud
+from schemas.course import CourseResponse, CourseCreate, CourseUpdate
+from schemas.user_progress import UserProgressUpdate, UserProgressResponse
+from services.grabber import get_current_user
 from typing import List
 
 router = APIRouter(tags=["courses"])
@@ -27,8 +27,8 @@ async def get_course(course_id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
 async def create_course(
     course_data: CourseCreate,
-    db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user)  
+    db: AsyncSession = Depends(get_db)
+     
 ):
 
     return await course_crud.create_course(db, course_data.dict())
@@ -38,8 +38,8 @@ async def create_course(
 async def update_course(
     course_id: int,
     course_update: CourseUpdate,
-    db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
+    
 ):
     course = await course_crud.update_course(db, course_id, course_update.dict(exclude_unset=True))
     if not course:

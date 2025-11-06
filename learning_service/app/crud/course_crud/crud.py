@@ -1,6 +1,6 @@
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models.course import Course
+from db.models.course import Course
 from typing import List, Optional
 
 
@@ -9,6 +9,10 @@ class CourseCRUD:
     async def get_courses(self, db: AsyncSession) -> List[Course]:
         result = await db.execute(select(Course).limit(10))
         return result.scalars().all()
+    
+    async def get_course_by_id(self, db: AsyncSession, course_id: int) -> Optional[Course]:
+        result = await db.execute(select(Course).where(Course.id == course_id))
+        return result.scalar_one_or_none()
     
     async def create_course(self, db: AsyncSession, course_data: dict) -> Course:
         course = Course(

@@ -1,8 +1,8 @@
 from pydantic import BaseModel
-from app.db.models.submission import SubmissionStatus
+from db.models.submission import SubmissionStatus
 
 class SubmissionCreate(BaseModel):
-    course_id: int  # Убираем user_id - он теперь из токена
+    course_id: int  
     file_url: str
 
 class SubmissionResponse(BaseModel):

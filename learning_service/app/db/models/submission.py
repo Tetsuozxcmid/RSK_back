@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer, String, ForeignKey, Enum as sqlEnum
-from app.db.base import Base
+from db.base import Base
 
-from app.db.models.enums.submission_enum import SubmissionStatus
+from db.models.enums.submission_enum import SubmissionStatus
 
 class Submission(Base):
     __tablename__ = "submissions"

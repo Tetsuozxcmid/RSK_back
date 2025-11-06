@@ -202,6 +202,40 @@ services:
       retries: 5
     networks:
       - shared_network
+
+  rsk_learning_app:
+    build: ./learning_service
+    depends_on:
+      rsk_learning_db:
+        condition: service_healthy
+    restart: on-failure
+    ports:
+      - "8011:8011"
+    env_file:
+    - ./learning_service/.env
+    networks:
+      - shared_network
+    
+
+
+  rsk_learning_db:
+    image: postgres:17-alpine
+    volumes:
+      - learning_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5445:5432"
+    environment:
+      POSTGRES_USER: ${DB_LEARNING_USER}
+      POSTGRES_PASSWORD: ${DB_LEARNING_PASSWORD}
+      POSTGRES_DB: ${DB_LEARNING_NAME}
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared_network
     
 
 volumes:
@@ -210,6 +244,8 @@ volumes:
   teams_postgres_data:
   orgs_postgres_data:
   projects_postgres_data:
+  learning_postgres_data:
+  
 
 networks:
   shared_network:

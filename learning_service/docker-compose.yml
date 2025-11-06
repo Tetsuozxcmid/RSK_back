@@ -1,5 +1,4 @@
 services:
-  # === Приложение: rsk_learning_app ===
   rsk_learning_app:
     build: .
     depends_on:
@@ -23,7 +22,7 @@ services:
   rsk_learning_db:
     image: postgres:17-alpine
     volumes:
-      - profile_postgres_data:/var/lib/postgresql/data
+      - learning_postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 2305
@@ -40,7 +39,7 @@ services:
       - shared_network
 
 volumes:
-  profile_postgres_data:
+  learning_postgres_data:
 
 networks:
   shared_network:

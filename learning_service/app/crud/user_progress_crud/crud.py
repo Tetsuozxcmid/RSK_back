@@ -1,7 +1,7 @@
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models.user_progress import UserProgress
-from typing import Optional
+from db.models.user_progress import UserProgress
+from typing import List, Optional
 
 
 class UserProgressCRUD:

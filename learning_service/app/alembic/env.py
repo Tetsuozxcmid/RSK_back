@@ -5,12 +5,12 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
-from app.config import settings
-from app.db.base import Base
+from config import settings
+from db.base import Base
 
-from app.db.models.course import Course
-from app.db.models.submission import Submission
-from app.db.models.user_progress import UserProgress
+from db.models.course import Course
+from db.models.submission import Submission
+from db.models.user_progress import UserProgress
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
