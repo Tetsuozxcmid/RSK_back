@@ -221,11 +221,11 @@ services:
     networks:
       - shared_network
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.rsk_users_app.rule=Host(`api.rosdk.ru`) && PathPrefix(`/learning`)"
-      - "traefik.http.routers.rsk_users_app.entrypoints=websecure"
-      - "traefik.http.routers.rsk_users_app.tls.certresolver=le"
-      - "traefik.http.services.rsk_users_app.loadbalancer.server.port=8011"
+    - "traefik.enable=true"
+    - "traefik.http.routers.learning.rule=Host(`api.rosdk.ru`) && PathPrefix(`/learning`)"  
+    - "traefik.http.routers.learning.entrypoints=websecure"
+    - "traefik.http.routers.learning.tls.certresolver=le"
+    - "traefik.http.services.learning.loadbalancer.server.port=8011"  
     
 
 
