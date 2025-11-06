@@ -5,7 +5,7 @@ from routes.submissons_routes.route import router as submissions_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
-app = FastAPI(title='Learning FASTAPI',description='xxx',root_path='/learning')
+app = FastAPI(title='Learning FASTAPI',description='xxx',root_path='/learning',docs_url="/learning/docs")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],  
