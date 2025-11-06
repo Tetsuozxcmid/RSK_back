@@ -4,6 +4,9 @@ __pycache__
 /__pycache__/
 venv
 .idea
+.env
+*.env
+**/.env
 data/
 volumes/
 /initdb/
