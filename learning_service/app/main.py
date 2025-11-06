@@ -18,6 +18,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Добавляем /learning в префикс каждого роутера
-app.include_router(courses_router, prefix="/learning/api/courses", tags=["courses"])
-app.include_router(submissions_router, prefix="/learning/api/submissions", tags=["submissions"])
+
+app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
+app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])
