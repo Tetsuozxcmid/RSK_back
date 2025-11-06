@@ -210,12 +210,49 @@ services:
     networks:
       - shared_network
 
+  rsk_learning_app:
+    build: ./learning_service
+    depends_on:
+      rsk_learning_db:
+        condition: service_healthy
+    restart: on-failure
+    env_file:
+    - ./learning_service/.env
+    networks:
+      - shared_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rsk_users_app.rule=Host(`api.rosdk.ru`) && PathPrefix(`/learning`)"
+      - "traefik.http.routers.rsk_users_app.entrypoints=websecure"
+      - "traefik.http.routers.rsk_users_app.tls.certresolver=le"
+      - "traefik.http.services.rsk_users_app.loadbalancer.server.port=8011"
+    
+
+
+  rsk_learning_db:
+    image: postgres:17-alpine
+    volumes:
+      - learning_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DB_LEARNING_USER}
+      POSTGRES_PASSWORD: ${DB_LEARNING_PASSWORD}
+      POSTGRES_DB: ${DB_LEARNING_NAME}
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared_network
+
 volumes:
   auth_postgres_data:
   profile_postgres_data:
   teams_postgres_data:
   orgs_postgres_data:
   projects_postgres_data:
+  learning_postgres_data:
 
 networks:
   shared_network:
