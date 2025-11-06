@@ -13,10 +13,10 @@ services:
       - shared_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.rsk_learning_service.rule=Host(`api.rosdk.ru`) && PathPrefix(`/learning`)"  
-      - "traefik.http.routers.rsk_learning_service.entrypoints=websecure"
-      - "traefik.http.routers.rsk_learning_service.tls.certresolver=le"
-      - "traefik.http.services.rsk_learning_service.loadbalancer.server.port=8011"
+      - "traefik.http.routers.learning.rule=Host(`api.rosdk.ru`) && PathPrefix(`/learning`)"  
+      - "traefik.http.routers.learning.entrypoints=websecure"
+      - "traefik.http.routers.learning.tls.certresolver=le"
+      - "traefik.http.services.learning.loadbalancer.server.port=8011"
       
 
   # === PostgreSQL ===
