@@ -3,7 +3,7 @@ from routes.coures_routes.route import router as courses_router
 from routes.submissons_routes.route import router as submissions_router
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Learning FASTAPI", description="xxx", root_path="/learning")
+app = FastAPI(title="Learning FASTAPI", description="xxx", root_path="/learning",openapi_url="/openapi.json")
 
 app.add_middleware(
     CORSMiddleware,
