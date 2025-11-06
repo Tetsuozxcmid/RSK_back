@@ -17,6 +17,8 @@ services:
       - "traefik.http.routers.rsk_learning_service.entrypoints=websecure"
       - "traefik.http.routers.rsk_learning_service.tls.certresolver=le"
       - "traefik.http.services.rsk_learning_service.loadbalancer.server.port=8011"
+      - "traefik.http.middlewares.learning-strip.stripprefix.prefixes=/learning"
+      - "traefik.http.routers.rsk_learning_service.middlewares=learning-strip"
 
   # === PostgreSQL ===
   rsk_learning_db:
