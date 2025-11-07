@@ -56,5 +56,10 @@ class OrgsCRUD:
         result = await db.execute(select(Orgs).offset(skip).limit(limit))
         return result.scalars().all()
     
+    @staticmethod
+    async def get_orgs_count(db: AsyncSession):
+        result = await db.execute(select(func.count(Orgs.id)))
+        return result.scalar_one()
+    
     
 

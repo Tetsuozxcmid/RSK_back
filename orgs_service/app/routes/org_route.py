@@ -7,6 +7,10 @@ from schemas import OrgCreateSchema
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
+@router.get("/count")
+async def get_organizations_count(db: AsyncSession = Depends(get_db)):
+    count = await OrgsCRUD.get_orgs_count(db)
+    return {"count": count}
 
 @router.get("/exists/{org_name}")
 async def check_organization_exists(org_name: str, db: AsyncSession = Depends(get_db)):
@@ -40,4 +44,6 @@ async def create_org(request: OrgCreateSchema, db: AsyncSession = Depends(get_db
     
     org = await OrgsCRUD.create_org_by_name(db, org_name)
     return {"id": org.id, "name": org.name}
+
+
 
