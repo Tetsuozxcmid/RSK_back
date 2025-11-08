@@ -12,13 +12,20 @@ router = APIRouter(tags=["courses"])
 
 
 @router.get("/", response_model=List[CourseResponse])
-async def get_courses(db: AsyncSession = Depends(get_db)):
-    return await course_crud.get_courses(db)
+async def get_courses(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)  
+):
+    return await course_crud.get_courses_with_progress(db, user_id)
 
-
+  
 @router.get("/{course_id}", response_model=CourseResponse)
-async def get_course(course_id: int, db: AsyncSession = Depends(get_db)):
-    course = await course_crud.get_course_by_id(db, course_id)
+async def get_course(
+    course_id: int, 
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)  
+):
+    course = await course_crud.get_course_with_progress(db, course_id, user_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     return course

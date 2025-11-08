@@ -1,3 +1,6 @@
+from db.models.submission import Submission
+from db.models.user_progress import UserProgress
+from db.models.enums.submission_enum import SubmissionStatus
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models.course import Course
@@ -13,6 +16,75 @@ class CourseCRUD:
     async def get_course_by_id(self, db: AsyncSession, course_id: int) -> Optional[Course]:
         result = await db.execute(select(Course).where(Course.id == course_id))
         return result.scalar_one_or_none()
+    
+    async def get_courses_with_progress(self, db: AsyncSession, user_id: int) -> List[Course]:
+        
+        result = await db.execute(select(Course))
+        courses = result.scalars().all()
+        
+        
+        progress_result = await db.execute(
+            select(UserProgress).where(UserProgress.user_id == user_id)
+        )
+        user_progress = {progress.course_id: progress for progress in progress_result.scalars().all()}
+        
+        
+        submissions_result = await db.execute(
+            select(Submission).where(
+                Submission.user_id == user_id,
+                Submission.status == SubmissionStatus.PENDING
+            )
+        )
+        pending_submissions = {submission.course_id for submission in submissions_result.scalars().all()}
+        
+        
+        for course in courses:
+            progress = user_progress.get(course.id)
+            if progress and progress.is_completed:
+                course.is_completed = "true"
+            elif course.id in pending_submissions:
+                course.is_completed = "process"
+            else:
+                course.is_completed = "false"
+        
+        return courses
+    
+    async def get_course_with_progress(self, db: AsyncSession, course_id: int, user_id: int) -> Optional[Course]:
+        
+        result = await db.execute(select(Course).where(Course.id == course_id))
+        course = result.scalar_one_or_none()
+        
+        if not course:
+            return None
+        
+        
+        progress_result = await db.execute(
+            select(UserProgress).where(
+                UserProgress.user_id == user_id,
+                UserProgress.course_id == course_id
+            )
+        )
+        progress = progress_result.scalar_one_or_none()
+        
+        
+        submission_result = await db.execute(
+            select(Submission).where(
+                Submission.user_id == user_id,
+                Submission.course_id == course_id,
+                Submission.status == SubmissionStatus.PENDING
+            )
+        )
+        has_pending_submission = submission_result.scalar_one_or_none() is not None
+        
+        
+        if progress and progress.is_completed:
+            course.is_completed = "true"
+        elif has_pending_submission:
+            course.is_completed = "process"
+        else:
+            course.is_completed = "false"
+        
+        return course
     
     async def create_course(self, db: AsyncSession, course_data: dict) -> Course:
         course = Course(

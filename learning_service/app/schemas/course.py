@@ -22,5 +22,6 @@ class CourseResponse(BaseModel):
     description: Optional[str]
     file_extension: str
     download_url: str
+    is_completed: str
 
     model_config = ConfigDict(from_attributes=True)
