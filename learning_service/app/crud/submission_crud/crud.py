@@ -7,6 +7,16 @@ from typing import List, Optional
 class SubmissionCRUD:
     
     async def create_submission(self, db: AsyncSession, user_id: int, course_id: int, file_url: str) -> Submission:
+
+        existing_submission = await db.execute(select(Submission).where(Submission.user_id == user_id,Submission.course_id == course_id,Submission.status !=  SubmissionStatus.REJECTED))
+        existing = existing_submission.scalar_one_or_none()
+
+        if existing:
+            if existing.status == SubmissionStatus.PENDING:
+                raise ValueError("Submission already exists and is pending review")
+            elif existing.status == SubmissionStatus.APPROVED:
+                raise ValueError("Submission already exists and is approved")
+
         submission = Submission(user_id=user_id, course_id=course_id, file_url=file_url)
         db.add(submission)
         await db.commit()
