@@ -16,6 +16,7 @@ from sqlalchemy import Integer, String
 class UserRole(str, Enum):
     STUDENT = "student"
     TEACHER = "teacher"
+    MODER = "moder"
 
 
 class User(Base):

@@ -7,6 +7,7 @@ from enum import Enum
 class UserRole(str, Enum):
     STUDENT = "student"
     TEACHER = "teacher"
+    MODER = "moder"
 
 class UserRegister(BaseModel):
     password: SecretStr = Field(..., min_length=8, example="password1232305")
@@ -16,7 +17,7 @@ class UserRegister(BaseModel):
     role: Optional[UserRole] = Field(
         default=UserRole.STUDENT, 
         example="student",
-        description="Роль пользователя: student или teacher"
+        description="Роль пользователя: student или teacher или moder"
     )
 
 class EmailSchema(BaseModel):
