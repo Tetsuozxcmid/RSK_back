@@ -25,3 +25,4 @@ async def get_current_user(request: Request):
         return int(user_id)
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+    

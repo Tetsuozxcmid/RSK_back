@@ -3,6 +3,9 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models.submission import Submission, SubmissionStatus
 from typing import List, Optional
+from services.auth_client import auth_client
+from services.emailsender import send_ok_email
+from services.emailsender import send_bad_email
 
 
 class SubmissionCRUD:
@@ -46,16 +49,27 @@ class SubmissionCRUD:
     async def review_submission(self, db: AsyncSession, submission_id: int, status: SubmissionStatus) -> Optional[Submission]:
         result = await db.execute(select(Submission).where(Submission.id == submission_id))
         submission = result.scalar_one_or_none()
+        
+        if not submission:
+            return None
 
+        
+        user_email = await auth_client.get_user_email(submission.user_id)
+
+        if not user_email:
+            print(f"Could not find email for user {submission.user_id}")
+        
+        
         submission.status = status
 
         if status == SubmissionStatus.APPROVED:
             await self.mark_course_completed(db, submission.user_id, submission.course_id)
-        
-        if not submission:
-            return None
-        
-        submission.status = status
+            if user_email:
+                await send_ok_email(user_email)  
+        elif status == SubmissionStatus.REJECTED:
+            if user_email:
+                await send_bad_email(user_email)  
+
         await db.commit()
         await db.refresh(submission)
         return submission

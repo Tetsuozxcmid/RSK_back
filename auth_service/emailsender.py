@@ -179,5 +179,4 @@ async def send_confirmation_email(recipient_email: str, token: str):
             
     except Exception as e:
         logger.error(f"Failed to send confirmation email to {recipient_email}: {str(e)}")
-        # Не поднимаем исключение, чтобы не ломать регистрацию
-        # Просто логируем ошибку
+        
