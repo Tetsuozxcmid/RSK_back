@@ -11,6 +11,8 @@ from typing import List
 router = APIRouter(tags=["courses"])
 
 
+
+
 @router.get("/", response_model=List[CourseResponse])
 async def get_courses(
     db: AsyncSession = Depends(get_db),
@@ -30,14 +32,12 @@ async def get_course(
         raise HTTPException(status_code=404, detail="Course not found")
     return course
 
-
 @router.post("/", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
 async def create_course(
     course_data: CourseCreate,
     db: AsyncSession = Depends(get_db)
      
 ):
-
     return await course_crud.create_course(db, course_data.dict())
 
 

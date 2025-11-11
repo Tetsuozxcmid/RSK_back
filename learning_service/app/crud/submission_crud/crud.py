@@ -1,3 +1,4 @@
+from db.models.user_progress import UserProgress
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models.submission import Submission, SubmissionStatus
@@ -8,14 +9,27 @@ class SubmissionCRUD:
     
     async def create_submission(self, db: AsyncSession, user_id: int, course_id: int, file_url: str) -> Submission:
 
-        existing_submission = await db.execute(select(Submission).where(Submission.user_id == user_id,Submission.course_id == course_id,Submission.status !=  SubmissionStatus.REJECTED))
-        existing = existing_submission.scalar_one_or_none()
+        progress_result = await db.execute(
+            select(UserProgress).where(
+                UserProgress.user_id == user_id,
+                UserProgress.course_id == course_id
+            )
+        )
+        user_progress = progress_result.scalar_one_or_none()
 
+        existing_submission = await db.execute(
+            select(Submission).where(
+                Submission.user_id == user_id,
+                Submission.course_id == course_id,
+                Submission.status == SubmissionStatus.PENDING
+            )
+        )
+        existing = existing_submission.scalar_one_or_none()
         if existing:
-            if existing.status == SubmissionStatus.PENDING:
-                raise ValueError("Submission already exists and is pending review")
-            elif existing.status == SubmissionStatus.APPROVED:
-                raise ValueError("Submission already exists and is approved")
+            raise ValueError("You already have a pending submission for this course")
+
+        if user_progress and user_progress.is_completed:
+            raise ValueError("Course is already completed, no new submissions allowed")
 
         submission = Submission(user_id=user_id, course_id=course_id, file_url=file_url)
         db.add(submission)
@@ -32,6 +46,11 @@ class SubmissionCRUD:
     async def review_submission(self, db: AsyncSession, submission_id: int, status: SubmissionStatus) -> Optional[Submission]:
         result = await db.execute(select(Submission).where(Submission.id == submission_id))
         submission = result.scalar_one_or_none()
+
+        submission.status = status
+
+        if status == SubmissionStatus.APPROVED:
+            await self.mark_course_completed(db, submission.user_id, submission.course_id)
         
         if not submission:
             return None
@@ -41,6 +60,25 @@ class SubmissionCRUD:
         await db.refresh(submission)
         return submission
     
+    async def mark_course_completed(self, db: AsyncSession, user_id: int, course_id: int):
+        
+        progress_result = await db.execute(
+            select(UserProgress).where(
+                UserProgress.user_id == user_id,
+                UserProgress.course_id == course_id
+            )
+        )
+        user_progress = progress_result.scalar_one_or_none()
+        
+        if user_progress:
+            user_progress.is_completed = True
+        else:
+            user_progress = UserProgress(
+                user_id=user_id,
+                course_id=course_id,
+                is_completed=True
+            )
+            db.add(user_progress)
 
     async def get_user_submissions(self, db: AsyncSession, user_id: int) -> List[Submission]:
         result = await db.execute(
