@@ -158,5 +158,5 @@ class UserCRUD:
             detail="User not found"
         )
         
-        return {"name": user.name}
+        return {"name": user.name,"email": user.email}
 
