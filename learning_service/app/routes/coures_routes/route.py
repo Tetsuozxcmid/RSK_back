@@ -36,7 +36,8 @@ async def get_course(
 @router.post("/", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
 async def create_course(
     course_data: CourseCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_moderator)
      
 ):
     return await course_crud.create_course(db, course_data.dict())
