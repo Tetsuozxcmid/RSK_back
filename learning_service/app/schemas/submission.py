@@ -16,3 +16,4 @@ class SubmissionResponse(BaseModel):
 
 class SubmissionReview(BaseModel):
     status: SubmissionStatus
+    description: str

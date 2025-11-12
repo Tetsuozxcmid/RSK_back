@@ -46,7 +46,7 @@ class SubmissionCRUD:
         )
         return result.scalars().all()
     
-    async def review_submission(self, db: AsyncSession, submission_id: int, status: SubmissionStatus) -> Optional[Submission]:
+    async def review_submission(self, db: AsyncSession, submission_id: int, status: SubmissionStatus,description: str) -> Optional[Submission]:
         result = await db.execute(select(Submission).where(Submission.id == submission_id))
         submission = result.scalar_one_or_none()
         
@@ -65,10 +65,10 @@ class SubmissionCRUD:
         if status == SubmissionStatus.APPROVED:
             await self.mark_course_completed(db, submission.user_id, submission.course_id)
             if user_email:
-                await send_ok_email(user_email)  
+                await send_ok_email(user_email,description)  
         elif status == SubmissionStatus.REJECTED:
             if user_email:
-                await send_bad_email(user_email)  
+                await send_bad_email(user_email,description)  
 
         await db.commit()
         await db.refresh(submission)

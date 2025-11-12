@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-async def send_ok_email(recipient_email: str):
+async def send_ok_email(recipient_email: str,description: str):
     try:
         message = MIMEMultipart()
         message['From'] = settings.SENDER_EMAIL
@@ -120,10 +120,13 @@ async def send_ok_email(recipient_email: str):
 
                         <tr>
                             <td class="content">
-                                <p class="lead">Ваш курс был подтвержден!</p>
+                                <p class="lead">Ваш курс был проверен!</p>
                                 
                                 <div class="message-box">
                                     <p style="margin: 0; font-size: 16px; color: #0f1724;">{confirmation_message}</p>
+                                    <hr style="border: none; border-top: 1px solid #eef2f7; margin: 20px 0" />
+                                    <p class="lead">Комментарий модератора</p>
+                                    <p style="margin: 0; font-size: 16px; color: #0f1724;">{description}</p>
                                 </div>
 
                                 <p>Пожалуйста, проверьте информацию в вашем личном кабинете на платформе РСК.</p>
@@ -162,7 +165,7 @@ async def send_ok_email(recipient_email: str):
         logger.error(f"Failed to send confirmation email to {recipient_email}: {str(e)}")
 
 
-async def send_bad_email(recipient_email: str):
+async def send_bad_email(recipient_email: str,description: str):
     try:
         message = MIMEMultipart()
         message['From'] = settings.SENDER_EMAIL
@@ -273,10 +276,13 @@ async def send_bad_email(recipient_email: str):
 
                         <tr>
                             <td class="content">
-                                <p class="lead">Ваш курс был подтвержден!</p>
+                                <p class="lead">Ваш курс был проверен!</p>
                                 
                                 <div class="message-box">
                                     <p style="margin: 0; font-size: 16px; color: #0f1724;">{confirmation_message}</p>
+                                    <hr style="border: none; border-top: 1px solid #eef2f7; margin: 20px 0" />
+                                    <p class="lead">Комментарий модератора</p>
+                                    <p style="margin: 0; font-size: 16px; color: #0f1724;">{description}</p>
                                 </div>
 
                                 <p>Пожалуйста, проверьте информацию в вашем личном кабинете на платформе РСК.</p>
