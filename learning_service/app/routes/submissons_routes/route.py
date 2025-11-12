@@ -31,7 +31,7 @@ async def review_submission(
     review: SubmissionReview,
     db: AsyncSession = Depends(get_db)
 ):
-    submission = await submission_crud.review_submission(db, submission_id, review.status)
+    submission = await submission_crud.review_submission(db, submission_id, review.status,description=review.description)
     
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
