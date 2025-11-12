@@ -102,7 +102,7 @@ async def auth_user(response: Response, user_data: UserAuth, db: AsyncSession = 
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect name or password")
     
-    access_token = await create_access_token({"sub": str(user['id'])})
+    access_token = await create_access_token({"sub": str(user['id']),"role": user['role']})
     response.set_cookie(key='users_access_token', value=access_token, httponly=True)
 
     return "Access successed"

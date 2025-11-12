@@ -1,6 +1,10 @@
 import httpx
 from typing import Optional, Dict
 from config import settings
+from fastapi import Depends, HTTPException, status, Request
+from jose import JWTError, jwt
+
+ALGORITHM = settings.ALGORITHM
 
 class AuthServiceClient:
     def __init__(self):
@@ -38,4 +42,43 @@ class AuthServiceClient:
             return email
         return None
 
+async def get_current_user_role(request: Request) -> str:
+
+    token = request.cookies.get("users_access_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing in cookies"
+        )
+    
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        user_role = payload.get("role")
+        
+        if not user_role:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Role not found in token"
+            )
+        
+        return user_role
+    
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+
+def require_role(required_role: str):
+    def role_checker(user_role: str = Depends(get_current_user_role)):
+        if user_role != required_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions. Required role: {required_role}"
+            )
+        return user_role
+    return role_checker
+
+
+get_moderator = require_role("moder")
 auth_client = AuthServiceClient()

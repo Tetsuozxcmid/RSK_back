@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db
 from crud.submission_crud.crud import submission_crud
 from schemas.submission import SubmissionCreate, SubmissionResponse, SubmissionReview
-from services.grabber import get_current_user  
+from services.grabber import get_current_user
+from services.auth_client import get_moderator 
 from typing import List
 
 router = APIRouter(tags=["submissions"])
@@ -22,14 +23,19 @@ async def submit_task(
     )
 
 @router.get("/pending", response_model=List[SubmissionResponse])
-async def get_pending_submissions(db: AsyncSession = Depends(get_db)):
+async def get_pending_submissions(
+    db: AsyncSession = Depends(get_db),
+    _:str = Depends(get_moderator)
+):
+
     return await submission_crud.get_pending_submissions(db)
 
 @router.patch("/{submission_id}/review", response_model=SubmissionResponse)
 async def review_submission(
     submission_id: int,
     review: SubmissionReview,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_moderator)
 ):
     submission = await submission_crud.review_submission(db, submission_id, review.status,description=review.description)
     

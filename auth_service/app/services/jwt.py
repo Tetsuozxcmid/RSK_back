@@ -20,3 +20,28 @@ async def create_access_token(data: dict) -> str:
 
 async def get_current_user(token: str = Depends(oauth2_scheme), security: HTTPAuthorizationCredentials = Depends(security)):
     pass
+
+async def get_current_user_role(token: str = Depends(oauth2_scheme)) -> str:
+    auth_data = get_auth_data()
+    
+    try:
+        payload = jwt.decode(
+            token, 
+            auth_data['secret_key'], 
+            algorithms=[auth_data['algorithm']]
+        )
+        user_role: str = payload.get("role")
+        
+        if user_role is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Role not found in token"
+            )
+        
+        return user_role
+    
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials"
+        )
