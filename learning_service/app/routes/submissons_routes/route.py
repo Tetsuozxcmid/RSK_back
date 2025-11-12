@@ -47,7 +47,8 @@ async def review_submission(
 @router.get("/my-submissions", response_model=List[SubmissionResponse])
 async def get_my_submissions(
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+    user_id: int = Depends(get_current_user),
+    _: str = Depends(get_moderator)
     
 ):
     return await submission_crud.get_user_submissions(db, user_id)
