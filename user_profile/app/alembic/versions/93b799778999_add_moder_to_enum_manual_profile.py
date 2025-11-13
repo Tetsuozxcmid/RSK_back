@@ -19,7 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("ALTER TYPE user_role_enum ADD VALUE 'MODER'")
+    op.execute("ALTER TYPE userenum ADD VALUE 'Moder'")
 
 
 def downgrade() -> None:
