@@ -11,6 +11,7 @@ import json
 ROLE_MAPPING = {
         "student":UserEnum.Student,
         "teacher":UserEnum.Teacher,
+        "moder":UserEnum.Moder
 }
 
 async def consume_user_created_events(rabbitmq_url: str):
