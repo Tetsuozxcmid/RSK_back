@@ -1,7 +1,7 @@
 """add_moder_to_enum_manual
 
 Revision ID: a4316195a7fe
-Revises: d701ece7034c
+Revises: d072bb4d8db5
 Create Date: 2025-11-13 12:40:40.774246
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'a4316195a7fe'
-down_revision: Union[str, None] = 'd701ece7034c'
+down_revision: Union[str, None] = 'd072bb4d8db5'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
