@@ -25,6 +25,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str] = mapped_column(String(100), nullable=True)
+    login: Mapped[str] = mapped_column(String(50), nullable=True)
 
     role: Mapped[UserRole] = mapped_column(
     sqlEnum(UserRole, name="user_role_enum"),
@@ -40,10 +41,25 @@ class User(Base):
     auth_provider: Mapped[str] = mapped_column(String(20), nullable=True)
     provider_id: Mapped[str] = mapped_column(String(100), nullable=True, unique=True)
 
+
+    temp_name: Mapped[str] = mapped_column(String(50), nullable=True)
+    temp_password: Mapped[str] = mapped_column(String(255), nullable=True)
+    temp_role: Mapped[UserRole] = mapped_column(
+        sqlEnum(UserRole, name="user_role_enum"), 
+        nullable=True
+    )
+    temp_login: Mapped[str] = mapped_column(String(255),nullable=True)
+
     @classmethod
-    async def check_user(cls, name: str, password: str, db: AsyncSession):
-        result = await db.execute(select(cls).where(cls.name == name))
+    async def check_user(cls, login: str, password: str, db: AsyncSession):
+
+        result = await db.execute(
+            select(cls).where(
+                (cls.login == login) | (cls.email == login) 
+            )
+        )
         user = result.scalar_one_or_none()
+        
         if not user or not pass_settings.verify_password(
             plain_password=password, hashed_password=user.hashed_password
         ):
@@ -55,6 +71,6 @@ class User(Base):
                 detail="Email not verified. Please check your email for confirmation."
             )
 
-        return {"id": user.id, "name": user.name,"verified":user.verified,"role": user.role.value}
+        return {"id": user.id, "login": user.login, "verified": user.verified, "role": user.role.value}
     
     

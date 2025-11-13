@@ -44,16 +44,17 @@ async def register_user(
     background_tasks: BackgroundTasks = None
 ):
     try:
-        user, confirmation_token = await UserCRUD.create_user(db, user_data)
+        user, confirmation_token, temp_login = await UserCRUD.create_user(db, user_data)
 
         if background_tasks:
             background_tasks.add_task(
                 send_confirmation_email,
                 user.email,
-                confirmation_token
+                confirmation_token,
+                temp_login  
             )
         else:
-            asyncio.create_task(send_confirmation_email(user.email, confirmation_token))
+            asyncio.create_task(send_confirmation_email(user.email, confirmation_token, temp_login))
 
         try:
             channel = await rabbitmq.channel()
@@ -62,7 +63,7 @@ async def register_user(
             user_data_message = {
                 "user_id": user.id,
                 "email": user.email,  
-                "username": user.name,
+                "username": temp_login,  
                 "verified": False,
                 "event_type": "user_registered",
                 "role" : user.role
@@ -82,8 +83,8 @@ async def register_user(
             "message": "User registered successfully. Please check your email for verification.",
             "user_id": user.id,
             "email": user.email,
-            "username": user.name,
-            "role":user.role
+            "future_login": temp_login,  
+            "role": user.role
         }
         
     except HTTPException as e:
@@ -97,10 +98,10 @@ async def register_user(
 @auth_router.post('/login/')
 async def auth_user(response: Response, user_data: UserAuth, db: AsyncSession = Depends(get_db)):
     password_str = user_data.password.get_secret_value()
-    user = await User.check_user(name=user_data.name, password=password_str, db=db)
+    user = await User.check_user(login=user_data.login, password=password_str, db=db)  
 
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect name or password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect login/email or password")
     
     access_token = await create_access_token({"sub": str(user['id']),"role": user['role']})
     response.set_cookie(key='users_access_token', value=access_token, httponly=True)
@@ -124,7 +125,7 @@ async def confirm_email(
         user_data_message = {
             "user_id": user.id,
             "email": user.email,  
-            "username": user.name,
+            "username": user.login,
             "is_verified": True,
             "event_type": "user_verified",
             "role":role_value

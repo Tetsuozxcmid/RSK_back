@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-async def send_confirmation_email(recipient_email: str, token: str):
+async def send_confirmation_email(recipient_email: str, token: str,login: str):
     try:
         message = MIMEMultipart()
         message['From'] = settings.SENDER_EMAIL
@@ -73,6 +73,24 @@ async def send_confirmation_email(recipient_email: str, token: str):
                 color: #0b1220;
                 font-size: 16px;
             }}
+            .message-box {{
+                background-color: #f8fafc;
+                border-radius: 8px;
+                padding: 20px;
+                margin: 20px 0;
+                border-left: 4px solid #3a6bff;
+                text-align: center;
+            }}
+            .login-highlight {{
+                background: linear-gradient(90deg, #3a6bff, #6366f1);
+                color: #ffffff;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 18px;
+                margin: 10px 0;
+                display: inline-block;
+            }}
             .button-wrap {{
                 text-align: center;
                 padding: 10px 0 20px 0;
@@ -117,6 +135,10 @@ async def send_confirmation_email(recipient_email: str, token: str):
                     padding: 12px 18px;
                     font-size: 15px;
                 }}
+                .login-highlight {{
+                    font-size: 16px;
+                    padding: 10px 16px;
+                }}
             }}
         </style>
     </head>
@@ -135,6 +157,16 @@ async def send_confirmation_email(recipient_email: str, token: str):
                         <tr>
                             <td class="content">
                                 <p class="lead">Спасибо за регистрацию на платформе РСК!</p>
+
+                                <div style="background: #f8fafc; border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                                    <p style="margin: 0 0 12px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Ваши данные для входа</p>
+                                    <div style="background: white; padding: 12px 16px; border-radius: 6px; margin: 8px 0;">
+                                        <p style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700; text-align: center; font-family: 'Courier New', monospace;">{login}</p>
+                                    </div>
+                                    <p style="margin: 8px 0 0 0; color: #475569; font-size: 14px;">
+                                        Для входа используйте этот логин или ваш email
+                                    </p>
+                                </div>
 
                                 <p>Мы будем оповещать вас о важных обновлениях платформы и о конкурсе на эту почту. Пожалуйста, подтвердите адрес электронной почты, чтобы завершить регистрацию и получить все уведомления.</p>
 
@@ -166,7 +198,7 @@ async def send_confirmation_email(recipient_email: str, token: str):
         </table>
     </body>
 </html>
-        """
+"""
         
         message.attach(MIMEText(html_body, 'html'))
 
