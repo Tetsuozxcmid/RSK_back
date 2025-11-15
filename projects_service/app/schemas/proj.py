@@ -109,9 +109,9 @@ class TaskSubmissionRead(TaskSubmissionBase):
         orm_mode = True
 
 
-class TaskStartRequest(BaseModel):
-    team_id: int
-    leader_id: int
+class TaskSubmitRequest(BaseModel):
+    text_description: Optional[str] = None
+    result_url: Optional[str] = None
 
 class TaskCreate(BaseModel):
     title: str

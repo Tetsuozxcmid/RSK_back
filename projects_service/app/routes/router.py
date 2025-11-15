@@ -80,7 +80,7 @@ async def submit_task(
     submission = await ZvezdaCRUD.submit_task(
         db, 
         task_id=task_id,
-        team_id=team_id,
+        team_id=team_id,  
         text_description=data.text_description,
         result_url=data.result_url
     )
