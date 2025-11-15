@@ -108,7 +108,6 @@ class ZvezdaCRUD:
     @staticmethod
     async def submit_task(db: AsyncSession, task_id: int, team_id: int, text_description: str = None, result_url: str = None):
         task = await ZvezdaCRUD.get_task(db, task_id)
-        
 
         print(f"Task team_id: {task.team_id}, Request team_id: {team_id}")
         
