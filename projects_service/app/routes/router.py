@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional,Dict,Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from services.teams_client import TeamsClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,7 +65,7 @@ async def start_task(task_id: int, request: Request, db: AsyncSession = Depends(
     return task
 
 
-@router.post("/tasks/{task_id}/submit")
+@router.post("/tasks/{task_id}/submit", response_model=Dict[str, Any])
 async def submit_task(
     task_id: int,
     request: Request,  
@@ -85,7 +85,6 @@ async def submit_task(
         result_url=data.result_url
     )
     return {"submission_id": submission.id, "status": submission.status.value}
-
 
 @router.get("/tasks/{task_id}/submissions")
 async def get_task_submissions(task_id: int, db: AsyncSession = Depends(get_db)):
