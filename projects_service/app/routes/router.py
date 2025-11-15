@@ -6,8 +6,7 @@ from db.session import get_db
 from cruds.crud import ZvezdaCRUD
 from services.service import get_current_user
 from schemas.proj import (
-    ProjectCreate, ProjectRead, TaskCreate, TaskOut,
-    TaskRead, TaskStartRequest, TaskSubmissionRead, TaskSubmitRequest
+    ProjectCreate, ProjectRead, TaskCreate, TaskOut, TaskSubmitRequest
 )
 
 router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
@@ -65,7 +64,7 @@ async def start_task(task_id: int, request: Request, db: AsyncSession = Depends(
     return task
 
 
-@router.post("/tasks/{task_id}/submit", response_model=Dict[str, Any])
+@router.post("/tasks/{task_id}/submit")
 async def submit_task(
     task_id: int,
     request: Request,  
