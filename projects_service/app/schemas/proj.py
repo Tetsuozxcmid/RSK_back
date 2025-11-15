@@ -99,8 +99,6 @@ class TaskSubmissionRead(TaskSubmissionBase):
     moderator_id: Optional[int]
     reviewed_at: Optional[datetime]
 
-    class Config:
-        orm_mode = True
 
 
 class TaskSubmitRequest(BaseModel):
