@@ -267,6 +267,7 @@ services:
       - shared_network
 
 volumes:
+  redis_data:
   auth_postgres_data:
   profile_postgres_data:
   teams_postgres_data:

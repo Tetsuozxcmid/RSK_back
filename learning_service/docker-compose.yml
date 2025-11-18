@@ -43,6 +43,7 @@ services:
  
 
 volumes:
+  redis_data:
   learning_postgres_data:
 
 networks:
