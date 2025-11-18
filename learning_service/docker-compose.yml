@@ -4,6 +4,8 @@ services:
     depends_on:
       rsk_learning_db:
         condition: service_healthy
+      redis:  # <- ДОБАВИТЬ ЗАВИСИМОСТЬ
+        condition: service_healthy
     restart: on-failure
     env_file:
       - .env
@@ -18,7 +20,6 @@ services:
       - "traefik.http.routers.learning.tls.certresolver=le"
       - "traefik.http.services.learning.loadbalancer.server.port=8011"
       
-
   # === PostgreSQL ===
   rsk_learning_db:
     image: postgres:17-alpine
@@ -39,9 +40,11 @@ services:
     networks:
       - shared_network
 
+ 
+
 volumes:
   learning_postgres_data:
 
 networks:
   shared_network:
-    external: true 
+    external: true

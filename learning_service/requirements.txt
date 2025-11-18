@@ -7,3 +7,4 @@ pydantic==2.5.0
 pydantic-settings==2.1.0
 python-jose==3.5.0
 httpx==0.25.2
+redis>=5.0.0

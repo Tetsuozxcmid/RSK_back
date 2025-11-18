@@ -1,14 +1,13 @@
 version: '3.8'
 
 services:
-  # RabbitMQ (один для всех)
   rabbitmq:
     image: rabbitmq:3.12-management
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     ports:
-      - "5672:5672"     # AMQP
+      - "5672:5672"     
       - "15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
@@ -18,6 +17,19 @@ services:
     restart: always
     networks:
       - shared_network
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared_network
+    ports:
+      - "6379:6379"  
 
   # Auth Service
   rsk_auth_app:
@@ -207,6 +219,8 @@ services:
     build: ./learning_service
     depends_on:
       rsk_learning_db:
+        condition: service_healthy
+      redis: 
         condition: service_healthy
     restart: on-failure
     ports:

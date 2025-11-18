@@ -6,12 +6,12 @@ from typing import List, Optional
 from services.auth_client import auth_client
 from services.emailsender import send_ok_email
 from services.emailsender import send_bad_email
+from services.assignement import assignment_service
 
 
 class SubmissionCRUD:
     
     async def create_submission(self, db: AsyncSession, user_id: int, course_id: int, file_url: str) -> Submission:
-
         progress_result = await db.execute(
             select(UserProgress).where(
                 UserProgress.user_id == user_id,
@@ -46,36 +46,57 @@ class SubmissionCRUD:
         )
         return result.scalars().all()
     
-    async def review_submission(self, db: AsyncSession, submission_id: int, status: SubmissionStatus,description: str) -> Optional[Submission]:
+    async def get_pending_submission_ids(self, db: AsyncSession) -> List[int]:
+
+        result = await db.execute(
+            select(Submission.id).where(Submission.status == SubmissionStatus.PENDING)
+        )
+        return [row[0] for row in result.all()]
+    
+    async def get_submissions_by_ids(self, db: AsyncSession, submission_ids: List[int]) -> List[Submission]:
+
+        if not submission_ids:
+            return []
+        result = await db.execute(
+            select(Submission).where(Submission.id.in_(submission_ids))
+        )
+        return result.scalars().all()
+    
+    async def get_submission_by_id(self, db: AsyncSession, submission_id: int) -> Optional[Submission]:
+        result = await db.execute(select(Submission).where(Submission.id == submission_id))
+        return result.scalar_one_or_none()
+    
+    async def review_submission(self, db: AsyncSession, submission_id: int, status: SubmissionStatus, description: str) -> Optional[Submission]:
         result = await db.execute(select(Submission).where(Submission.id == submission_id))
         submission = result.scalar_one_or_none()
         
         if not submission:
             return None
 
-        
         user_email = await auth_client.get_user_email(submission.user_id)
 
         if not user_email:
             print(f"Could not find email for user {submission.user_id}")
-        
         
         submission.status = status
 
         if status == SubmissionStatus.APPROVED:
             await self.mark_course_completed(db, submission.user_id, submission.course_id)
             if user_email:
-                await send_ok_email(user_email,description)  
+                await send_ok_email(user_email, description)  
         elif status == SubmissionStatus.REJECTED:
             if user_email:
-                await send_bad_email(user_email,description)  
+                await send_bad_email(user_email, description)  
 
         await db.commit()
         await db.refresh(submission)
+        
+
+        await assignment_service.remove_assignment(submission_id)
+        
         return submission
     
     async def mark_course_completed(self, db: AsyncSession, user_id: int, course_id: int):
-        
         progress_result = await db.execute(
             select(UserProgress).where(
                 UserProgress.user_id == user_id,
