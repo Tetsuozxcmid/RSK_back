@@ -8,22 +8,23 @@ from services.assignement import assignment_service
 from config import settings
 
 app = FastAPI(title="Learning FASTAPI", description="xxx", root_path="/learning",openapi_url="/openapi.json")
-
-app = FastAPI(
-    title="Learning FASTAPI", 
-    description="xxx",
-    docs_url="/learning/docs",
-    redoc_url="/learning/redoc",
-    openapi_url="/learning/openapi.json"
-)
-
-#app.add_middleware(
-    #CORSMiddleware,
-    #allow_origins=["http://localhost:3000"],  
-    #allow_credentials=True,
-    #allow_methods=["*"],
-    #allow_headers=["*"],
+#Для локалки
+#app = FastAPI(
+    #title="Learning FASTAPI", 
+    #description="xxx",
+    #docs_url="/learning/docs",
+    #redoc_url="/learning/redoc",
+    #openapi_url="/learning/openapi.json"
 #)
+
+#для прода
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 async def startup_event():
