@@ -63,7 +63,8 @@ async def register_user(
             user_data_message = {
                 "user_id": user.id,
                 "email": user.email,  
-                "username": temp_login,  
+                "username": temp_login,
+                "name": user.temp_name,
                 "verified": False,
                 "event_type": "user_registered",
                 "role" : user.role
@@ -126,6 +127,7 @@ async def confirm_email(
             "user_id": user.id,
             "email": user.email,  
             "username": user.login,
+            "name": user.name,
             "is_verified": True,
             "event_type": "user_verified",
             "role":role_value

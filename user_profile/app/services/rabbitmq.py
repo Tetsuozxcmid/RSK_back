@@ -31,6 +31,7 @@ async def consume_user_created_events(rabbitmq_url: str):
                             user_id = data.get("user_id")
                             email = data.get("email","")
                             username = data.get("username","")
+                            name = data.get("name","")
                             role_raw = data.get("role","")
                             if not isinstance(role_raw,str):
                                 role_str = str(role_raw).lower()
@@ -49,7 +50,7 @@ async def consume_user_created_events(rabbitmq_url: str):
                                     new_profile = User(
                                         id=user_id,
                                         username=username,
-                                        NameIRL="",
+                                        NameIRL=name or "",
                                         email=email,
                                         Surname="",
                                         Type=user_role
