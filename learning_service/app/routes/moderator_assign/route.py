@@ -9,6 +9,46 @@ from typing import List
 
 router = APIRouter(tags=["moderator-assignments"])
 
+
+@router.get("/assignments", response_model=List[SubmissionResponse])
+async def get_or_assign_moderator_tasks(
+    db: AsyncSession = Depends(get_db),
+    moderator_id: int = Depends(get_moderator)
+):
+    current_assignments = await assignment_service.get_moderator_assignments_with_ttl(moderator_id)
+    
+    if current_assignments:
+        submission_ids = [item["id"] for item in current_assignments]
+        submissions = await submission_crud.get_submissions_by_ids(db, submission_ids)
+        submissions_dict = {s.id: s for s in submissions}
+        
+        result = []
+        for item in current_assignments:
+            sub = submissions_dict.get(item["id"])
+            if sub:
+                sub.expires_at = item["expires_at"]  
+                result.append(sub)
+        return result
+
+
+    new_assigned_ids = await assignment_service.assign_submissions_to_moderator(db, moderator_id)
+    if not new_assigned_ids:
+        return []  
+
+
+    current_assignments = await assignment_service.get_moderator_assignments_with_ttl(moderator_id)
+    submission_ids = [item["id"] for item in current_assignments]
+    submissions = await submission_crud.get_submissions_by_ids(db, submission_ids)
+    submissions_dict = {s.id: s for s in submissions}
+    
+    result = []
+    for item in current_assignments:
+        sub = submissions_dict.get(item["id"])
+        if sub:
+            sub.expires_at = item["expires_at"]
+            result.append(sub)
+    return result
+
 @router.get("/tasks", response_model=List[SubmissionResponse])
 async def get_moderator_tasks(
     db: AsyncSession = Depends(get_db),

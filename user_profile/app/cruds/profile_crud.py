@@ -67,7 +67,7 @@ class ProfileCRUD:
         
         update_dict = update_data.dict(exclude_unset=True)
         
-        
+
         for field in ["NameIRL", "Surname", "Patronymic", "Description", "Region","Organization","email"]:
             if field in update_dict:
                 setattr(existing_profile, field, update_dict[field])
@@ -137,7 +137,6 @@ class ProfileCRUD:
         
     @staticmethod
     async def update_profile_joined_org(db: AsyncSession, user_id: int, organization_name: str, organization_id: int):
-        
         
         result = await db.execute(select(User).where(User.id == user_id))
         existing_profile = result.scalar_one_or_none()

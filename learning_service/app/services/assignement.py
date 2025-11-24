@@ -153,5 +153,39 @@ class SubmissionAssignmentService:
         except Exception as e:
             print(f"Error removing assignment for submission {submission_id}: {e}")
 
+    async def get_moderator_assignments_with_ttl(self, moderator_id: int) -> List[Dict[str, Any]]:
+        try:
+            cursor = 0
+            assignments = []
+            while True:
+                cursor, keys = await self.redis_client.scan(
+                    cursor=cursor, 
+                    match=f"{self.assignment_prefix}*"
+                )
+                for key in keys:
+                    data_str = await self.redis_client.get(key)
+                    if data_str:
+                        try:
+                            data = json.loads(data_str)
+                            if data.get('moderator_id') == moderator_id:
+                                expires_at = data.get('expires_at')
+                                if expires_at and time.time() < expires_at:
+                                    submission_id = int(key.replace(self.assignment_prefix, ""))
+                                    assignments.append({
+                                        "id": submission_id,
+                                        "expires_at": expires_at
+                                    })
+                                else:
+                                    await self.redis_client.delete(key)
+                                    await self.redis_client.delete(f"{self.submission_lock_prefix}{submission_id}")
+                        except (json.JSONDecodeError, ValueError, TypeError):
+                            continue
+                if cursor == 0:
+                    break
+            return assignments
+        except Exception as e:
+            print(f"Error in get_moderator_assignments_with_ttl: {e}")
+            return []
+
 
 assignment_service = SubmissionAssignmentService()
