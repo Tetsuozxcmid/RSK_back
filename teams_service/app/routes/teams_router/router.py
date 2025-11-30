@@ -6,17 +6,18 @@ from shemas.team_shemas.team_update import TeamUpdate
 from db.session import get_db
 from services.grabber import get_current_user
 
-
 router = APIRouter(prefix="/teams")
-
 
 team_management_router = APIRouter(tags=["Team Management"])
 team_membership_router = APIRouter(tags=["Team Membership"])
 team_discovery_router = APIRouter(tags=["Team Discovery"])
 
-
 @team_management_router.post("/register")
-async def register_team(team_data: TeamRegister, request: Request, db: AsyncSession = Depends(get_db)):
+async def register_team(
+    team_data: TeamRegister, 
+    request: Request, 
+    db: AsyncSession = Depends(get_db)
+):
     leader_id = await get_current_user(request)
     team = await TeamCRUD.create_team(db, team_data, leader_id=leader_id)
     return {
@@ -48,7 +49,6 @@ async def update_team_data(team_id: int, update_data: TeamUpdate, db: AsyncSessi
         return team
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{str(e)}")
-
 
 @team_membership_router.post('/join_team/{team_id}')
 async def join_team(
@@ -101,28 +101,6 @@ async def get_my_teams(
             detail=f"Server error: {str(e)}"
         )
 
-
-@team_discovery_router.get('/all_teams/')
-async def get_all_teams(db: AsyncSession = Depends(get_db)):
-    teams = await TeamCRUD.get_all_teams(db)
-    return teams
-
-@team_discovery_router.get('/get_team_by_id/{team_id}')
-async def get_team_by_id(team_id: int, db: AsyncSession = Depends(get_db)):
-    try:
-        team = await TeamCRUD.get_team_by_id(team_id=team_id, db=db)
-        return team
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"team with {team_id} not found")
-
-@team_discovery_router.get('/get_team_by_organization/{org_id}')
-async def get_team_by_org(org_id: int, db: AsyncSession = Depends(get_db)):
-    try:
-        team = await TeamCRUD.get_teams_by_organization(db=db, org_id=org_id)
-        return team
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"not found")
-
 @team_membership_router.delete('/leave_team/{team_id}')
 async def leave_team(
     team_id: int,
@@ -142,7 +120,56 @@ async def leave_team(
         )
 
 
+@team_membership_router.get('/can_join_team/{team_id}')
+async def check_can_join_team(
+    team_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    user_id = await get_current_user(request)
+    can_join, message = await TeamCRUD.can_user_join_team(db, team_id, user_id)
+    
+    return {
+        "can_join": can_join,
+        "message": message
+    }
+
+@team_discovery_router.get('/all_teams/')
+async def get_all_teams(db: AsyncSession = Depends(get_db)):
+    teams = await TeamCRUD.get_all_teams(db)
+    return teams
+
+@team_discovery_router.get('/get_team_by_id/{team_id}')
+async def get_team_by_id(team_id: int, db: AsyncSession = Depends(get_db)):
+    try:
+        team = await TeamCRUD.get_team_by_id(team_id=team_id, db=db)
+        if not team:
+            raise HTTPException(status_code=404, detail=f"Team with id {team_id} not found")
+            
+        composition = await TeamCRUD.get_team_composition(db, team_id)
+        
+        return {
+            "team": team,
+            "composition": composition,
+            "available_slots": {
+                "students": 1 - composition["students"],
+                "teachers": 3 - composition["teachers"],
+                "total": 4 - composition["total"]
+            }
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Team with id {team_id} not found")
+
+@team_discovery_router.get('/get_team_by_organization/{org_id}')
+async def get_team_by_org(org_id: int, db: AsyncSession = Depends(get_db)):
+    try:
+        teams = await TeamCRUD.get_teams_by_organization(db=db, org_id=org_id)
+        return teams
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"No teams found for organization {org_id}")
+
 router.include_router(team_management_router)
 router.include_router(team_membership_router)
 router.include_router(team_discovery_router)
-

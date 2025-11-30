@@ -59,16 +59,15 @@ class ProfileCRUD:
         result = await db.execute(select(User).where(User.id == user_id))
         existing_profile = result.scalar_one_or_none()
 
-        if not result:
+        if not existing_profile: 
             raise HTTPException(
                 status_code=404, detail="Profile not found"
             )
-    
         
         update_dict = update_data.dict(exclude_unset=True)
         
 
-        for field in ["NameIRL", "Surname", "Patronymic", "Description", "Region","Organization","email"]:
+        for field in ["NameIRL", "Surname", "Patronymic", "Description", "Region", "Organization", "email", "Type"]:
             if field in update_dict:
                 setattr(existing_profile, field, update_dict[field])
 

@@ -7,15 +7,25 @@ class UserProfileClient:
     @staticmethod
     async def get_user_profile(user_id: int):
         try:
+            print(f"DEBUG UserProfileClient: Making batch request for user {user_id}")
+            
             async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{settings.USER_PROFILE_URL}/profile_interaction/get_user_by_id/{user_id}",
+                response = await client.post(
+                    f"{settings.USER_PROFILE_URL}/profile_interaction/get_users_batch",
+                    json={"user_ids": [user_id]},  
                     timeout=5.0,
                 )
                 
+                print(f"DEBUG UserProfileClient: Batch response: {response.status_code} - {response.text}")
+                
                 if response.status_code == 200:
-                    return response.json()
+                    users_data = response.json()
+
+                    user_data = users_data.get(str(user_id))
+                    print(f"DEBUG UserProfileClient: Found user data: {user_data}")
+                    return user_data
                 else:
+                    print(f"DEBUG UserProfileClient: Batch request failed: {response.status_code}")
                     return None
                     
         except Exception as e:
@@ -100,8 +110,3 @@ class UserProfileClient:
         except Exception as e:
             logging.error(f"Error updating user team: {str(e)}")
             return None
-        
-
-        
-        
-    

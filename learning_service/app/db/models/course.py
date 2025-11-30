@@ -2,6 +2,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer, String
 from db.base import Base
 
+
 class Course(Base):
     __tablename__ = "courses"
 

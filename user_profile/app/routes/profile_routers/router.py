@@ -88,7 +88,8 @@ async def get_users_batch(
                 "NameIRL": user.NameIRL,
                 "Surname": user.Surname,
                 "Patronymic": user.Patronymic,
-                "Region": user.Region
+                "Region": user.Region,
+                "Type": user.Type.value if user.Type else None
             }
         
         return users_data

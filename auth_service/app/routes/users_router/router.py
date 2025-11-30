@@ -1,9 +1,7 @@
-
 import json
 import aio_pika
 from fastapi import APIRouter,HTTPException,Response,status,Depends, BackgroundTasks
 from sqlalchemy import select
-
 from schemas.user_schemas.user_register import UserRegister
 from schemas.user_schemas.user_password import ChangePasswordSchema
 from schemas.user_schemas.user_auth import UserAuth
@@ -15,7 +13,7 @@ from cruds.users_crud.crud import UserCRUD
 from db.models.user import User
 from services.jwt import create_access_token
 from services.emailsender import send_confirmation_email
-
+import asyncio
 from fastapi import APIRouter,Depends
 from fastapi.responses import HTMLResponse
 import os
@@ -130,8 +128,9 @@ async def confirm_email(
             "name": user.name,
             "is_verified": True,
             "event_type": "user_verified",
-            "role":role_value
+            "role": user.role.value
         }
+
         message = aio_pika.Message(
             body=json.dumps(user_data_message).encode(),
             headers={"event_type": "user_verified"},
