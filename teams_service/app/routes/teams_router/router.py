@@ -1,3 +1,4 @@
+from services.user_profile_client import UserProfileClient
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from shemas.team_shemas.team_register import TeamRegister
@@ -142,24 +143,58 @@ async def get_all_teams(db: AsyncSession = Depends(get_db)):
 @team_discovery_router.get('/get_team_by_id/{team_id}')
 async def get_team_by_id(team_id: int, db: AsyncSession = Depends(get_db)):
     try:
-        team = await TeamCRUD.get_team_by_id(team_id=team_id, db=db)
+        team = await TeamCRUD.get_team_by_id(db, team_id)  
         if not team:
             raise HTTPException(status_code=404, detail=f"Team with id {team_id} not found")
             
-        composition = await TeamCRUD.get_team_composition(db, team_id)
+
+        members = await TeamCRUD.get_team_members_with_profiles(db, team_id)
+        
+
+        composition = await TeamCRUD.analyze_team_composition(db, team_id)
+        
+
+        leader_info = None
+        if team.leader_id:
+            leader_profile = await UserProfileClient.get_user_profile(team.leader_id)
+            if leader_profile:
+                leader_info = {
+                    "user_id": team.leader_id,
+                    "username": leader_profile.get("username", ""),
+                    "name": leader_profile.get("NameIRL", ""),
+                    "surname": leader_profile.get("Surname", ""),
+                    "role": await TeamCRUD.get_user_role(team.leader_id)
+                }
         
         return {
-            "team": team,
+            "team_info": {
+                "id": team.id,
+                "name": team.name,
+                "direction": team.direction,
+                "region": team.region,
+                "leader_id": team.leader_id,
+                "leader_info": leader_info,
+                "organization_name": team.organization_name,
+                "organization_id": team.organization_id,
+                "points": team.points,
+                "description": team.description,
+                "tasks_completed": team.tasks_completed,
+                "number_of_members": team.number_of_members,
+                "created_at": team.created_at if hasattr(team, 'created_at') else None
+            },
+            "members": members,  
             "composition": composition,
             "available_slots": {
-                "students": 1 - composition["students"],
-                "teachers": 3 - composition["teachers"],
-                "total": 4 - composition["total"]
+                "students": max(0, 1 - composition["students"]),
+                "teachers": max(0, 3 - composition["teachers"]),
+                "total": max(0, 4 - composition["total"])
             }
         }
+        
     except HTTPException as he:
         raise he
     except Exception as e:
+        print(f"Error in get_team_by_id: {str(e)}")
         raise HTTPException(status_code=404, detail=f"Team with id {team_id} not found")
 
 @team_discovery_router.get('/get_team_by_organization/{org_id}')

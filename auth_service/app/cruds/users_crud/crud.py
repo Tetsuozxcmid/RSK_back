@@ -14,6 +14,7 @@ class UserCRUD:
             select(User).where(User.email == user_data.email.lower())
         )
         existing_user = existing_user.scalar_one_or_none()
+        user_role = user_data.role if hasattr(user_data, 'role') else UserRole.STUDENT
         
 
         if existing_user and existing_user.verified:
@@ -34,7 +35,7 @@ class UserCRUD:
             email=user_data.email.lower(),
             hashed_password="",  
             login=None,  
-            role=UserRole.STUDENT,  
+            role=user_role,  
             verified=False,
             confirmation_token=confirmation_token,
             auth_provider=None,
@@ -44,7 +45,7 @@ class UserCRUD:
             temp_password=pass_settings.get_password_hash(
                 user_data.password.get_secret_value()
             ),  
-            temp_role=user_data.role if hasattr(user_data, 'role') else UserRole.STUDENT,  
+            temp_role=user_role,  
             temp_login=None  
         )
         

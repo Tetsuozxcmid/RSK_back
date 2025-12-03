@@ -13,7 +13,7 @@ class TeamCRUD:
     async def get_user_role(user_id: int) -> str:
         user_info = await UserProfileClient.get_user_profile(user_id)
         
-        print(f"🔴 DEBUG get_user_role: User {user_id} info: {user_info}")
+        print(f"DEBUG get_user_role: User {user_id} info: {user_info}")
         
         if not user_info:
             raise HTTPException(
@@ -22,14 +22,14 @@ class TeamCRUD:
             )
         
         role = user_info.get("Type") or user_info.get("type") or user_info.get("role")
-        print(f"🔴 DEBUG get_user_role: Found role field: {role}")
+        print(f"DEBUG get_user_role: Found role field: {role}")
         
 
         if role:
             role = role.lower()
         
         if not role:
-            print(f"🔴 DEBUG get_user_role: Available fields: {list(user_info.keys())}")
+            print(f"DEBUG get_user_role: Available fields: {list(user_info.keys())}")
             raise HTTPException(
                 status_code=400,
                 detail=f"User {user_id} doesn't have a role assigned"
@@ -135,6 +135,7 @@ class TeamCRUD:
                     leader_id=leader_id,
                     team_name=team_data.name,
                     org_name=team_data.organization_name
+                    
                 )
                 raise HTTPException(
                     status_code=400,
@@ -356,20 +357,33 @@ class TeamCRUD:
             return []
         
         user_ids = [member.user_id for member in members]
+        print(f"DEBUG: Getting profiles for user_ids: {user_ids}")
+        
         users_profiles = await UserProfileClient.get_users_profiles(user_ids)
+        print(f"DEBUG: Received profiles: {users_profiles}")
         
         members_with_profiles = []
         for member in members:
             user_profile = users_profiles.get(str(member.user_id), {})
+            print(f"DEBUG: Profile for user {member.user_id}: {user_profile}")
+            
+
+            try:
+                role = await TeamCRUD.get_user_role(member.user_id)
+            except:
+                role = "unknown"
             
             member_data = {
-            "user_id": member.user_id,
-            "team_id": member.team_id,
-            "is_leader": member.is_leader,
-            "name": user_profile.get("NameIRL", ""),
-            "surname": user_profile.get("Surname", ""),
-            "patronymic": user_profile.get("Patronymic", ""),
-            "region": user_profile.get("Region", "")
+                "user_id": member.user_id,
+                "team_id": member.team_id,
+                "is_leader": member.is_leader,
+                "username": user_profile.get("username", f"user{member.user_id}"),
+                "name": user_profile.get("NameIRL", ""),
+                "surname": user_profile.get("Surname", ""),
+                "patronymic": user_profile.get("Patronymic", ""),
+                "region": user_profile.get("Region", ""),
+                "role": role,
+                "email": user_profile.get("email", "")
             }
 
             members_with_profiles.append(member_data)
