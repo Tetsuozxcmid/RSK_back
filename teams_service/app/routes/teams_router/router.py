@@ -44,10 +44,21 @@ async def delete_team(
         )
 
 @team_management_router.patch('/update_team_data/{team_id}')
-async def update_team_data(team_id: int, update_data: TeamUpdate, db: AsyncSession = Depends(get_db)):
+async def update_team_data(team_id: int, update_data: TeamUpdate, request: Request, db: AsyncSession = Depends(get_db)):
     try:
-        team = await TeamCRUD.update_team(db=db, team_id=team_id, update_data=update_data.model_dump())
-        return team
+        current_user = await get_current_user(request)
+        team = await TeamCRUD.get_team_by_id(db, team_id)
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+        
+        if team.leader_id != current_user:
+            raise HTTPException(status_code=403, detail="Only team leader can update team data")
+        
+        updated_team = await TeamCRUD.update_team(db=db, team_id=team_id, update_data=update_data.model_dump())
+        return updated_team
+    
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{str(e)}")
 
