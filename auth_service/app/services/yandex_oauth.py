@@ -1,80 +1,95 @@
-from urllib.parse import urlencode
+from fastapi import APIRouter, Depends, Response
+from fastapi.responses import RedirectResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+import httpx
+from db.session import get_db
+from cruds.users_crud.crud import UserCRUD
+from db.models.user import User, UserRole
+from services.jwt import create_access_token
 
-import aiohttp
+import os
 
-class YandexOauthAPI:
-    def __init__(self, client_id: str, client_secret: str):
-        self.client_id = client_id
-        self.client_secret = client_secret
-
-        self.auth_url = "https://oauth.yandex.ru/authorize"
-        self.token_url = "https://oauth.yandex.ru/token"
-        self.info_url = "https://login.yandex.ru/info"
-
-    def build_auth_url(
-            self,
-            device_id: str = None,
-            device_name: str = None,
-            login_hint: str = None,
-            scope: str = None,
-            optional_scope: str = None,
-            force_confirm: bool = False,
-            state: str = None,
-            code_challenge: str = None,
-            code_challenge_method: str = "plain") -> str:
-        params = {
-            "response_type": "code",
-            "client_id": self.client_id
-        }
-
-        if device_id:
-            params["device_id"] = device_id
-        if device_name:
-            params["device_name"] = device_name
-        if login_hint:
-            params["login_hint"] = login_hint
-        if scope:
-            params["scope"] = scope
-        if optional_scope:
-            params["optional_scope"] = optional_scope
-        if force_confirm:
-            params["force_confirm"] = "yes"
-        if state:
-            params["state"] = state
-        if code_challenge:
-            params["code_challenge"] = code_challenge
-            params["code_challenge_method"] = code_challenge_method
-
-        return f"{self.auth_url}?{urlencode(params)}"
+yandex_router = APIRouter(prefix="/auth/yandex", tags=["Yandex OAuth"])
 
 
-    async def get_token(self, code: str) -> dict:
-        data = {
-            "grant_type": "authorization_code",
-            "code": code,
-            "client_id": self.client_id,
-            "client_secret": self.client_secret
-        }
+CLIENT_ID = os.getenv("YANDEX_CLIENT_ID")
+CLIENT_SECRET = os.getenv("YANDEX_CLIENT_SECRET")
+REDIRECT_URI = os.getenv("YANDEX_REDIRECT_URI")
+FRONTEND_URL = os.getenv("YANDEX_FRONTEND_URL")
+COOKIE_NAME = "users_access_token"  
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(self. token_url, data=data) as response:
-                return await response.json()
+@yandex_router.get("/login")
+async def yandex_login():
 
-    async def get_info_by_token(
-            self,
-            access_token: str,
-            format: str = "json",
-            jwt_secret: str = None) -> dict:
+    url = (
+        f"https://oauth.yandex.com/authorize?"
+        f"response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
+    )
+    return RedirectResponse(url)
 
-        if format not in ("json", "xml", "jwt"):
-            raise ValueError("Недопустимый формат. Допустимые значения: json, xml, jwt")
+@yandex_router.get("/callback")
+async def yandex_callback(
+    response: Response, 
+    code: str = None, 
+    error: str = None, 
+    db: AsyncSession = Depends(get_db)
+):
 
-        params = {"format": format}
-        if format == "jwt" and jwt_secret:
-            params["jwt_secret"] = jwt_secret
+    if error:
+        return RedirectResponse(f"{FRONTEND_URL}?error={error}")
+
+
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            "https://oauth.yandex.com/token",
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "client_id": CLIENT_ID,
+                "client_secret": CLIENT_SECRET,
+            },
+        )
+        token_data = token_resp.json()
+        access_token = token_data.get("access_token")
+        if not access_token:
+            return RedirectResponse(f"{FRONTEND_URL}?error=token_not_received")
+
 
         headers = {"Authorization": f"OAuth {access_token}"}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(self.info_url, params=params, headers=headers) as response:
-                return await response.json()
+        user_resp = await client.get("https://login.yandex.ru/info?format=json", headers=headers)
+        user_data = user_resp.json()
 
+
+    result = await db.execute(
+        select(User).where(User.provider_id == str(user_data["id"]), User.auth_provider == "yandex")
+    )
+    existing_user = result.scalar_one_or_none()
+
+    if existing_user:
+        user = existing_user
+    else:
+        user = await UserCRUD.create_oauth_user(
+            db=db,
+            email=user_data.get("default_email"),
+            name=user_data.get("real_name") or user_data.get("display_name"),
+            provider="yandex",
+            provider_id=user_data["id"],
+            role=UserRole.STUDENT
+        )
+
+
+
+    jwt_token = await create_access_token({"sub": str(user.id), "role": user.role.value})
+
+
+    response = RedirectResponse(FRONTEND_URL)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=jwt_token,
+        httponly=True,
+        secure=False,   
+        samesite="lax",
+        max_age=3600*24*7  
+    )
+    return response

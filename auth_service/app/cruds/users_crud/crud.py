@@ -67,6 +67,37 @@ class UserCRUD:
                 status_code=500,
                 detail=f"Error while registering user: {str(e)}"
             )
+        
+    async def create_oauth_user(db: AsyncSession, email: str, name: str, provider: str, provider_id: str, role: UserRole = UserRole.STUDENT):
+        result = await db.execute(
+            select(User).where(
+                (User.provider_id == provider_id) & (User.auth_provider == provider)
+            )
+        )
+        existing_user = result.scalar_one_or_none()
+        if existing_user:
+            return existing_user
+
+        new_user = User(
+            name=name,
+            email=email.lower() if email else None,
+            hashed_password="",  
+            login=None,
+            role=role,
+            verified=True,  
+            auth_provider=provider,
+            provider_id=str(provider_id),
+        )
+        
+        db.add(new_user)
+        try:
+            await db.commit()
+            await db.refresh(new_user)
+            return new_user
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Error creating OAuth user: {str(e)}")
+
     
     @staticmethod
     async def confirm_user_email(db: AsyncSession, token: str):
