@@ -20,6 +20,17 @@ class Settings(BaseSettings):
 
     URL_FOR_TOKEN: str
 
+    VK_APP_ID: int
+    VK_APP_SECRET: str
+    VK_REDIRECT_URI: str
+
+    CLIENT_ID_YANDEX: str
+    CLIENT_SECRET_YANDEX: str
+    REDIRECT_URI_YANDEX: str
+    
+    FRONTEND_URL: str
+    
+
     @property
     def DATABASE_URL(self):
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -35,7 +46,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env',env_file_encoding='utf-8',extra='ignore')
 
 
-settings = Settings()
+settings = Settings() # type: ignore
 
 def get_auth_data():
     return {"secret_key" : settings.SECRET_KEY,"algorithm" : settings.ALGORITHM}

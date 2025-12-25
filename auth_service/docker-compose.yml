@@ -49,8 +49,8 @@ services:
   rabbitmq:
     image: rabbitmq:3.12-management
     environment:
-      RABBITMQ_DEFAULT_USER:admin
-      RABBITMQ_DEFAULT_PASS:myStrongPasswordRSKTEAM
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: myStrongPasswordRSKTEAM
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
@@ -59,6 +59,7 @@ services:
     restart: always
     networks:
       - shared_network
+
 
 # === Volumes для данных БД ===
 volumes:

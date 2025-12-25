@@ -3,7 +3,7 @@ import aio_pika
 from aio_pika.abc import AbstractRobustConnection
 from config import settings
 
-rabbitmq_connection: AbstractRobustConnection = None
+rabbitmq_connection: AbstractRobustConnection = None # type: ignore
 
 async def get_rabbitmq_connection() -> AbstractRobustConnection:
     if not rabbitmq_connection:

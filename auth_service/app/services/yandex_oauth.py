@@ -3,20 +3,17 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 import httpx
-from db.session import get_db
+from db.session import get_db   
 from cruds.users_crud.crud import UserCRUD
 from db.models.user import User, UserRole
 from services.jwt import create_access_token
+
+from config import settings
 
 import os
 
 yandex_router = APIRouter(prefix="/auth/yandex", tags=["Yandex OAuth"])
 
-
-CLIENT_ID = os.getenv("YANDEX_CLIENT_ID")
-CLIENT_SECRET = os.getenv("YANDEX_CLIENT_SECRET")
-REDIRECT_URI = os.getenv("YANDEX_REDIRECT_URI")
-FRONTEND_URL = os.getenv("YANDEX_FRONTEND_URL")
 COOKIE_NAME = "users_access_token"  
 
 @yandex_router.get("/login")
@@ -24,20 +21,20 @@ async def yandex_login():
 
     url = (
         f"https://oauth.yandex.com/authorize?"
-        f"response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
+        f"response_type=code&client_id={settings.CLIENT_ID_YANDEX}&redirect_uri={settings.REDIRECT_URI_YANDEX}"
     )
     return RedirectResponse(url)
 
 @yandex_router.get("/callback")
 async def yandex_callback(
     response: Response, 
-    code: str = None, 
-    error: str = None, 
+    code: str = None,  # type: ignore
+    error: str = None,  # type: ignore
     db: AsyncSession = Depends(get_db)
 ):
 
     if error:
-        return RedirectResponse(f"{FRONTEND_URL}?error={error}")
+        return RedirectResponse(f"{settings.FRONTEND_URL}?error={error}")
 
 
     async with httpx.AsyncClient() as client:
@@ -46,14 +43,14 @@ async def yandex_callback(
             data={
                 "grant_type": "authorization_code",
                 "code": code,
-                "client_id": CLIENT_ID,
-                "client_secret": CLIENT_SECRET,
+                "client_id": settings.CLIENT_ID_YANDEX,
+                "client_secret": settings.CLIENT_SECRET_YANDEX,
             },
         )
         token_data = token_resp.json()
         access_token = token_data.get("access_token")
         if not access_token:
-            return RedirectResponse(f"{FRONTEND_URL}?error=token_not_received")
+            return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
 
 
         headers = {"Authorization": f"OAuth {access_token}"}
@@ -69,7 +66,7 @@ async def yandex_callback(
     if existing_user:
         user = existing_user
     else:
-        user = await UserCRUD.create_oauth_user(
+        user = await UserCRUD.create_oauth_user( # type: ignore
             db=db,
             email=user_data.get("default_email"),
             name=user_data.get("real_name") or user_data.get("display_name"),
@@ -83,7 +80,7 @@ async def yandex_callback(
     jwt_token = await create_access_token({"sub": str(user.id), "role": user.role.value})
 
 
-    response = RedirectResponse(FRONTEND_URL)
+    response = RedirectResponse(FRONTEND_URL) # type: ignore
     response.set_cookie(
         key=COOKIE_NAME,
         value=jwt_token,
