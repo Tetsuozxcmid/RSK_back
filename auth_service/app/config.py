@@ -20,15 +20,15 @@ class Settings(BaseSettings):
 
     URL_FOR_TOKEN: str
 
-    VK_APP_ID: int
-    VK_APP_SECRET: str
-    VK_REDIRECT_URI: str
+    #VK_APP_ID: int
+    #VK_APP_SECRET: str
+    #VK_REDIRECT_URI: str
 
-    CLIENT_ID_YANDEX: str
-    CLIENT_SECRET_YANDEX: str
-    REDIRECT_URI_YANDEX: str
+    YANDEX_CLIENT_ID: str
+    YANDEX_CLIENT_SECRET: str
+    YANDEX_REDIRECT_URI: str
     
-    FRONTEND_URL: str
+    YANDEX_FRONTEND_URL: str
     
 
     @property
