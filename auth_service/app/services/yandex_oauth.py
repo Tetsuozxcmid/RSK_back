@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from aio_pika.abc import AbstractRobustConnection
 import httpx
 import aio_pika
 import json
+import time
 
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
@@ -21,8 +23,8 @@ COOKIE_NAME = "users_access_token"
 @yandex_router.get("/login")
 async def yandex_login():
     url = (
-        f"https://oauth.yandex.com/authorize?"
-        f"response_type=code"
+        "https://oauth.yandex.com/authorize?"
+        "response_type=code"
         f"&client_id={settings.CLIENT_ID_YANDEX}"
         f"&redirect_uri={settings.REDIRECT_URI_YANDEX}"
     )
@@ -34,11 +36,16 @@ async def yandex_callback(
     response: Response,
     code: str | None = None,
     error: str | None = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection),
 ):
+    print(f"[YANDEX DEBUG {time.time()}] Callback started, code: {code}")
+
     if error:
         return RedirectResponse(f"{settings.FRONTEND_URL}?error={error}")
 
+    if not code:
+        return RedirectResponse(f"{settings.FRONTEND_URL}?error=code_missing")
 
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
@@ -48,22 +55,26 @@ async def yandex_callback(
                 "code": code,
                 "client_id": settings.CLIENT_ID_YANDEX,
                 "client_secret": settings.CLIENT_SECRET_YANDEX,
+                "redirect_uri": settings.REDIRECT_URI_YANDEX,
             },
         )
+
         token_data = token_resp.json()
         access_token = token_data.get("access_token")
 
         if not access_token:
+            print(f"[YANDEX ERROR] Token response: {token_data}")
             return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
 
-
-        headers = {"Authorization": f"OAuth {access_token}"}
         user_resp = await client.get(
             "https://login.yandex.ru/info?format=json",
-            headers=headers
+            headers={"Authorization": f"OAuth {access_token}"}
         )
         user_data = user_resp.json()
 
+    email = user_data.get("default_email")
+    if not email:
+        return RedirectResponse(f"{settings.FRONTEND_URL}?error=email_not_provided")
 
     result = await db.execute(
         select(User).where(
@@ -73,72 +84,63 @@ async def yandex_callback(
     )
     existing_user = result.scalar_one_or_none()
 
-    created = False
-
     if existing_user:
         user = existing_user
+        print(f"[YANDEX DEBUG] User already exists, id: {user.id}")
     else:
         user = await UserCRUD.create_oauth_user(
             db=db,
-            email=user_data.get("default_email"),
+            email=email,
             name=user_data.get("real_name") or user_data.get("display_name") or "",
             provider="yandex",
-            provider_id=user_data["id"],
+            provider_id=str(user_data["id"]),
             role=UserRole.STUDENT
         )
-        created = True
 
+        if not user.login:
+            user.login = f"user{user.id}"
+            await db.commit()
+            await db.refresh(user)
 
-    if created:
-        try:
-            rabbitmq = await get_rabbitmq_connection()
-            channel = await rabbitmq.channel()
-            exchange = await channel.declare_exchange(
-                "user_events",
-                type="direct",
-                durable=True
-            )
+        print(f"[YANDEX DEBUG] New user created, id: {user.id}")
 
-            user_event = {
-                "user_id": user.id,
-                "email": user.email or "",
-                "username": user.login or f"user{user.id}",
-                "name": user.name or "",
-                "verified": True,
-                "event_type": "user_registered",
-                "role": user.role.value
-            }
+    print(f"[YANDEX DEBUG] Sending user.created event, user_id: {user.id}")
 
-            message = aio_pika.Message(
-                body=json.dumps(user_event).encode(),
-                headers={"event_type": "user_events"},
-                delivery_mode=aio_pika.DeliveryMode.PERSISTENT
-            )
+    channel = await rabbitmq.channel()
+    exchange = await channel.declare_exchange("user_events", type="direct", durable=True)
 
-            await exchange.publish(
-                message,
-                routing_key="user.created"
-            )
+    user_event = {
+        "user_id": user.id,
+        "email": user.email,
+        "username": user.login,
+        "name": user.name,
+        "verified": True,
+        "event_type": "user_registered",
+        "role": user.role.value,
+    }
 
-        except Exception as e:
+    message = aio_pika.Message(
+        body=json.dumps(user_event).encode(),
+        delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+        headers={"event_type": "user_registered"},
+    )
 
-            print(f"[RabbitMQ] Failed to publish OAuth user event: {e}")
+    await exchange.publish(message, routing_key="user.created")
+    print(f"[YANDEX DEBUG] Event published for user_id: {user.id}")
 
-
-    jwt_token = await create_access_token({
-        "sub": str(user.id),
-        "role": user.role.value
-    })
+    jwt_token = await create_access_token(
+        {"sub": str(user.id), "role": user.role.value}
+    )
 
     response = RedirectResponse(settings.FRONTEND_URL)
     response.set_cookie(
         key=COOKIE_NAME,
         value=jwt_token,
         httponly=True,
-        secure=False,   
+        secure=False,
         samesite="lax",
-        max_age=3600 * 24 * 7
+        max_age=3600 * 24 * 7,
     )
 
+    print(f"[YANDEX DEBUG] Callback completed for user_id: {user.id}")
     return response
-
