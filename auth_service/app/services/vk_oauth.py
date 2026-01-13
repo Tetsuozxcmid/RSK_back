@@ -6,12 +6,15 @@ from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
 from db.models.user import UserRole
 from services.jwt import create_access_token
+from services.rabbitmq import get_rabbitmq_connection
 
 from config import settings
 
 import httpx
+import aio_pika
+import json
 
-router = APIRouter(prefix="/auth/vk", tags=["vk_oauth"])
+router = APIRouter(prefix="/auth/vk", tags=["VK OAuth"])
 user_crud = UserCRUD()
 COOKIE_NAME = "users_access_token"  
 
@@ -21,7 +24,8 @@ async def vk_callback(
     device_id: str | int = None, # type: ignore
     code: str = None, # type: ignore
     error: str = None, # type: ignore
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    rabbitmq: aio_pika.abc.AbstractRobustConnection = Depends(get_rabbitmq_connection)
 ):
     if error:
         return RedirectResponse(f"{settings.FRONTEND_URL_YANDEX}?error={error}")
@@ -52,21 +56,59 @@ async def vk_callback(
                 "access_token": access_token
             }
         )
-        user_data = user_resp.json()
-        user_info = user_data.get("user", {})
+        data = user_resp.json()
+        user = data.get("user")
 
-        user_id = user_info.get("user_id")
-        user_first_name = user_info.get("first_name")
-        user_email = user_info.get("email")
+        user_id = user.get("user_id")
+        user_first_name = user.get("first_name")
+        user_last_name = user.get("last_name")
+        user_email = user.get("email")
+
+        user_name = f"{user_first_name} {user_last_name}"
 
         user = await user_crud.create_oauth_user(
             db=db,
             email=user_email,
-            name=user_first_name,
+            name=user_name,
             provider="vk",
             provider_id=str(user_id),
             role=UserRole.STUDENT
         )
+        created = True
+
+        if created:
+            try:
+                channel = await rabbitmq.channel()
+                exchange = await channel.declare_exchange(
+                    "user_events",
+                    type="direct",
+                    durable=True
+                )
+
+                user_event = {
+                    "user_id": user.id,
+                    "email": user.email or user_email or "",
+                    "username": user.login or f"vk_user_{user_id}",
+                    "name": user.name or user_name,
+                    "verified": True,  # OAuth пользователи считаются верифицированными
+                    "event_type": "user_registered",
+                    "role": user.role.value
+                }
+
+                message = aio_pika.Message(
+                    body=json.dumps(user_event).encode(),
+                    headers={"event_type": "user_events"},
+                    delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+                )
+
+                await exchange.publish(
+                    message,
+                    routing_key="user.created"
+                )
+
+            except Exception as e:
+                # Логируем ошибку, но не прерываем процесс авторизации
+                print(f"[RabbitMQ] Failed to publish VK OAuth user event: {e}")
 
         jwt_token = await create_access_token({"sub": str(user.id), "role": user.role.value})
 
