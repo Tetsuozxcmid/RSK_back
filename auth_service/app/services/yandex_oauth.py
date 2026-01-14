@@ -135,8 +135,10 @@ async def yandex_callback(
         key=COOKIE_NAME,
         value=jwt_token,
         httponly=True,
-        secure=False,   
-        samesite="lax",
+        secure=True,
+        samesite="none",
+        domain=".rosdk.ru",   # ← если фронт и бэк на поддоменах
+        path="/",
         max_age=3600 * 24 * 7
     )
 

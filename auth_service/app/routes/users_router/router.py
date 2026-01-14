@@ -24,6 +24,7 @@ from services.rabbitmq import get_rabbitmq_connection
 from sqlalchemy.ext.asyncio import AsyncSession
 from aio_pika.abc import AbstractRobustConnection
 from services.yandex_oauth import yandex_router
+from services.vk_oauth import vk_router
 
 
 router = APIRouter(prefix='/users_interaction')
@@ -222,7 +223,7 @@ router.include_router(auth_router)
 router.include_router(email_router)
 router.include_router(user_management_router)
 router.include_router(yandex_router)
-    
+router.include_router(vk_router)
 
     
 

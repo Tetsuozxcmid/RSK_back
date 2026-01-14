@@ -14,11 +14,11 @@ import httpx
 import aio_pika
 import json
 
-router = APIRouter(prefix="/auth/vk", tags=["VK OAuth"])
+vk_router = APIRouter(prefix="/auth/vk", tags=["VK OAuth"])
 user_crud = UserCRUD()
 COOKIE_NAME = "users_access_token"  
 
-@router.get("/callback")
+@vk_router.get("/callback")
 async def vk_callback(
     request: Request,
     device_id: str | int = None, # type: ignore
@@ -118,8 +118,10 @@ async def vk_callback(
             key=COOKIE_NAME,
             value=jwt_token,
             httponly=True,
-            secure=False,   
-            samesite="lax",
-            max_age=3600*24*7  
+            secure=True,
+            samesite="none",
+            domain=".rosdk.ru",   # ← если фронт и бэк на поддоменах
+            path="/",
+            max_age=3600 * 24 * 7
         )
         return response
