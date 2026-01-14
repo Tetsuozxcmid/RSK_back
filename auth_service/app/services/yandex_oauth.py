@@ -137,7 +137,7 @@ async def yandex_callback(
         httponly=True,
         secure=True,
         samesite="none",
-        domain=".rosdk.ru",   # ← если фронт и бэк на поддоменах
+        domain=".rosdk.ru",
         path="/",
         max_age=3600 * 24 * 7
     )
