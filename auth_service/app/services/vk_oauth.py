@@ -28,7 +28,7 @@ async def vk_callback(
     rabbitmq: aio_pika.abc.AbstractRobustConnection = Depends(get_rabbitmq_connection)
 ):
     if error:
-        return RedirectResponse(f"{settings.FRONTEND_URL_YANDEX}?error={error}")
+        return RedirectResponse(f"{settings.FRONTEND_URL}?error={error}")
 
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
