@@ -42,6 +42,22 @@ class Settings(BaseSettings):
     @property
     def URL_TOKEN(self):
         return f"{self.URL_FOR_TOKEN}"
+
+    @property
+    def CLIENT_ID_YANDEX(self):
+        return self.YANDEX_CLIENT_ID
+
+    @property
+    def CLIENT_SECRET_YANDEX(self):
+        return self.YANDEX_CLIENT_SECRET
+
+    @property
+    def REDIRECT_URI_YANDEX(self):
+        return self.YANDEX_REDIRECT_URI
+
+    @property  
+    def FRONTEND_URL(self):
+        return self.YANDEX_FRONTEND_URL
         
     model_config = SettingsConfigDict(env_file='.env',env_file_encoding='utf-8',extra='ignore')
 
