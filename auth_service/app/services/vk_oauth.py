@@ -46,7 +46,7 @@ async def vk_callback(
         token_data = token_resp.json()
         access_token = token_data.get("access_token")
         if not access_token:
-            return RedirectResponse(f"{settings.FRONTEND_URL_YANDEX}?error=token_not_received")
+            return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
 
     async with httpx.AsyncClient() as client:
         user_resp = await client.get(
