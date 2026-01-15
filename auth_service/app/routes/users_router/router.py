@@ -5,7 +5,6 @@ from sqlalchemy import select
 from schemas.user_schemas.user_register import UserRegister
 from schemas.user_schemas.user_password import ChangePasswordSchema
 from schemas.user_schemas.user_auth import UserAuth
-from schemas.user_schemas.user_get import UserGet
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models.user import User
 from db.session import get_db
@@ -17,7 +16,7 @@ import asyncio
 from fastapi import APIRouter,Depends
 from fastapi.responses import HTMLResponse
 import os
-from schemas.user_schemas.user_register import UserRegister,EmailSchema
+from schemas.user_schemas.user_register import UserRegister
 from pathlib import Path
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
@@ -25,6 +24,7 @@ from services.rabbitmq import get_rabbitmq_connection
 from sqlalchemy.ext.asyncio import AsyncSession
 from aio_pika.abc import AbstractRobustConnection
 from services.yandex_oauth import yandex_router
+from services.vk_oauth import vk_router
 
 
 router = APIRouter(prefix='/users_interaction')
@@ -223,7 +223,7 @@ router.include_router(auth_router)
 router.include_router(email_router)
 router.include_router(user_management_router)
 router.include_router(yandex_router)
-    
+router.include_router(vk_router)
 
     
 

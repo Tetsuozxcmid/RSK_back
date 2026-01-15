@@ -134,13 +134,15 @@ async def yandex_callback(
 
     response = RedirectResponse(settings.FRONTEND_URL)
     response.set_cookie(
-        key=COOKIE_NAME,
-        value=jwt_token,
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=3600 * 24 * 7,
-    )
+    key=COOKIE_NAME,
+    value=jwt_token,
+    httponly=True,
+    secure=True,  
+    samesite="none",  
+    domain=".rosdk.ru",  
+    path="/",
+    max_age=3600 * 24 * 7
+)
 
     print(f"[YANDEX DEBUG] Callback completed for user_id: {user.id}")
     return response
