@@ -64,18 +64,25 @@ async def vk_callback(
         user_id = user.get("user_id")
         user_first_name = user.get("first_name")
         user_last_name = user.get("last_name")
-        user_email = user.get("email")
+        user_email = user.get("email")  
 
         user_name = f"{user_first_name} {user_last_name}"
 
+        
+        if not user_email:
+            user_email = None  
+            
+        
+        print(f"[VK DEBUG] Полученный email: {user_email}")  
+
         user = await user_crud.create_oauth_user(
             db=db,
-            email=user_email,
-            name=user_name,
-            provider="vk",
-            provider_id=str(user_id),
+            name=user_name,      
+            provider="vk",       
+            provider_id=str(user_id), 
+            email=user_email,    
             role=UserRole.STUDENT
-        )
+            )
         created = True
 
         if created:
@@ -87,12 +94,13 @@ async def vk_callback(
                     durable=True
                 )
 
+                # ИСПРАВЛЕНА ПЕРЕДАЧА EMAIL
                 user_event = {
                     "user_id": user.id,
-                    "email": user.email or user_email or "",
+                    "email": user.email or user_email or "",  # ← берем email из БД
                     "username": user.login or f"vk_user_{user_id}",
                     "name": user.name or user_name,
-                    "verified": True,  # OAuth пользователи считаются верифицированными
+                    "verified": True,  
                     "event_type": "user_registered",
                     "role": user.role.value
                 }
@@ -109,11 +117,9 @@ async def vk_callback(
                 )
 
             except Exception as e:
-                # Логируем ошибку, но не прерываем процесс авторизации
                 print(f"[RabbitMQ] Failed to publish VK OAuth user event: {e}")
 
         jwt_token = await create_access_token({"sub": str(user.id), "role": user.role.value})
-
 
         response = RedirectResponse(settings.FRONTEND_URL) # type: ignore
         response.set_cookie(
