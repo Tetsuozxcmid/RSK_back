@@ -132,7 +132,7 @@ async def yandex_callback(
         {"sub": str(user.id), "role": user.role.value}
     )
 
-    response = RedirectResponse(settings.FRONTEND_URL)
+    response = RedirectResponse(settings.YANDEX_FRONTEND_URL)
     response.set_cookie(
     key=COOKIE_NAME,
     value=jwt_token,
