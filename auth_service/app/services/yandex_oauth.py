@@ -25,8 +25,8 @@ async def yandex_login():
     url = (
         "https://oauth.yandex.com/authorize?"
         "response_type=code"
-        f"&client_id={settings.CLIENT_ID_YANDEX}"
-        f"&redirect_uri={settings.REDIRECT_URI_YANDEX}"
+        f"&client_id={settings.YANDEX_CLIENT_ID}"
+        f"&redirect_uri={settings.YANDEX_REDIRECT_URI}"
     )
     return RedirectResponse(url)
 
@@ -42,10 +42,10 @@ async def yandex_callback(
     print(f"[YANDEX DEBUG {time.time()}] Callback started, code: {code}")
 
     if error:
-        return RedirectResponse(f"{settings.FRONTEND_URL}?error={error}")
+        return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error={error}")
 
     if not code:
-        return RedirectResponse(f"{settings.FRONTEND_URL}?error=code_missing")
+        return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error=code_missing")
 
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
@@ -53,9 +53,9 @@ async def yandex_callback(
             data={
                 "grant_type": "authorization_code",
                 "code": code,
-                "client_id": settings.CLIENT_ID_YANDEX,
-                "client_secret": settings.CLIENT_SECRET_YANDEX,
-                "redirect_uri": settings.REDIRECT_URI_YANDEX,
+                "client_id": settings.YANDEX_CLIENT_ID,
+                "client_secret": settings.YANDEX_CLIENT_SECRET,
+                "redirect_uri": settings.YANDEX_REDIRECT_URI,
             },
         )
 
@@ -64,7 +64,7 @@ async def yandex_callback(
 
         if not access_token:
             print(f"[YANDEX ERROR] Token response: {token_data}")
-            return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
+            return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error=token_not_received")
 
         user_resp = await client.get(
             "https://login.yandex.ru/info?format=json",
@@ -74,7 +74,7 @@ async def yandex_callback(
 
     email = user_data.get("default_email")
     if not email:
-        return RedirectResponse(f"{settings.FRONTEND_URL}?error=email_not_provided")
+        return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error=email_not_provided")
 
     result = await db.execute(
         select(User).where(
