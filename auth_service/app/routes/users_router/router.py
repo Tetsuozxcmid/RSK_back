@@ -10,7 +10,7 @@ from db.models.user import User
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
 from db.models.user import User
-from services.jwt import create_access_token,decode_token
+from services.jwt import create_access_token
 from services.emailsender import send_confirmation_email
 import asyncio
 from fastapi import APIRouter,Depends
@@ -109,20 +109,7 @@ async def auth_user(response: Response, user_data: UserAuth, db: AsyncSession = 
     return "Access successed"
 
 @auth_router.post('/logout/')
-async def logout_user(
-    request: Request, 
-    response: Response
-):
-    token = request.cookies.get("users_access_token")
-
-    if token:
-        try:
-            payload = await decode_token(token)  
-            if payload:
-                user_id = payload.get("sub")
-                print(f"[LOGOUT] User {user_id} logged out")
-        except:
-            pass
+async def logout_user(response: Response):
     
     response.delete_cookie(
         key="users_access_token",
@@ -132,8 +119,6 @@ async def logout_user(
         httponly=True,
         samesite="none"
     )
-    
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     
     return {"message": "Successfully logged out"}
 
