@@ -57,7 +57,7 @@ async def vk_callback(
     async with httpx.AsyncClient() as client:
         user_resp = await client.get(
             "https://id.vk.ru/oauth2/user_info",
-            params={
+            data={
                 "client_id": settings.VK_APP_ID,
                 "access_token": access_token
             }
