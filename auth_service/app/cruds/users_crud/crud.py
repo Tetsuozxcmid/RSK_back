@@ -68,7 +68,7 @@ class UserCRUD:
                 detail=f"Error while registering user: {str(e)}"
             )
         
-    async def create_oauth_user(db: AsyncSession, email: str, name: str, provider: str, provider_id: str, role: UserRole = UserRole.STUDENT):
+    async def create_oauth_user(self, db: AsyncSession, email: str, name: str, provider: str, provider_id: str, role: UserRole = UserRole.STUDENT):
         result = await db.execute(
             select(User).where(
                 (User.provider_id == provider_id) & (User.auth_provider == provider)
