@@ -110,7 +110,19 @@ async def auth_user(response: Response, user_data: UserAuth, db: AsyncSession = 
 
 @auth_router.post('/logout/')
 async def logout_user(response: Response):
-    response.delete_cookie(key="users_access_token")
+
+    cookies = [
+        "users_access_token=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=None",
+        "users_access_token=; Max-Age=0; Path=/; Domain=.rosdk.ru; HttpOnly; Secure; SameSite=None",
+        "users_access_token=; Max-Age=0; Path=/; Domain=rosdk.ru; HttpOnly; Secure; SameSite=None",
+        "userData=; Max-Age=0; Path=/",
+        "userData=; Max-Age=0; Path=/; Domain=.rosdk.ru",
+        "userData=; Max-Age=0; Path=/; Domain=rosdk.ru"
+    ]
+    
+    for cookie in cookies:
+        response.headers.append("Set-Cookie", cookie)
+    
     return {"message": "Successfully logged out"}
 
 
