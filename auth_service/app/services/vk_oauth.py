@@ -50,7 +50,8 @@ async def vk_callback(
         )
         token_data = token_resp.json()
         access_token = token_data.get("access_token")
-       	if not access_token:
+        print(f"ТОКЕН - {access_token}")
+        if not access_token:
             return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
 
     async with httpx.AsyncClient() as client:
@@ -62,6 +63,7 @@ async def vk_callback(
             }
         )
         data = user_resp.json()
+        print(f"ДАТА - {data}")
         user = data.get("user")
 
         user_id = user.get("user_id")
