@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     YANDEX_REDIRECT_URI: str
     
     YANDEX_FRONTEND_URL: str
+
+    FRONTEND_URL: str
     
 
     @property
