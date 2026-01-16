@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from aio_pika.abc import AbstractRobustConnection
 from services.yandex_oauth import yandex_router
 from services.vk_oauth import vk_router
+from datetime import datetime, timezone
 
 
 router = APIRouter(prefix='/users_interaction')
@@ -111,17 +112,51 @@ async def auth_user(response: Response, user_data: UserAuth, db: AsyncSession = 
 @auth_router.post('/logout/')
 async def logout_user(response: Response):
 
-    cookies = [
-        "users_access_token=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=None",
-        "users_access_token=; Max-Age=0; Path=/; Domain=.rosdk.ru; HttpOnly; Secure; SameSite=None",
-        "users_access_token=; Max-Age=0; Path=/; Domain=rosdk.ru; HttpOnly; Secure; SameSite=None",
-        "userData=; Max-Age=0; Path=/",
-        "userData=; Max-Age=0; Path=/; Domain=.rosdk.ru",
-        "userData=; Max-Age=0; Path=/; Domain=rosdk.ru"
-    ]
+    expired = datetime.now(timezone.utc)
     
-    for cookie in cookies:
-        response.headers.append("Set-Cookie", cookie)
+
+    response.set_cookie(
+        key="users_access_token",
+        value="",
+        expires=expired,
+        max_age=0,
+        path="/",
+        domain=".rosdk.ru",
+        secure=True,
+        httponly=True,
+        samesite="none"
+    )
+    
+    response.set_cookie(
+        key="users_access_token",
+        value="",
+        expires=expired,
+        max_age=0,
+        path="/",
+        domain="rosdk.ru",
+        secure=True,
+        httponly=True,
+        samesite="none"
+    )
+    
+
+    response.set_cookie(
+        key="userData",
+        value="",
+        expires=expired,
+        max_age=0,
+        path="/",
+        domain=".rosdk.ru"
+    )
+    
+    response.set_cookie(
+        key="userData",
+        value="",
+        expires=expired,
+        max_age=0,
+        path="/",
+        domain="rosdk.ru"
+    )
     
     return {"message": "Successfully logged out"}
 
