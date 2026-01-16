@@ -46,7 +46,7 @@ async def vk_callback(
             },
         )
         token_data = token_resp.json()
-        access_token = token_data.get("access_token")
+        access_token = token_data.get("code")
         if not access_token:
             return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
 
@@ -113,7 +113,6 @@ async def vk_callback(
                 print(f"[RabbitMQ] Failed to publish VK OAuth user event: {e}")
 
         jwt_token = await create_access_token({"sub": str(user.id), "role": user.role.value})
-
 
         response = RedirectResponse(settings.FRONTEND_URL) # type: ignore
         response.set_cookie(
