@@ -46,6 +46,7 @@ async def vk_callback(
             },
         )
         token_data = token_resp.json()
+        print(token_data)
         access_token = token_data.get("code")
         if not access_token:
             return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
@@ -59,6 +60,7 @@ async def vk_callback(
             }
         )
         data = user_resp.json()
+        print(data)
         user = data.get("user")
 
         user_id = user.get("user_id")
