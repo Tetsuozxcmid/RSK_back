@@ -18,7 +18,7 @@ vk_router = APIRouter(prefix="/auth/vk", tags=["VK OAuth"])
 user_crud = UserCRUD()
 
 COOKIE_NAME = "users_access_token"
-STATE_COOKIE = "vk_oauth_state"
+STATE_COOKIE = "vkid_sdk:state"
 
 
 # ================= START =================
