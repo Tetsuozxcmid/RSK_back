@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown
+
     logger.info("=== SHUTDOWN: Cancelling RabbitMQ consumer ===")
     if consumer_task:
         consumer_task.cancel()
