@@ -56,6 +56,7 @@ async def vk_callback(
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
+        print(token_resp)
         token_data = token_resp.json()
         print(f"Token response: {token_data}")
         
