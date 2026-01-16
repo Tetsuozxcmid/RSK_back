@@ -76,7 +76,7 @@ class UserCRUD:
         )
         existing_user = result.scalar_one_or_none()
         if existing_user:
-            return existing_user
+            return existing_user, False  # User already exists, not created
 
         new_user = User(
             name=name,
@@ -93,7 +93,7 @@ class UserCRUD:
         try:
             await db.commit()
             await db.refresh(new_user)
-            return new_user
+            return new_user, True  # New user created
         except Exception as e:
             await db.rollback()
             raise HTTPException(status_code=500, detail=f"Error creating OAuth user: {str(e)}")

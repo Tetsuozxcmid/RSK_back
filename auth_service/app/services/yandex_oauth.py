@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from aio_pika.abc import AbstractRobustConnection
 import httpx
 import aio_pika
@@ -10,7 +9,7 @@ import time
 
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
-from db.models.user import User, UserRole
+from db.models.user import UserRole
 from services.jwt import create_access_token
 from services.rabbitmq import get_rabbitmq_connection
 from config import settings
@@ -76,57 +75,50 @@ async def yandex_callback(
     if not email:
         return RedirectResponse(f"{settings.FRONTEND_URL}?error=email_not_provided")
 
-    result = await db.execute(
-        select(User).where(
-            User.provider_id == str(user_data["id"]),
-            User.auth_provider == "yandex"
-        )
+    user, created = await UserCRUD().create_oauth_user(
+        db=db,
+        email=email,
+        name=user_data.get("real_name") or user_data.get("display_name") or "",
+        provider="yandex",
+        provider_id=str(user_data["id"]),
+        role=UserRole.STUDENT
     )
-    existing_user = result.scalar_one_or_none()
 
-    if existing_user:
-        user = existing_user
-        print(f"[YANDEX DEBUG] User already exists, id: {user.id}")
-    else:
-        user = await UserCRUD.create_oauth_user(
-            db=db,
-            email=email,
-            name=user_data.get("real_name") or user_data.get("display_name") or "",
-            provider="yandex",
-            provider_id=str(user_data["id"]),
-            role=UserRole.STUDENT
-        )
-
+    if created:
         if not user.login:
             user.login = f"user{user.id}"
             await db.commit()
             await db.refresh(user)
 
         print(f"[YANDEX DEBUG] New user created, id: {user.id}")
+        print(f"[YANDEX DEBUG] Sending user.created event, user_id: {user.id}")
 
-    print(f"[YANDEX DEBUG] Sending user.created event, user_id: {user.id}")
+        try:
+            channel = await rabbitmq.channel()
+            exchange = await channel.declare_exchange("user_events", type="direct", durable=True)
 
-    channel = await rabbitmq.channel()
-    exchange = await channel.declare_exchange("user_events", type="direct", durable=True)
+            user_event = {
+                "user_id": user.id,
+                "email": user.email,
+                "username": user.login,
+                "name": user.name,
+                "verified": True,
+                "event_type": "user_registered",
+                "role": user.role.value,
+            }
 
-    user_event = {
-        "user_id": user.id,
-        "email": user.email,
-        "username": user.login,
-        "name": user.name,
-        "verified": True,
-        "event_type": "user_registered",
-        "role": user.role.value,
-    }
+            message = aio_pika.Message(
+                body=json.dumps(user_event).encode(),
+                delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+                headers={"event_type": "user_registered"},
+            )
 
-    message = aio_pika.Message(
-        body=json.dumps(user_event).encode(),
-        delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
-        headers={"event_type": "user_registered"},
-    )
-
-    await exchange.publish(message, routing_key="user.created")
-    print(f"[YANDEX DEBUG] Event published for user_id: {user.id}")
+            await exchange.publish(message, routing_key="user.created")
+            print(f"[YANDEX DEBUG] Event published for user_id: {user.id}")
+        except Exception as e:
+            print(f"[RabbitMQ] Failed to publish Yandex OAuth user event: {e}")
+    else:
+        print(f"[YANDEX DEBUG] User already exists, id: {user.id}")
 
     jwt_token = await create_access_token(
         {"sub": str(user.id), "role": user.role.value}

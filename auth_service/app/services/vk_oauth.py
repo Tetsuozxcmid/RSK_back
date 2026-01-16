@@ -73,7 +73,7 @@ async def vk_callback(
 
         user_name = f"{user_first_name} {user_last_name}"
 
-        user = await user_crud.create_oauth_user(
+        user, created = await user_crud.create_oauth_user(
             db=db,
             email=user_email,
             name=user_name,
@@ -81,7 +81,6 @@ async def vk_callback(
             provider_id=str(user_id),
             role=UserRole.STUDENT
         )
-        created = True
 
         if created:
             try:
