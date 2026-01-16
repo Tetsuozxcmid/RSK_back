@@ -32,22 +32,27 @@ async def vk_callback(
     if error:
         return RedirectResponse(f"{settings.FRONTEND_URL}?error={error}")
 
+    code_verifier = request.cookies.get("vkid_sdk:codeVerifier")
+    if not code_verifier:
+        return RedirectResponse(f"{settings.FRONTEND_URL}?error=code_verifier_not_found")
+
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
             "https://oauth.vk.com/access_token",
             params={
                 "grant_type": "authorization_code",
                 "code": code,
+                "code_verifier": code_verifier,
                 "redirect_uri": settings.VK_REDIRECT_URI,
                 "client_id": settings.VK_APP_ID,
                 "client_secret": settings.VK_APP_SECRET,
-                "device_id": device_id,
-                "state": "get_token"
+                "device_id": device_id
             },
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         token_data = token_resp.json()
         print(token_data)
-        access_token = token_data.get("access_token")
+        access_token = token_data.get("")
         if not access_token:
             return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
 
@@ -127,4 +132,6 @@ async def vk_callback(
             path="/",
             max_age=3600 * 24 * 7
         )
+
+        response.delete_cookie(key="vk_code_verifier")
         return response
