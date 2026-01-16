@@ -109,24 +109,23 @@ async def auth_user(response: Response, user_data: UserAuth, db: AsyncSession = 
 
     return "Access successed"
 
-@auth_router.post('/logout/')
-async def logout_user(response: Response):
+@auth_router.post('/logout/', response_model=dict)
+async def logout_user(response: Response) -> dict:
 
     response.delete_cookie(
         key="users_access_token",
         path="/",
-        domain=".rosdk.ru",  
+        domain=".rosdk.ru",
         secure=True,
         httponly=True,
         samesite="none"
     )
     
-
-    response.delete_cookie(key="users_access_token", path="/")
-    
-    
-    response.delete_cookie(key="userData", path="/", domain=".rosdk.ru")
-    response.delete_cookie(key="userData", path="/")
+    response.delete_cookie(
+        key="userData",
+        path="/",
+        domain=".rosdk.ru"
+    )
     
     return {"message": "Successfully logged out"}
 
