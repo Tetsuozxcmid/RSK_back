@@ -49,6 +49,7 @@ async def vk_callback(
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         token_data = token_resp.json()
+        print(token_data)
         access_token = token_data.get("access_token")
         if not access_token:
             return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
