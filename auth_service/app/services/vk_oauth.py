@@ -36,7 +36,7 @@ async def vk_callback(
 
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
-            "https://id.vk.ru/oauth2/auth",
+            "https://id.vk.ru/oauth2/token",
             data={
                 "grant_type": "authorization_code",
                 "code": code,
@@ -50,7 +50,6 @@ async def vk_callback(
         )
         token_data = token_resp.json()
         access_token = token_data.get("access_token")
-        print(f"ТОКЕН - {access_token}")
         if not access_token:
             return RedirectResponse(f"{settings.FRONTEND_URL}?error=token_not_received")
 
@@ -131,5 +130,5 @@ async def vk_callback(
             max_age=3600 * 24 * 7
         )
 
-        response.delete_cookie(key="vk_code_verifier")
+        response.delete_cookie(key="vkid_sdk:codeVerifier")
         return response 
