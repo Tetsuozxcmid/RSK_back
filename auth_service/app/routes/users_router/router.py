@@ -10,7 +10,7 @@ from db.models.user import User
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
 from db.models.user import User
-from services.jwt import create_access_token
+from services.jwt import create_access_token,decode_token
 from services.emailsender import send_confirmation_email
 import asyncio
 from fastapi import APIRouter,Depends
@@ -117,8 +117,7 @@ async def logout_user(
 
     if token:
         try:
-            from services.jwt import decode_token
-            payload = await decode_token(token)
+            payload = await decode_token(token)  
             if payload:
                 user_id = payload.get("sub")
                 print(f"[LOGOUT] User {user_id} logged out")
