@@ -36,7 +36,7 @@ async def vk_callback(
 
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
-            "https://id.vk.com/oauth2/token",
+            "https://id.vk.ru/oauth2/auth",
             data={
                 "grant_type": "authorization_code",
                 "code": code,
