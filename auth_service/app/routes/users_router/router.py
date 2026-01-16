@@ -1,6 +1,6 @@
 import json
 import aio_pika
-from fastapi import APIRouter,HTTPException,Response,status,Depends, BackgroundTasks
+from fastapi import APIRouter,HTTPException,Response,status,Depends, BackgroundTasks,Request
 from sqlalchemy import select
 from schemas.user_schemas.user_register import UserRegister
 from schemas.user_schemas.user_password import ChangePasswordSchema
@@ -107,6 +107,36 @@ async def auth_user(response: Response, user_data: UserAuth, db: AsyncSession = 
     response.set_cookie(key='users_access_token', value=access_token, httponly=True)
 
     return "Access successed"
+
+@auth_router.post('/logout/')
+async def logout_user(
+    request: Request, 
+    response: Response
+):
+    token = request.cookies.get("users_access_token")
+
+    if token:
+        try:
+            from services.jwt import decode_token
+            payload = await decode_token(token)
+            if payload:
+                user_id = payload.get("sub")
+                print(f"[LOGOUT] User {user_id} logged out")
+        except:
+            pass
+    
+    response.delete_cookie(
+        key="users_access_token",
+        domain=".rosdk.ru",
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="none"
+    )
+    
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    
+    return {"message": "Successfully logged out"}
 
 
 @email_router.get('/confirm-email')
