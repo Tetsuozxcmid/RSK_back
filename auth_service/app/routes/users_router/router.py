@@ -112,51 +112,21 @@ async def auth_user(response: Response, user_data: UserAuth, db: AsyncSession = 
 @auth_router.post('/logout/')
 async def logout_user(response: Response):
 
-    expired = datetime.now(timezone.utc)
-    
-
-    response.set_cookie(
+    response.delete_cookie(
         key="users_access_token",
-        value="",
-        expires=expired,
-        max_age=0,
         path="/",
-        domain=".rosdk.ru",
-        secure=True,
-        httponly=True,
-        samesite="none"
-    )
-    
-    response.set_cookie(
-        key="users_access_token",
-        value="",
-        expires=expired,
-        max_age=0,
-        path="/",
-        domain="rosdk.ru",
+        domain=".rosdk.ru",  
         secure=True,
         httponly=True,
         samesite="none"
     )
     
 
-    response.set_cookie(
-        key="userData",
-        value="",
-        expires=expired,
-        max_age=0,
-        path="/",
-        domain=".rosdk.ru"
-    )
+    response.delete_cookie(key="users_access_token", path="/")
     
-    response.set_cookie(
-        key="userData",
-        value="",
-        expires=expired,
-        max_age=0,
-        path="/",
-        domain="rosdk.ru"
-    )
+    
+    response.delete_cookie(key="userData", path="/", domain=".rosdk.ru")
+    response.delete_cookie(key="userData", path="/")
     
     return {"message": "Successfully logged out"}
 
