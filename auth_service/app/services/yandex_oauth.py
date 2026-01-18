@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from aio_pika.abc import AbstractRobustConnection
 import httpx
 import aio_pika
