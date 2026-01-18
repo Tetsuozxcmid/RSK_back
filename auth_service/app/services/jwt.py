@@ -1,4 +1,4 @@
-from jose import jwt
+from jose import jwt, JWTError 
 from datetime import datetime, timedelta, timezone
 from config import get_auth_data
 from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
@@ -20,6 +20,19 @@ async def create_access_token(data: dict) -> str:
 
 async def get_current_user(token: str = Depends(oauth2_scheme), security: HTTPAuthorizationCredentials = Depends(security)):
     pass
+
+
+async def decode_token(token: str):
+    auth_data = get_auth_data()
+    try:
+        payload = jwt.decode(
+            token, 
+            auth_data['secret_key'], 
+            algorithms=[auth_data['algorithm']]
+        )
+        return payload
+    except JWTError:
+        return None
 
 async def get_current_user_role(token: str = Depends(oauth2_scheme)) -> str:
     auth_data = get_auth_data()

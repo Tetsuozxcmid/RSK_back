@@ -18,7 +18,7 @@ consumer_task = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+
     logger.info("=== STARTUP: Creating database tables ===")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown
+
     logger.info("=== SHUTDOWN: Cancelling RabbitMQ consumer ===")
     if consumer_task:
         consumer_task.cancel()

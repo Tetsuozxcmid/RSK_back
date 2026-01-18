@@ -1,0 +1,20 @@
+from enum import StrEnum
+
+class OrgType(StrEnum):
+    VUZ = "ВУЗ"
+    COLLEGE = "Колледж"
+    GBU = "ГБУ"
+    SCHOOL = "Школа"
+    MBU = "МБУ"
+    ANO = "АНО"
+    FGBU = "ФГБУ"
+    GAU = "ГАУ"
+    PO = "ПО"
+    OD = "ОД"
+    GKU = "ГКУ"
+    OOO = "ООО"
+    CHU = "ЧУ"
+    AO = "АО"
+    MKU = "МКУ"
+    ASSOCIATION = "АССОЦИАЦИЯ"
+    IP = "ИП"
