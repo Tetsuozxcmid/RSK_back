@@ -1,5 +1,5 @@
 import pandas as pd
-from app.db.session import engine  # AsyncEngine
+from db.session import engine  # AsyncEngine
 
 
 def import_excel_to_sql(
