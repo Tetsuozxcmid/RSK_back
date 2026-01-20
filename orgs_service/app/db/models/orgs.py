@@ -2,7 +2,7 @@ from __future__ import annotations
 from db.base import Base
 from db.models.org_enum import OrgType
 
-from sqlalchemy import Column, Integer, String, Enum, Float
+from sqlalchemy import Column, Integer, String, Enum, Float, BigInteger
 
 
 class Orgs(Base):
@@ -11,7 +11,7 @@ class Orgs(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     full_name = Column(String, nullable=False)
     short_name = Column(String, nullable=False)
-    kpp = Column(Integer, nullable=False, unique=True)
+    kpp = Column(BigInteger, nullable=False, unique=True)
     region = Column(String, nullable=False)
     type = Column(Enum(OrgType, name="org_type_enum"), nullable=False)
     
