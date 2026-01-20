@@ -2,6 +2,7 @@ from http.client import HTTPException
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db
+from db.parser import import_excel_to_sql
 from cruds.orgs_crud import OrgsCRUD
 from schemas import OrgCreateSchema
 
@@ -46,3 +47,16 @@ async def create_org(request: OrgCreateSchema, db: AsyncSession = Depends(get_db
 
 
 
+
+@router.get("/import_from_excel")
+async def import_from_excel():
+    try:
+        # Просто выполняем синхронную функцию
+        import_excel_to_sql(
+            excel_path="/root/RSK_back/orgs_service/app/db/result_full.xlsx",
+            sheet_name="Sheet 1",
+            table_name="rsk_organizations"
+        )
+        return {"status": "ok", "message": "Импорт выполнен"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
