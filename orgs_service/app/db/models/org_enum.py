@@ -17,4 +17,4 @@ class OrgType(StrEnum):
     AO = "АО"
     MKU = "МКУ"
     ASSOCIATION = "АССОЦИАЦИЯ"
-    IP = "ИП"
+    IP = "ИП" 

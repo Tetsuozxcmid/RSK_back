@@ -37,6 +37,7 @@ class Project(Base):
     title = Column(String, nullable=False)
 
     description = Column(Text)
+    
     organization_name = Column(String)
 
     star_index = Column(Integer, nullable=False, default=0)

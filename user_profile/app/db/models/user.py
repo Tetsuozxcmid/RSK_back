@@ -20,10 +20,10 @@ class User(Base):
     Type: Mapped[UserEnum] = mapped_column(SQLEnum(UserEnum), nullable=True, default=UserEnum.Student)
 
     is_learned: Mapped[bool] = mapped_column(
-    Boolean,
-    default=False,
-    nullable=True
-)
+        Boolean,
+        default=False,
+        nullable=True
+    )
 
     Organization: Mapped[str] = mapped_column(String(100), nullable=True, default="")
     Organization_id: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
