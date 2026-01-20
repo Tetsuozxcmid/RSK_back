@@ -21,7 +21,7 @@ async def import_from_excel():
         # Просто выполняем синхронную функцию
         import_excel_to_sql(
             excel_path="/app/app/db/result_full.xlsx",
-            sheet_name="Sheet 1",
+            sheet_name="Sheet1",
             table_name="organizations"
         )
         return {"status": "ok", "message": "Импорт выполнен"}
