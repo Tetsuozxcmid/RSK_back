@@ -3,9 +3,6 @@ from db.session import sync_engine
 from db.models.org_enum import OrgType
 
 
-TYPE_MAP = {e.value: e.name for e in OrgType}  # "ВУЗ" -> "VUZ"
-
-
 def import_excel_to_sql(
     excel_path: str,
     sheet_name: str | int = 0,
@@ -14,17 +11,20 @@ def import_excel_to_sql(
     chunk_size: int = 2000,
     drop_duplicates_by_kpp: bool = True,
 ):
+    # 1) Загружаем Excel
     df = pd.read_excel(excel_path, sheet_name=sheet_name, engine="openpyxl")
+
+    # 2) Удаляем полностью пустые строки
     df = df.dropna(how="all")
 
     if df.empty:
         print("⚠️ Excel пустой — нечего импортировать")
         return
 
-    # убираем мусорные колонки типа Unnamed: 0
+    # 3) Убираем мусорные колонки типа Unnamed: 0
     df = df.loc[:, ~df.columns.astype(str).str.contains(r"^Unnamed", na=False)]
 
-    # нормализуем названия колонок
+    # 4) Нормализуем названия колонок
     df.columns = (
         df.columns.astype(str)
         .str.strip()
@@ -33,42 +33,42 @@ def import_excel_to_sql(
         .str.replace("-", "_")
     )
 
-    # если вдруг в Excel есть id — выбрасываем (он автоинкрементный)
+    # если вдруг в Excel есть id — выкидываем
     if "id" in df.columns:
         df = df.drop(columns=["id"])
 
     print(f"📌 Колонки из Excel: {list(df.columns)}")
     print(f"📌 Строк до обработки: {len(df)}")
 
-    # обязательные колонки
+    # 5) Проверяем обязательные поля
     required_cols = ["full_name", "short_name", "kpp", "region", "type"]
     missing = [c for c in required_cols if c not in df.columns]
     if missing:
         raise ValueError(f"❌ В Excel нет обязательных колонок: {missing}")
 
-    # чистка строк: trim + пустые -> None
+    # 6) Чистим строковые поля: trim + пустые строки -> None
     for col in df.columns:
         if df[col].dtype == "object":
             df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
             df[col] = df[col].replace("", None)
 
-    # NaN -> None
+    # 7) NaN -> None
     df = df.where(pd.notnull(df), None)
 
-    # short_name NOT NULL: если пустой -> full_name
+    # 8) short_name NOT NULL: если пустой -> берём full_name
     df["short_name"] = df["short_name"].fillna(df["full_name"])
 
-    # ✅ enum type: "ВУЗ" -> "VUZ"
+    # 9) ENUM type: в БД хранятся русские значения -> оставляем как есть
     df["type"] = df["type"].astype(str).str.strip()
-    df["type"] = df["type"].map(TYPE_MAP)
 
-    bad_types = df[df["type"].isna()]
+    allowed_types = {e.value for e in OrgType}
+    bad_types = df[~df["type"].isin(allowed_types)]
     if not bad_types.empty:
-        print("❌ Найдены неизвестные значения type в Excel (пример):")
-        print(bad_types[["full_name", "kpp"]].head(15))
-        raise ValueError("Исправьте значения в колонке type — они не совпадают с OrgType")
+        print("❌ Найдены неизвестные значения type в Excel:")
+        print(bad_types[["full_name", "kpp", "type"]].head(20))
+        raise ValueError("Исправь значения в колонке type в Excel (они не совпадают с OrgType)")
 
-    # kpp -> число
+    # 10) kpp -> число
     df["kpp"] = pd.to_numeric(df["kpp"], errors="coerce")
     before = len(df)
     df = df.dropna(subset=["kpp"])
@@ -78,7 +78,7 @@ def import_excel_to_sql(
 
     df["kpp"] = df["kpp"].astype("int64")
 
-    # float колонки -> float + fill 0
+    # 11) float колонки -> float + заполнение None -> 0.0
     float_cols = [
         "star",
         "knowledge_skills_z",
@@ -92,7 +92,7 @@ def import_excel_to_sql(
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0).astype(float)
 
-    # дубли по kpp внутри Excel
+    # 12) дубли по kpp внутри Excel
     if drop_duplicates_by_kpp:
         before = len(df)
         df = df.drop_duplicates(subset=["kpp"], keep="first")
@@ -102,6 +102,7 @@ def import_excel_to_sql(
 
     print(f"✅ Строк после обработки: {len(df)}")
 
+    # 13) Импорт в БД
     with sync_engine.begin() as conn:
         df.to_sql(
             name=table_name,
