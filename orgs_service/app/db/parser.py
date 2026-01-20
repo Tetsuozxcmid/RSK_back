@@ -55,4 +55,8 @@ def import_excel_to_sql(
 
 
 if __name__ == "__main__":
-    import_excel_to_sql()
+    import_excel_to_sql(
+        excel_path="/root//RSK_back/orgs_service/app/db/result_full.xlsx",
+        sheet_name="Sheet 1",
+        table_name="rsk_organizations"
+    )
