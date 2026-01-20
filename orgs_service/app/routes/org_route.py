@@ -6,10 +6,8 @@ from db.parser import import_excel_to_sql
 from cruds.orgs_crud import OrgsCRUD
 from schemas import OrgCreateSchema
 
-import asyncio
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
-
 
 
 @router.get("/count")
@@ -44,10 +42,10 @@ async def get_organization(org_name: str, db: AsyncSession = Depends(get_db)):
     org = await OrgsCRUD.get_org(db, org_name)
     return {"id": org.id, "name": org.name}
 
-@router.get("/org-id/{org_id}")
+@router.get("/org/{org_id}")
 async def get_organization_by_id(org_id: int, db: AsyncSession = Depends(get_db)):
     org = await OrgsCRUD.get_org_by_id(db, org_id)
-    return {"id": org.id, "name": org.name}
+    return {"id": org.id, "name": org.full_name}
 
 @router.get("/")
 async def get_organizations(skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)):
