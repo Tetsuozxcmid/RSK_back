@@ -1,6 +1,9 @@
 import pandas as pd
-from sqlalchemy import text
 from db.session import sync_engine
+from db.models.org_enum import OrgType
+
+
+TYPE_MAP = {e.value: e.name for e in OrgType}  # "ВУЗ" -> "VUZ"
 
 
 def import_excel_to_sql(
@@ -11,20 +14,17 @@ def import_excel_to_sql(
     chunk_size: int = 2000,
     drop_duplicates_by_kpp: bool = True,
 ):
-    # 1) Загружаем Excel
     df = pd.read_excel(excel_path, sheet_name=sheet_name, engine="openpyxl")
-
-    # 2) Удаляем полностью пустые строки
     df = df.dropna(how="all")
 
     if df.empty:
         print("⚠️ Excel пустой — нечего импортировать")
         return
 
-    # 3) Убираем мусорные колонки типа Unnamed: 0
+    # убираем мусорные колонки типа Unnamed: 0
     df = df.loc[:, ~df.columns.astype(str).str.contains(r"^Unnamed", na=False)]
 
-    # 4) Нормализуем названия колонок
+    # нормализуем названия колонок
     df.columns = (
         df.columns.astype(str)
         .str.strip()
@@ -33,39 +33,52 @@ def import_excel_to_sql(
         .str.replace("-", "_")
     )
 
+    # если вдруг в Excel есть id — выбрасываем (он автоинкрементный)
+    if "id" in df.columns:
+        df = df.drop(columns=["id"])
+
     print(f"📌 Колонки из Excel: {list(df.columns)}")
     print(f"📌 Строк до обработки: {len(df)}")
 
-    # 5) Проверяем обязательные поля
+    # обязательные колонки
     required_cols = ["full_name", "short_name", "kpp", "region", "type"]
     missing = [c for c in required_cols if c not in df.columns]
     if missing:
         raise ValueError(f"❌ В Excel нет обязательных колонок: {missing}")
 
-    # 6) Чистим строковые поля: trim + пустые строки -> None
+    # чистка строк: trim + пустые -> None
     for col in df.columns:
         if df[col].dtype == "object":
             df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
             df[col] = df[col].replace("", None)
 
-    # 7) NaN -> None (чтобы ушло в SQL как NULL)
+    # NaN -> None
     df = df.where(pd.notnull(df), None)
 
-    # 8) short_name обязателен: если пусто -> берём full_name
+    # short_name NOT NULL: если пустой -> full_name
     df["short_name"] = df["short_name"].fillna(df["full_name"])
 
-    # 9) Приводим kpp к числу (и выкидываем строки где kpp невалидный)
+    # ✅ enum type: "ВУЗ" -> "VUZ"
+    df["type"] = df["type"].astype(str).str.strip()
+    df["type"] = df["type"].map(TYPE_MAP)
+
+    bad_types = df[df["type"].isna()]
+    if not bad_types.empty:
+        print("❌ Найдены неизвестные значения type в Excel (пример):")
+        print(bad_types[["full_name", "kpp"]].head(15))
+        raise ValueError("Исправьте значения в колонке type — они не совпадают с OrgType")
+
+    # kpp -> число
     df["kpp"] = pd.to_numeric(df["kpp"], errors="coerce")
     before = len(df)
     df = df.dropna(subset=["kpp"])
-    after = len(df)
-    if before != after:
-        print(f"⚠️ Удалено строк без корректного kpp: {before - after}")
+    removed = before - len(df)
+    if removed:
+        print(f"⚠️ Удалено строк без корректного kpp: {removed}")
 
-    # kpp -> int (BigInteger)
     df["kpp"] = df["kpp"].astype("int64")
 
-    # 10) Приведение числовых колонок к float + заполнение None -> 0.0
+    # float колонки -> float + fill 0
     float_cols = [
         "star",
         "knowledge_skills_z",
@@ -79,7 +92,7 @@ def import_excel_to_sql(
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0).astype(float)
 
-    # 11) Если нужно — убираем дубликаты по kpp в Excel (иначе упадёте на unique)
+    # дубли по kpp внутри Excel
     if drop_duplicates_by_kpp:
         before = len(df)
         df = df.drop_duplicates(subset=["kpp"], keep="first")
@@ -87,18 +100,9 @@ def import_excel_to_sql(
         if removed:
             print(f"⚠️ Удалено дублей по kpp в Excel: {removed}")
 
-    # 12) Отладочный вывод проблемных строк
-    bad_short = df[df["short_name"].isna()]
-    if not bad_short.empty:
-        print("❌ Остались строки без short_name (не должно быть!)")
-        print(bad_short[["full_name", "kpp"]].head(10))
-
     print(f"✅ Строк после обработки: {len(df)}")
 
-    # 13) Загрузка в БД
     with sync_engine.begin() as conn:
-        # Если replace — можно перезаписать таблицу
-        # df.to_sql сам создаёт таблицу, если её нет, но у вас таблица уже есть -> append норм
         df.to_sql(
             name=table_name,
             con=conn,
