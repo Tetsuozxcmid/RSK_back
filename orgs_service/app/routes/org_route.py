@@ -20,16 +20,18 @@ async def get_organizations_count(db: AsyncSession = Depends(get_db)):
 @router.get("/import_from_excel")
 def import_from_excel():
     try:
-        def run_import():
-            import_excel_to_sql(
-                excel_path="/app/app/db/result_full.xlsx",
-                sheet_name="Sheet1",
-                table_name="organizations"
-            )
-        run_import()
+        import_excel_to_sql(
+            excel_path="/app/app/db/result_full.xlsx",
+            sheet_name="Sheet1",
+            table_name="organizations",
+            if_exists="append",
+            chunk_size=2000,
+            drop_duplicates_by_kpp=True,
+        )
         return {"status": "ok", "message": "Импорт выполнен"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
 
 @router.get("/exists/{org_name}")
 async def check_organization_exists(org_name: str, db: AsyncSession = Depends(get_db)):
