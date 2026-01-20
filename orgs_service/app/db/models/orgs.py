@@ -9,7 +9,7 @@ class Orgs(Base):
     __tablename__ = "organizations"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False)
+    full_name = Column(String, nullable=False)
     short_name = Column(String, nullable=False)
     kpp = Column(Integer, nullable=False, unique=True)
     region = Column(String, nullable=False)

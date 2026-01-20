@@ -13,7 +13,7 @@ class OrgsCRUD:
     async def get_org_by_name(db: AsyncSession, org_name: str):
         
         result = await db.execute(
-            select(Orgs).where(func.lower(func.trim(Orgs.name)) == org_name.lower().strip())
+            select(Orgs).where(func.lower(func.trim(Orgs.full_name)) == org_name.lower().strip())
         )
         return result.scalar_one_or_none()
     
@@ -21,7 +21,7 @@ class OrgsCRUD:
     @staticmethod
     async def organization_exists(db: AsyncSession, org_name: str):
         result = await db.execute(
-            select(Orgs).where(func.lower(func.trim(Orgs.name)) == org_name.lower().strip())
+            select(Orgs).where(func.lower(func.trim(Orgs.full_name)) == org_name.lower().strip())
         )
         return result.scalar_one_or_none() is not None
 
@@ -48,7 +48,7 @@ class OrgsCRUD:
         db.add(new_org)
         await db.commit()
         await db.refresh(new_org)
-        logging.info(f"organization '{new_org.name}' successfully created with ID {new_org.id}")
+        logging.info(f"organization '{new_org.full_name}' successfully created with ID {new_org.id}")
         return new_org
 
     @staticmethod
