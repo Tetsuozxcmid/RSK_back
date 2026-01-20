@@ -55,7 +55,7 @@ async def import_from_excel():
         import_excel_to_sql(
             excel_path="/root/RSK_back/orgs_service/app/db/result_full.xlsx",
             sheet_name="Sheet 1",
-            table_name="rsk_organizations"
+            table_name="organizations"
         )
         return {"status": "ok", "message": "Импорт выполнен"}
     except Exception as e:
