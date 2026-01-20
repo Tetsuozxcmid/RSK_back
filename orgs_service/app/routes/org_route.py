@@ -26,7 +26,7 @@ def import_from_excel():
                 sheet_name="Sheet1",
                 table_name="organizations"
             )
-        
+        run_import()
         return {"status": "ok", "message": "Импорт выполнен"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
