@@ -45,7 +45,21 @@ async def get_organization(org_name: str, db: AsyncSession = Depends(get_db)):
 @router.get("/org/{org_id}")
 async def get_organization_by_id(org_id: int, db: AsyncSession = Depends(get_db)):
     org = await OrgsCRUD.get_org_by_id(db, org_id)
-    return {"id": org.id, "name": org.full_name}
+    return {
+        "id": org.id,
+        "full_name": org.full_name,
+        "short_name": org.short_name,
+        "inn": org.kpp,
+        "region": org.region,
+        "type": org.type,
+        "star": org.star,
+        "knowledge_skills_z": org.knowledge_skills_z,
+        "knowledge_skills_v": org.knowledge_skills_v,
+        "digital_env_e": org.digital_env_e,
+        "data_protection_z": org.data_protection_z,
+        "data_analytics_d": org.data_analytics_d,
+        "automation_a": org.automation_a
+    }
 
 @router.get("/")
 async def get_organizations(skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)):
