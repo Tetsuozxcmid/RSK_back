@@ -8,10 +8,25 @@ from schemas import OrgCreateSchema
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
+
+
 @router.get("/count")
 async def get_organizations_count(db: AsyncSession = Depends(get_db)):
     count = await OrgsCRUD.get_orgs_count(db)
     return {"count": count}
+
+@router.get("/import_from_excel")
+async def import_from_excel():
+    try:
+        # Просто выполняем синхронную функцию
+        import_excel_to_sql(
+            excel_path="/root/RSK_back/orgs_service/app/db/result_full.xlsx",
+            sheet_name="Sheet 1",
+            table_name="organizations"
+        )
+        return {"status": "ok", "message": "Импорт выполнен"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @router.get("/exists/{org_name}")
 async def check_organization_exists(org_name: str, db: AsyncSession = Depends(get_db)):
@@ -46,17 +61,3 @@ async def create_org(request: OrgCreateSchema, db: AsyncSession = Depends(get_db
     return {"id": org.id, "name": org.name}
 
 
-
-
-@router.get("/import_from_excel")
-async def import_from_excel():
-    try:
-        # Просто выполняем синхронную функцию
-        import_excel_to_sql(
-            excel_path="/root/RSK_back/orgs_service/app/db/result_full.xlsx",
-            sheet_name="Sheet 1",
-            table_name="organizations"
-        )
-        return {"status": "ok", "message": "Импорт выполнен"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
