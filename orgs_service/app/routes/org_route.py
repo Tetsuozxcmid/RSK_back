@@ -6,6 +6,8 @@ from db.parser import import_excel_to_sql
 from cruds.orgs_crud import OrgsCRUD
 from schemas import OrgCreateSchema
 
+import asyncio
+
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
 
@@ -19,11 +21,16 @@ async def get_organizations_count(db: AsyncSession = Depends(get_db)):
 async def import_from_excel():
     try:
         # Просто выполняем синхронную функцию
-        import_excel_to_sql(
-            excel_path="/app/app/db/result_full.xlsx",
-            sheet_name="Sheet1",
-            table_name="organizations"
-        )
+        loop = asyncio.get_event_loop()
+
+        def run_import():
+            import_excel_to_sql(
+                excel_path="/app/app/db/result_full.xlsx",
+                sheet_name="Sheet1",
+                table_name="organizations"
+            )
+        
+        await loop.run_in_executor(None, run_import)
         return {"status": "ok", "message": "Импорт выполнен"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
