@@ -52,7 +52,7 @@ async def get_organization_by_id(org_id: int, db: AsyncSession = Depends(get_db)
 @router.get("/")
 async def get_organizations(skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)):
     orgs = await OrgsCRUD.get_orgs_paginated(db, skip=skip, limit=limit)
-    return [{"id": org.id, "name": org.name} for org in orgs]
+    return [{"id": org.id, "name": org.full_name} for org in orgs]
 
 @router.post("/create")
 async def create_org(request: OrgCreateSchema, db: AsyncSession = Depends(get_db)):
