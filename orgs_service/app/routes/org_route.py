@@ -18,11 +18,8 @@ async def get_organizations_count(db: AsyncSession = Depends(get_db)):
     return {"count": count}
 
 @router.get("/import_from_excel")
-async def import_from_excel():
+def import_from_excel():
     try:
-        # Просто выполняем синхронную функцию
-        loop = asyncio.get_event_loop()
-
         def run_import():
             import_excel_to_sql(
                 excel_path="/app/app/db/result_full.xlsx",
@@ -30,7 +27,6 @@ async def import_from_excel():
                 table_name="organizations"
             )
         
-        await loop.run_in_executor(None, run_import)
         return {"status": "ok", "message": "Импорт выполнен"}
     except Exception as e:
         return {"status": "error", "message": str(e)}

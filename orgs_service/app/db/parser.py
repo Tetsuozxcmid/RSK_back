@@ -1,5 +1,5 @@
 import pandas as pd
-from db.session import engine  # AsyncEngine
+from db.session import sync_engine  # AsyncEngine
 
 
 def import_excel_to_sql(
@@ -38,8 +38,6 @@ def import_excel_to_sql(
 
     print(f"📌 Колонки из Excel: {list(df.columns)}")
     print(f"📌 Строк к импорту: {len(df)}")
-
-    sync_engine = engine.sync_engine
 
     with sync_engine.begin() as conn:
         df.to_sql(
