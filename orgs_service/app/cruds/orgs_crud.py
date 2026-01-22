@@ -1,10 +1,10 @@
 import logging
+from typing import Optional
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 from db.models.orgs import Orgs
 from fastapi import HTTPException
-from schemas import OrgCreateSchema
 import logging
 
 
@@ -43,7 +43,7 @@ class OrgsCRUD:
     @staticmethod
     async def create_org_by_name(db: AsyncSession, org_name: str):
         new_org = Orgs(
-                name=org_name,
+            name=org_name,
             )
         db.add(new_org)
         await db.commit()
@@ -52,14 +52,33 @@ class OrgsCRUD:
         return new_org
 
     @staticmethod
-    async def get_orgs_paginated(db: AsyncSession, skip: int = 0, limit: int = 10):
-        result = await db.execute(select(Orgs).offset(skip).limit(limit))
+    async def get_orgs_paginated(
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 10,
+        region: Optional[str] = None,
+    ):
+        stmt = select(Orgs).order_by(Orgs.full_name)
+
+        if region:
+            stmt = stmt.where(Orgs.region == region)
+
+        stmt = stmt.offset(skip).limit(limit)
+
+        result = await db.execute(stmt)
         return result.scalars().all()
     
     @staticmethod
     async def get_orgs_count(db: AsyncSession):
         result = await db.execute(select(func.count(Orgs.id)))
         return result.scalar_one()
-    
-    
 
+    @staticmethod
+    async def get_orgs_by_region(db: AsyncSession, region: Optional[str] = None):
+        stmt = select(Orgs).order_by(Orgs.full_name)
+
+        if region:
+            stmt = stmt.where(Orgs.region == region)
+
+        res = await db.execute(stmt)
+        return res.scalars().all()
