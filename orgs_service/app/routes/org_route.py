@@ -1,5 +1,5 @@
 from http.client import HTTPException
-from typing import Optional
+from typing import Optional, Literal
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db
@@ -32,11 +32,25 @@ async def get_organizations_count(db: AsyncSession = Depends(get_db)):
 async def get_all_organizations(
     region: Optional[str] = Query(default=None),
     name: Optional[str] = Query(default=None),
+
+    sort_by: Literal["name", "members"] = Query(default="name"),
+    order: Literal["asc", "desc"] = Query(default="asc"),
+
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+
     db: AsyncSession = Depends(get_db),
 ):
-    orgs = await OrgsCRUD.get_orgs(db, region=region)
+    orgs = await OrgsCRUD.get_orgs(
+        db=db,
+        region=region,
+        name=name,
+        sort_by=sort_by,
+        order=order,
+        limit=limit,
+        offset=offset,
+    )
     return orgs
-
 
 @router.get("/import_from_excel")
 def import_from_excel():
