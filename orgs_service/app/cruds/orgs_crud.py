@@ -50,27 +50,45 @@ class OrgsCRUD:
     @staticmethod
     async def create_org_by_inn(db: AsyncSession, inn: int):
         result = await dadata.find_by_id("party", str(inn))
-        print(result)
 
-        suggestions = result.get("suggestions", [])
+        if isinstance(result, dict):
+            suggestions = result.get("suggestions", [])
+        elif isinstance(result, list):
+            suggestions = result
+        else:
+            suggestions = []
+
         if not suggestions:
             return None
-        
+
         suggestion = next(
             (s for s in suggestions if s.get("data", {}).get("branch_type") == "MAIN"),
             suggestions[0],
         )
-        
-        name = suggestion.get("value")
-        address_data = (
-            suggestion.get("data", {})
-            .get("address", {})
-            .get("data", {})
-        )
 
-        region = address_data.get("region")
-        
-        print(name, region)
+        name_block = suggestion.get("data", {}).get("name", {})
+
+        full_name = (name_block.get("full_with_opf") or suggestion.get("value") or "").strip()
+
+        short_raw = (
+            name_block.get("short_with_opf")
+            or name_block.get("short")
+            or suggestion.get("value")
+            or ""
+        )
+        short_name = short_raw.split(",")[0].strip()
+
+        address_data = suggestion.get("data", {}).get("address", {}).get("data", {})
+
+        city = address_data.get("city") or address_data.get("settlement") or address_data.get("area")
+
+        # Москва/СПб/Севастополь: если city пустой — берём region
+        if not city and address_data.get("region_type") == "г":
+            city = address_data.get("region")
+
+        return full_name, short_name, city
+
+
 
 
     @staticmethod
