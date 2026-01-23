@@ -3,6 +3,7 @@ import httpx
 from typing import Optional, Literal
 from dadata import DadataAsync
 from sqlalchemy.future import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 from sqlalchemy.inspection import inspect
@@ -33,6 +34,13 @@ class OrgsCRUD:
         return result.scalar_one_or_none() is not None
 
     @staticmethod
+    async def get_org_by_inn(db: AsyncSession, inn: int):
+        result = await db.execute(
+            select(Orgs).where(Orgs.inn == inn)
+        )
+        return result.scalar_one_or_none() is not None
+
+    @staticmethod
     async def get_org(db: AsyncSession, org_name: str):
         org = await OrgsCRUD.get_org_by_name(db, org_name)
         if not org:
@@ -48,7 +56,7 @@ class OrgsCRUD:
         return org
         
     @staticmethod
-    async def create_org_by_inn(db: AsyncSession, inn: int):
+    async def create_org(db: AsyncSession, inn: int, org_type: str):
         result = await dadata.find_by_id("party", str(inn))
 
         if isinstance(result, dict):
@@ -81,8 +89,27 @@ class OrgsCRUD:
         address_data = suggestion.get("data", {}).get("address", {}).get("data", {})
         region = address_data.get("region_with_type")
 
-        print(full_name, short_name, region)
+        org = await OrgsCRUD.get_org_by_inn(db=db, inn=inn)
+        if org:
+            return org
+        
+        new_org = Orgs(
+            full_name=full_name,
+            short_name=short_name,
+            inn=inn,
+            region=region,
+            type=org_type,
+        )
+        db.add(new_org)
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
 
+            return await OrgsCRUD.get_org_by_inn(db=db, inn=inn)
+        
+        await db.refresh(new_org)
+        return new_org
 
     @staticmethod
     async def get_orgs_count(db: AsyncSession):
