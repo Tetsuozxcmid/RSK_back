@@ -13,7 +13,7 @@ class Orgs(Base):
     full_name = Column(String, nullable=False)
     short_name = Column(String, nullable=False)
 
-    kpp = Column(BigInteger, nullable=False, unique=True)
+    inn = Column(BigInteger, nullable=False, unique=True)
     region = Column(String, nullable=False)
 
     type = Column(

@@ -9,7 +9,7 @@ def import_excel_to_sql(
     table_name: str = "organizations",
     if_exists: str = "append",  # "append" | "replace" | "fail"
     chunk_size: int = 2000,
-    drop_duplicates_by_kpp: bool = True,
+    drop_duplicates_by_inn: bool = True,
 ):
     # 1) Загружаем Excel
     df = pd.read_excel(excel_path, sheet_name=sheet_name, engine="openpyxl")
@@ -41,7 +41,7 @@ def import_excel_to_sql(
     print(f"📌 Строк до обработки: {len(df)}")
 
     # 5) Проверяем обязательные поля
-    required_cols = ["full_name", "short_name", "kpp", "region", "type"]
+    required_cols = ["full_name", "short_name", "inn", "region", "type"]
     missing = [c for c in required_cols if c not in df.columns]
     if missing:
         raise ValueError(f"❌ В Excel нет обязательных колонок: {missing}")
@@ -68,15 +68,15 @@ def import_excel_to_sql(
         print(bad_types[["full_name", "kpp", "type"]].head(20))
         raise ValueError("Исправь значения в колонке type в Excel (они не совпадают с OrgType)")
 
-    # 10) kpp -> число
-    df["kpp"] = pd.to_numeric(df["kpp"], errors="coerce")
+    # 10) inn -> число
+    df["inn"] = pd.to_numeric(df["inn"], errors="coerce")
     before = len(df)
-    df = df.dropna(subset=["kpp"])
+    df = df.dropna(subset=["inn"])
     removed = before - len(df)
     if removed:
-        print(f"⚠️ Удалено строк без корректного kpp: {removed}")
+        print(f"⚠️ Удалено строк без корректного inn: {removed}")
 
-    df["kpp"] = df["kpp"].astype("int64")
+    df["inn"] = df["inn"].astype("int64")
 
     # 11) float колонки -> float + заполнение None -> 0.0
     float_cols = [
@@ -92,13 +92,13 @@ def import_excel_to_sql(
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0).astype(float)
 
-    # 12) дубли по kpp внутри Excel
-    if drop_duplicates_by_kpp:
+    # 12) дубли по inn внутри Excel
+    if drop_duplicates_by_inn:
         before = len(df)
-        df = df.drop_duplicates(subset=["kpp"], keep="first")
+        df = df.drop_duplicates(subset=["inn"], keep="first")
         removed = before - len(df)
         if removed:
-            print(f"⚠️ Удалено дублей по kpp в Excel: {removed}")
+            print(f"⚠️ Удалено дублей по inn в Excel: {removed}")
 
     print(f"✅ Строк после обработки: {len(df)}")
 

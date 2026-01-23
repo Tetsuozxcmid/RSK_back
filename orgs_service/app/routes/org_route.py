@@ -86,7 +86,7 @@ async def get_organization_by_id(org_id: int, db: AsyncSession = Depends(get_db)
         "id": org.id,
         "full_name": org.full_name,
         "short_name": org.short_name,
-        "inn": org.kpp,
+        "inn": org.inn,
         "region": org.region,
         "type": org.type,
         "star": org.star,

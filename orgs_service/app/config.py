@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     DB_NAME: str
 
     USERS_SERVICE_URL: str = "https://api.rosdk.ru/users"
+    DADATA_TOKEN: str
+    DADATA_SECRET: str
 
     @property
     def DATABASE_URL(self):

@@ -1,6 +1,7 @@
 import logging
 import httpx
 from typing import Optional, Literal
+from dadata import DadataAsync
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
@@ -11,6 +12,8 @@ from config import settings
 
 SortBy = Literal["name", "members"]
 SortOrder = Literal["asc", "desc"]
+
+dadata = DadataAsync(token=settings.DADATA_TOKEN, secret=settings.DADATA_SECRET)
 
 class OrgsCRUD:
     @staticmethod
@@ -45,15 +48,29 @@ class OrgsCRUD:
         return org
         
     @staticmethod
-    async def create_org_by_name(db: AsyncSession, org_name: str):
-        new_org = Orgs(
-            name=org_name,
-            )
-        db.add(new_org)
-        await db.commit()
-        await db.refresh(new_org)
-        logging.info(f"organization '{new_org.full_name}' successfully created with ID {new_org.id}")
-        return new_org
+    async def create_org_by_inn(db: AsyncSession, inn: int):
+        result = await dadata.find_by_id("party", str(inn))
+
+        suggestions = result.get("suggestions", [])
+        if not suggestions:
+            return None
+        
+        suggestion = next(
+            (s for s in suggestions if s.get("data", {}).get("branch_type") == "MAIN"),
+            suggestions[0],
+        )
+        
+        name = suggestion.get("value")
+        address_data = (
+            suggestion.get("data", {})
+            .get("address", {})
+            .get("data", {})
+        )
+
+        region = address_data.get("region")
+        
+        print(name, region)
+
 
     @staticmethod
     async def get_orgs_count(db: AsyncSession):
