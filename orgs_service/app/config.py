@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     DB_PASS: str
     DB_NAME: str
 
-    USERS_SERVICE_URL: str = "https://api.rosdk.ru/users/"
+    USERS_SERVICE_URL: str = "https://api.rosdk.ru/users"
 
     @property
     def DATABASE_URL(self):
