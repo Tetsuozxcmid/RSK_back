@@ -79,16 +79,9 @@ class OrgsCRUD:
         short_name = short_raw.split(",")[0].strip()
 
         address_data = suggestion.get("data", {}).get("address", {}).get("data", {})
+        region = address_data.get("region")
 
-        city = address_data.get("city") or address_data.get("settlement") or address_data.get("area")
-
-        # Москва/СПб/Севастополь: если city пустой — берём region
-        if not city and address_data.get("region_type") == "г":
-            city = address_data.get("region")
-
-        return full_name, short_name, city
-
-
+        print(full_name, short_name, region)
 
 
     @staticmethod
