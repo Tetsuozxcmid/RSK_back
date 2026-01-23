@@ -3,7 +3,7 @@ from typing import Optional
 from db.models.orgs import Orgs
 
 class OrgCreateSchema(BaseModel):
-    name: Optional[str] = None
+    inn: Optional[str] = None
     
 
 

@@ -12,14 +12,9 @@ router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
 @router.post("/create")
 async def create_org(request: OrgCreateSchema, db: AsyncSession = Depends(get_db)):
-    org_name = request.name
-    
-    existing_org = await OrgsCRUD.get_org_by_name(db, org_name)
-    if existing_org:
-        raise HTTPException(status_code=400, detail="Organization already exists")
-    
-    org = await OrgsCRUD.create_org_by_name(db, org_name)
-    return {"id": org.id, "name": org.name}
+    inn = request.inn
+    org = await OrgsCRUD.create_org_by_inn(db, inn)
+    return "ok"
 
 
 
