@@ -79,7 +79,7 @@ class OrgsCRUD:
         short_name = short_raw.split(",")[0].strip()
 
         address_data = suggestion.get("data", {}).get("address", {}).get("data", {})
-        region = address_data.get("region")
+        region = address_data.get("region_with_type")
 
         print(full_name, short_name, region)
 
