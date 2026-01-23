@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends, Body
+from fastapi import APIRouter, HTTPException, Depends, Body, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -115,6 +115,28 @@ async def update_profile(update_data: ProfileUpdate, db: AsyncSession = Depends(
     return {
         "message": "success"
     }
+
+@profile_admin_router.get("/by-org/{org_id}")
+async def get_users_by_org(
+    org_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    res = await ProfileCRUD.get_users_by_org_id(
+        db=db,
+        org_id=org_id
+    )
+    return res
+
+@profile_admin_router.get("/members-count")
+async def get_members_count(
+    org_ids: list[int] = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    counts = await ProfileCRUD.get_member_count_by_id(
+        db=db,
+        org_ids=org_ids
+    )
+    return counts
 
 router.include_router(profile_management_router)
 router.include_router(profile_batch_router)

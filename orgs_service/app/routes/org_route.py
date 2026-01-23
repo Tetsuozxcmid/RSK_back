@@ -31,9 +31,10 @@ async def get_organizations_count(db: AsyncSession = Depends(get_db)):
 @router.get("/all")
 async def get_all_organizations(
     region: Optional[str] = Query(default=None),
+    name: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ):
-    orgs = await OrgsCRUD.get_orgs_by_region(db, region=region)
+    orgs = await OrgsCRUD.get_orgs(db, region=region)
     return orgs
 
 

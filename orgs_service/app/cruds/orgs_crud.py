@@ -1,12 +1,16 @@
 import logging
-from typing import Optional
+import httpx
+from typing import Optional, Literal
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
+from sqlalchemy.inspection import inspect
 from db.models.orgs import Orgs
 from fastapi import HTTPException
-import logging
+from config import settings
 
+SortBy = Literal["name", "members"]
+SortOrder = Literal["asc", "desc"]
 
 class OrgsCRUD:
     @staticmethod
@@ -52,33 +56,82 @@ class OrgsCRUD:
         return new_org
 
     @staticmethod
-    async def get_orgs_paginated(
-        db: AsyncSession,
-        skip: int = 0,
-        limit: int = 10,
-        region: Optional[str] = None,
-    ):
-        stmt = select(Orgs).order_by(Orgs.full_name)
-
-        if region:
-            stmt = stmt.where(Orgs.region == region)
-
-        stmt = stmt.offset(skip).limit(limit)
-
-        result = await db.execute(stmt)
-        return result.scalars().all()
-    
-    @staticmethod
     async def get_orgs_count(db: AsyncSession):
         result = await db.execute(select(func.count(Orgs.id)))
         return result.scalar_one()
 
+
     @staticmethod
-    async def get_orgs_by_region(db: AsyncSession, region: Optional[str] = None):
-        stmt = select(Orgs).order_by(Orgs.full_name)
+    def org_to_dict(org: Orgs) -> dict:
+        data = {c.key: getattr(org, c.key) for c in inspect(org).mapper.column_attrs}
+
+        # если type = Enum объект, то сделаем строкой
+        if hasattr(org.type, "value"):
+            data["type"] = org.type.value
+
+        return data
+
+    @staticmethod
+    async def get_orgs(
+        db: AsyncSession,
+        region: Optional[str] = None,
+        name: Optional[str] = None,
+        sort_by: SortBy = "name",
+        order: SortOrder = "asc",
+        limit: int = 50,
+        offset: int = 0,
+    ):
+        stmt = select(Orgs)
+
+        if name:
+            stmt = stmt.where(Orgs.full_name.ilike(f"%{name}%"))
 
         if region:
             stmt = stmt.where(Orgs.region == region)
 
-        res = await db.execute(stmt)
-        return res.scalars().all()
+        if sort_by == "name":
+            stmt = stmt.order_by(
+                Orgs.full_name.asc() if order == "asc" else Orgs.full_name.desc()
+            )
+            stmt = stmt.offset(offset).limit(limit)
+
+            res = await db.execute(stmt)
+            orgs = res.scalars().all()
+            return [OrgsCRUD.org_to_dict(o) for o in orgs]
+
+        if sort_by == "members":
+            res = await db.execute(stmt)
+            orgs = res.scalars().all()
+
+            if not orgs:
+                return []
+
+            org_ids = [o.id for o in orgs]
+
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(
+                    f"{settings.USERS_SERVICE_URL}/profile_interaction/members-count",
+                    params=[("org_ids", oid) for oid in org_ids],
+                )
+
+            if r.status_code != 200:
+                raise HTTPException(status_code=502, detail="Users service unavailable")
+
+            counts = {int(k): v for k, v in r.json().items()}
+
+            orgs.sort(
+                key=lambda o: counts.get(o.id, 0),
+                reverse=(order == "desc"),
+            )
+
+            sliced = orgs[offset: offset + limit]
+
+            result = []
+            for o in sliced:
+                data = OrgsCRUD.org_to_dict(o)
+                data["members_count"] = counts.get(o.id, 0)
+                result.append(data)
+
+            return result
+
+        raise HTTPException(status_code=400, detail="Invalid sort_by value")

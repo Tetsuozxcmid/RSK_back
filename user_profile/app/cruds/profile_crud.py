@@ -1,6 +1,7 @@
 import logging
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func
 
 from db.models.user import User
 from fastapi import HTTPException
@@ -158,6 +159,28 @@ class ProfileCRUD:
             )
         
 
+    @staticmethod
+    async def get_users_by_org_id(
+        db: AsyncSession,
+        org_id: int
+    ):
+        result = await db.execute(select(User).where(User.Organization_id == org_id))
+        return result.scalars().all()
+    
+    @staticmethod
+    async def get_member_count_by_id(
+        db: AsyncSession,
+        org_ids: list[int]
+    ):
+        res = await db.execute(
+        select(User.Organization_id, func.count(User.id))
+        .where(User.Organization_id.in_(org_ids))
+        .group_by(User.Organization_id)
+        )
+        rows = res.all()
 
+        counts = {org_id: 0 for org_id in org_ids}
+        for org_id, cnt in rows:
+            counts[org_id] = cnt
 
-        
+        return counts
