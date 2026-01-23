@@ -50,6 +50,7 @@ class OrgsCRUD:
     @staticmethod
     async def create_org_by_inn(db: AsyncSession, inn: int):
         result = await dadata.find_by_id("party", str(inn))
+        print(result)
 
         suggestions = result.get("suggestions", [])
         if not suggestions:
