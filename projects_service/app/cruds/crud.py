@@ -28,6 +28,16 @@ class ZvezdaCRUD:
             .where(Project.id == project.id)
         )
         return result.scalar_one()
+    
+    @staticmethod
+    async def delete_project(db: AsyncSession, project_id: int):
+        project = await db.get(Project, project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        await db.delete(project)
+        await db.commit()
+
 
     @staticmethod
     async def get_project(db: AsyncSession, project_id: int):

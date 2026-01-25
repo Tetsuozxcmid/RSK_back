@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db
 from cruds.crud import ZvezdaCRUD
 from services.service import get_current_user
+from services.auth_client import get_moderator
 from schemas.proj import (
     ProjectCreate, ProjectRead, TaskCreate, TaskOut, TaskSubmitRequest
 )
@@ -43,6 +44,16 @@ async def create_task(
     user_id: int = Depends(get_current_user)
 ):
     return await ZvezdaCRUD.create_task(db, task_in, project_id)
+
+@router.delete("/projects/{project_id}")
+async def delete_project(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(get_moderator)
+):
+    await ZvezdaCRUD.delete_project(db, project_id)
+    return {"status": "deleted"}
+
 
 
 @router.get("/tasks", response_model=List[TaskOut])
