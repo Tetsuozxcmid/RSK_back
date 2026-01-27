@@ -27,7 +27,7 @@ async def get_all_organizations(
     region: Optional[str] = Query(default=None),
     name: Optional[str] = Query(default=None),
 
-    sort_by: Literal["name", "members"] = Query(default="name"),
+    sort_by: Literal["name", "members", "index"] = Query(default="name"),
     order: Literal["asc", "desc"] = Query(default="asc"),
 
     limit: int = Query(default=50, ge=1, le=200),
