@@ -66,10 +66,11 @@ class OrgsCRUD:
                 r.raise_for_status()
                 members_data = r.json()
                 members_count = members_data.get("members_count", 0)
-            except httpx.RequestError:
-                # Логируем, но не падаем
-                logging.error(f"ошибка: reguest error")
-                pass
+            except httpx.RequestError as e:
+                logging.error(f"Request error: {e}")
+                # Можно также добавить логирование для других типов ошибок
+            except Exception as e:
+                logging.error(f"Unexpected error when fetching members count: {e}")
         
         return OrgResponse(
             id=org.id,
@@ -81,7 +82,7 @@ class OrgsCRUD:
             star=org.star,
             knowledge_skills_z=org.knowledge_skills_z,
             knowledge_skills_v=org.knowledge_skills_v,
-            data_analytics_d=org.digital_env_e,
+            digital_env_e=org.digital_env_e,  # Исправлено: используем правильное имя поля
             data_protection_z=org.data_protection_z,
             data_analytics_d=org.data_analytics_d,
             automation_a=org.automation_a,
