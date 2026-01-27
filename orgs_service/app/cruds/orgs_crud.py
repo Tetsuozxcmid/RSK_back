@@ -224,4 +224,14 @@ class OrgsCRUD:
 
             return result
 
+        if sort_by == "index":
+            stmt = stmt.order_by(
+                Orgs.star.asc() if order == "asc" else Orgs.star.desc()
+            )
+            stmt = stmt.offset(offset).limit(limit)
+
+            res = await db.execute(stmt)
+            orgs = res.scalars().all()
+            return [OrgsCRUD.org_to_dict(o) for o in orgs]
+
         raise HTTPException(status_code=400, detail="Invalid sort_by value")
