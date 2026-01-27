@@ -1,4 +1,5 @@
 from sqlalchemy.future import select
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from services.user_profile_client import UserProfileClient
 from services.db_checker import OrgsClient
@@ -492,3 +493,8 @@ class TeamCRUD:
             "teachers": teacher_count,
             "total": len(members)
         }
+    
+    @staticmethod
+    async def get_team_count(db: AsyncSession):
+        result = await db.execute(select(func.count(Team.id)))
+        return result.scalar_one()

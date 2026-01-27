@@ -20,3 +20,4 @@ class OrgResponse(BaseModel):
     data_analytics_d: float
     automation_a: float
     members_count: int
+    teams_count: int

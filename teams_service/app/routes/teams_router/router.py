@@ -205,6 +205,11 @@ async def get_team_by_org(org_id: int, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"No teams found for organization {org_id}")
 
+@team_management_router.get("/count")
+async def get_teams_count(db: AsyncSession = Depends(get_db)):
+    count = await TeamCRUD.get_team_count(db)
+    return {"count": count}
+
 router.include_router(team_management_router)
 router.include_router(team_membership_router)
 router.include_router(team_discovery_router)

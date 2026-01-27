@@ -52,7 +52,7 @@ class OrgsCRUD:
     async def get_org_by_id(db: AsyncSession, org_id: int) -> OrgResponse:
         result = await db.execute(select(Orgs).where(Orgs.id == org_id))
         org = result.scalar_one_or_none()
-
+    
         if not org:
             raise HTTPException(status_code=404, detail="Organization not found")
         
@@ -65,13 +65,30 @@ class OrgsCRUD:
                 )
                 r.raise_for_status()
                 members_data = r.json()
-                members_count = members_data.get("members_count", 0)
+                members_count = members_data.get("count", 0)
             except httpx.RequestError as e:
                 logging.error(f"Request error: {e}")
                 # Можно также добавить логирование для других типов ошибок
             except Exception as e:
                 logging.error(f"Unexpected error when fetching members count: {e}")
         
+
+        teams_count = 0
+        async with httpx.AsyncClient(timeout=10) as client:
+            try:
+                r = await client.get(
+                    f"{settings.TEAMS_SERVICE_URL}/teams/count",
+                    params={"org_ids": [org.id]}
+                )
+                r.raise_for_status()
+                teams_count = r.json()
+                teams_count = teams_count.get("count", 0)
+            except httpx.RequestError as e:
+                logging.error(f"Request error: {e}")
+                # Можно также добавить логирование для других типов ошибок
+            except Exception as e:
+                logging.error(f"Unexpected error when fetching members count: {e}")
+
         return OrgResponse(
             id=org.id,
             full_name=org.full_name,
@@ -86,7 +103,8 @@ class OrgsCRUD:
             data_protection_z=org.data_protection_z,
             data_analytics_d=org.data_analytics_d,
             automation_a=org.automation_a,
-            members_count=members_count
+            members_count=members_count,
+            teams_count=teams_count
         )
 
     @staticmethod
@@ -185,6 +203,17 @@ class OrgsCRUD:
             )
             stmt = stmt.offset(offset).limit(limit)
 
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(
+                    f"{settings.USERS_SERVICE_URL}/profile_interaction/members-count",
+                    params=[("org_ids", oid) for oid in org_ids],
+                )
+
+            if r.status_code != 200:
+                raise HTTPException(status_code=502, detail="Users service unavailable")
+
+            members_counts = {int(k): v for k, v in r.json().items()}
+
             res = await db.execute(stmt)
             orgs = res.scalars().all()
             return [OrgsCRUD.org_to_dict(o) for o in orgs]
@@ -207,10 +236,10 @@ class OrgsCRUD:
             if r.status_code != 200:
                 raise HTTPException(status_code=502, detail="Users service unavailable")
 
-            counts = {int(k): v for k, v in r.json().items()}
+            members_counts = {int(k): v for k, v in r.json().items()}
 
             orgs.sort(
-                key=lambda o: counts.get(o.id, 0),
+                key=lambda o: members_counts.get(o.id, 0),
                 reverse=(order == "desc"),
             )
 
@@ -219,7 +248,7 @@ class OrgsCRUD:
             result = []
             for o in sliced:
                 data = OrgsCRUD.org_to_dict(o)
-                data["members_count"] = counts.get(o.id, 0)
+                data["members_count"] = members_counts.get(o.id, 0)
                 result.append(data)
 
             return result
