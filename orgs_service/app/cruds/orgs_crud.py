@@ -52,7 +52,7 @@ class OrgsCRUD:
     async def get_org_by_id(db: AsyncSession, org_id: int) -> OrgResponse:
         result = await db.execute(select(Orgs).where(Orgs.id == org_id))
         org = result.scalar_one_or_none()
-    
+
         if not org:
             raise HTTPException(status_code=404, detail="Organization not found")
         
@@ -202,17 +202,6 @@ class OrgsCRUD:
                 Orgs.full_name.asc() if order == "asc" else Orgs.full_name.desc()
             )
             stmt = stmt.offset(offset).limit(limit)
-
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.get(
-                    f"{settings.USERS_SERVICE_URL}/profile_interaction/members-count",
-                    params=[("org_ids", oid) for oid in org_ids],
-                )
-
-            if r.status_code != 200:
-                raise HTTPException(status_code=502, detail="Users service unavailable")
-
-            members_counts = {int(k): v for k, v in r.json().items()}
 
             res = await db.execute(stmt)
             orgs = res.scalars().all()
