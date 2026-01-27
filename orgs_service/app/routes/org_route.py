@@ -1,4 +1,3 @@
-from http.client import HTTPException
 from typing import Optional, Literal
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession

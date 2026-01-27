@@ -8,10 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 from sqlalchemy.inspection import inspect
 from db.models.orgs import Orgs
+from schemas import OrgResponse
 from fastapi import HTTPException
 from config import settings
 
-SortBy = Literal["name", "members"]
+SortBy = Literal["name", "members", "index"]
 SortOrder = Literal["asc", "desc"]
 
 dadata = DadataAsync(token=settings.DADATA_TOKEN, secret=settings.DADATA_SECRET)
@@ -48,13 +49,45 @@ class OrgsCRUD:
         return org
     
     @staticmethod
-    async def get_org_by_id(db: AsyncSession, org_id: int):
+    async def get_org_by_id(db: AsyncSession, org_id: int) -> OrgResponse:
         result = await db.execute(select(Orgs).where(Orgs.id == org_id))
         org = result.scalar_one_or_none()
+
         if not org:
             raise HTTPException(status_code=404, detail="Organization not found")
-        return org
         
+        members_count = 0
+        async with httpx.AsyncClient(timeout=10) as client:
+            try:
+                r = await client.get(
+                    f"{settings.USERS_SERVICE_URL}/profile_interaction/members-count",
+                    params={"org_ids": [org.id]}
+                )
+                r.raise_for_status()
+                members_data = r.json()
+                members_count = members_data.get("members_count", 0)
+            except httpx.RequestError:
+                # Логируем, но не падаем
+                logging.error(f"ошибка: reguest error")
+                pass
+        
+        return OrgResponse(
+            id=org.id,
+            full_name=org.full_name,
+            short_name=org.short_name,
+            inn=org.inn,
+            region=org.region,
+            type=org.type,
+            star=org.star,
+            knowledge_skills_z=org.knowledge_skills_z,
+            knowledge_skills_v=org.knowledge_skills_v,
+            data_analytics_d=org.digital_env_e,
+            data_protection_z=org.data_protection_z,
+            data_analytics_d=org.data_analytics_d,
+            automation_a=org.automation_a,
+            members_count=members_count
+        )
+
     @staticmethod
     async def create_org(db: AsyncSession, inn: int, org_type: str):
         result = await dadata.find_by_id("party", str(inn))
