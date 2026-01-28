@@ -90,7 +90,8 @@ async def get_organization_by_id(org_id: int, db: AsyncSession = Depends(get_db)
         "data_protection_z": org.data_protection_z,
         "data_analytics_d": org.data_analytics_d,
         "automation_a": org.automation_a,
-        "members_count": org.members_count
+        "members_count": org.members_count,
+        "teams_count": org.teams_count
     }
 
 
