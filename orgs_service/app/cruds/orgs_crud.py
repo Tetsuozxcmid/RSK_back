@@ -78,7 +78,7 @@ class OrgsCRUD:
             try:
                 r = await client.get(
                     f"{settings.TEAMS_SERVICE_URL}/teams/teams-count",
-                    params={"org_id": [org.id]}
+                    params={"org_ids": [org.id]}
                 )
                 r.raise_for_status()
                 teams_count = r.json()
