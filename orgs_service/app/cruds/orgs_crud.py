@@ -11,6 +11,7 @@ from db.models.orgs import Orgs
 from schemas import OrgResponse
 from fastapi import HTTPException
 from config import settings
+import asyncio
 
 SortBy = Literal["name", "members", "index"]
 SortOrder = Literal["asc", "desc"]
@@ -197,38 +198,47 @@ class OrgsCRUD:
         if region:
             stmt = stmt.where(Orgs.region == region)
 
-        if sort_by == "name":
-            stmt = stmt.order_by(
-                Orgs.full_name.asc() if order == "asc" else Orgs.full_name.desc()
-            )
+        if sort_by in ["name", "index"]:
+            if sort_by == "name":
+                stmt = stmt.order_by(
+                    Orgs.full_name.asc() if order == "asc" else Orgs.full_name.desc()
+                )
+            elif sort_by == "index":
+                stmt = stmt.order_by(
+                    Orgs.star.asc() if order == "asc" else Orgs.star.desc()
+                )
+            
             stmt = stmt.offset(offset).limit(limit)
-
             res = await db.execute(stmt)
             orgs = res.scalars().all()
-            return [OrgsCRUD.org_to_dict(o) for o in orgs]
-
-        if sort_by == "members":
-            res = await db.execute(stmt)
-            orgs = res.scalars().all()
-
+            
             if not orgs:
                 return []
 
             org_ids = [o.id for o in orgs]
+            counts = await OrgsCRUD._get_orgs_counts(org_ids)
 
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.get(
-                    f"{settings.USERS_SERVICE_URL}/profile_interaction/members-count",
-                    params=[("org_ids", oid) for oid in org_ids],
-                )
+            result = []
+            for o in orgs:
+                data = OrgsCRUD.org_to_dict(o)
+                data.update(counts.get(o.id, {"members_count": 0, "teams_count": 0}))
+                result.append(data)
+            
+            return result
+        
+        elif sort_by == "members":
+            stmt = stmt.order_by(Orgs.full_name.asc())
+            res = await db.execute(stmt)
+            orgs = res.scalars().all()
+            
+            if not orgs:
+                return []
 
-            if r.status_code != 200:
-                raise HTTPException(status_code=502, detail="Users service unavailable")
-
-            members_counts = {int(k): v for k, v in r.json().items()}
+            org_ids = [o.id for o in orgs]
+            counts = await OrgsCRUD._get_orgs_counts(org_ids)
 
             orgs.sort(
-                key=lambda o: members_counts.get(o.id, 0),
+                key=lambda o: counts.get(o.id, {}).get("members_count", 0),
                 reverse=(order == "desc"),
             )
 
@@ -237,19 +247,50 @@ class OrgsCRUD:
             result = []
             for o in sliced:
                 data = OrgsCRUD.org_to_dict(o)
-                data["members_count"] = members_counts.get(o.id, 0)
+                data.update(counts.get(o.id, {"members_count": 0, "teams_count": 0}))
                 result.append(data)
-
+            
             return result
+        
+        else:
+            raise HTTPException(status_code=400, detail="Invalid sort_by value")
 
-        if sort_by == "index":
-            stmt = stmt.order_by(
-                Orgs.star.asc() if order == "asc" else Orgs.star.desc()
-            )
-            stmt = stmt.offset(offset).limit(limit)
-
-            res = await db.execute(stmt)
-            orgs = res.scalars().all()
-            return [OrgsCRUD.org_to_dict(o) for o in orgs]
-
-        raise HTTPException(status_code=400, detail="Invalid sort_by value")
+    @staticmethod
+    async def _get_orgs_counts(org_ids: list[int]):
+        """
+        Получает members_count и teams_count для списка организаций.
+        Возвращает словарь: {org_id: {"members_count": X, "teams_count": Y}}
+        """
+        if not org_ids:
+            return {}
+        
+        async with httpx.AsyncClient(timeout=10) as client:
+            try:           
+                members_req = client.get(
+                    f"{settings.USERS_SERVICE_URL}/profile_interaction/members-count",
+                    params=[("org_ids", oid) for oid in org_ids]
+                )
+                teams_req = client.get(
+                    f"{settings.USERS_SERVICE_URL}/profile_interaction/teams-count",
+                    params=[("org_ids", oid) for oid in org_ids]
+                )
+                
+                members_resp, teams_resp = await asyncio.gather(members_req, teams_req)
+                
+                if members_resp.status_code != 200 or teams_resp.status_code != 200:
+                    raise HTTPException(status_code=502, detail="Users service unavailable")
+                
+                members_counts = {int(k): v for k, v in members_resp.json().items()}
+                teams_counts = {int(k): v for k, v in teams_resp.json().items()}
+                
+                # Объединяем результаты
+                result = {}
+                for org_id in org_ids:
+                    result[org_id] = {
+                        "members_count": members_counts.get(org_id, 0),
+                        "teams_count": teams_counts.get(org_id, 0)
+                    }
+                return result
+                    
+            except httpx.RequestError:
+                raise HTTPException(status_code=502, detail="Users service unavailable")
