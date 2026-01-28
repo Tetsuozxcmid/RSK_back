@@ -210,7 +210,7 @@ async def get_members_count(
     org_ids: list[int] = Query(...),
     db: AsyncSession = Depends(get_db),
 ):
-    counts = await TeamCRUD.get_team_count_by_org_id(
+    counts = await TeamCRUD.get_team_count_by_id(
         db=db,
         org_ids=org_ids
     )
