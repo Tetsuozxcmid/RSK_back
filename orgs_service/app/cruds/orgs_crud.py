@@ -271,12 +271,12 @@ class OrgsCRUD:
                     params=[("org_ids", oid) for oid in org_ids]
                 )
                 teams_req = client.get(
-                    f"{settings.USERS_SERVICE_URL}/profile_interaction/teams-count",
+                    f"{settings.TEAMS_SERVICE_URL}/teams/teams-count",
                     params=[("org_ids", oid) for oid in org_ids]
                 )
                 
                 members_resp, teams_resp = await asyncio.gather(members_req, teams_req)
-                
+
                 if members_resp.status_code != 200 or teams_resp.status_code != 200:
                     raise HTTPException(status_code=502, detail="Users service unavailable")
                 
