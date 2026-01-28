@@ -1,5 +1,5 @@
 from services.user_profile_client import UserProfileClient
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from shemas.team_shemas.team_register import TeamRegister
 from cruds.teams_crud.crud import TeamCRUD
@@ -205,10 +205,16 @@ async def get_team_by_org(org_id: int, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"No teams found for organization {org_id}")
 
-@team_management_router.get("/count")
-async def get_teams_count(db: AsyncSession = Depends(get_db)):
-    count = await TeamCRUD.get_team_count(db)
-    return {"count": count}
+@team_management_router.get("/team-count")
+async def get_members_count(
+    org_ids: list[int] = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    counts = await TeamCRUD.get_team_count_by_org_id(
+        db=db,
+        org_ids=org_ids
+    )
+    return counts
 
 router.include_router(team_management_router)
 router.include_router(team_membership_router)
