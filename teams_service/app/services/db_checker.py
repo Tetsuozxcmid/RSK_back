@@ -1,6 +1,7 @@
 import httpx
 from fastapi import HTTPException
 from config import settings
+import logging
 
 class OrgsClient:
 
@@ -23,22 +24,17 @@ class OrgsClient:
 
                 if response.status_code == 404:
                     return {"id": None, "name": org_name, "exists": False}
-
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"Organization service error: {response.text}"
-                )
+                
+              
+                logging.error(f"Organization service returned {response.status_code}: {response.text}")
+                return {"id": None, "name": org_name, "exists": False, "error": True}
 
         except httpx.ConnectError:
-            raise HTTPException(
-                status_code=503,
-                detail="Organization service is unavailable"
-            )
+            logging.error("Organization service is unavailable")
+            return {"id": None, "name": org_name, "exists": False, "error": True}
         except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error retrieving organization info: {str(e)}"
-            )
+            logging.error(f"Error retrieving organization info: {str(e)}")
+            return {"id": None, "name": org_name, "exists": False, "error": True}
         
     
         
