@@ -1,3 +1,7 @@
+from typing import Optional
+
+from sqlalchemy import func, select
+from db.models.teams import Team
 from services.user_profile_client import UserProfileClient
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +10,7 @@ from cruds.teams_crud.crud import TeamCRUD
 from shemas.team_shemas.team_update import TeamUpdate
 from db.session import get_db
 from services.grabber import get_current_user
+import logging
 
 router = APIRouter(prefix="/teams")
 
@@ -13,6 +18,44 @@ team_management_router = APIRouter(tags=["Team Management"])
 team_membership_router = APIRouter(tags=["Team Membership"])
 team_discovery_router = APIRouter(tags=["Team Discovery"])
 
+
+
+
+@router.get("/count-by-region")
+async def get_teams_count_by_region(
+    region: Optional[str] = Query(None, description="Фильтр по региону"),
+    db: AsyncSession = Depends(get_db)
+):
+   
+    try:
+        
+        if region:
+            query = select(func.count()).where(Team.region == region)
+            result = await db.execute(query)
+            count = result.scalar()
+            
+            return {
+                "region": region,
+                "teams_count": count
+            }
+        
+       
+        query = select(Team.region, func.count(Team.id).label("teams_count"))\
+                .group_by(Team.region)\
+                .order_by(func.count(Team.id).desc())
+        
+        result = await db.execute(query)
+        regions_stats = result.all()
+        
+        return [
+            {"region": region, "teams_count": count}
+            for region, count in regions_stats
+        ]
+        
+    except Exception as e:
+        logging.error(f"Error getting teams count by region: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    
 @team_management_router.post("/register")
 async def register_team(
     team_data: TeamRegister, 
