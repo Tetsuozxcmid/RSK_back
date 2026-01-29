@@ -1,4 +1,3 @@
-from http.client import HTTPException
 from typing import Optional, Literal
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +27,7 @@ async def get_all_organizations(
     region: Optional[str] = Query(default=None),
     name: Optional[str] = Query(default=None),
 
-    sort_by: Literal["name", "members"] = Query(default="name"),
+    sort_by: Literal["name", "members", "index"] = Query(default="name"),
     order: Literal["asc", "desc"] = Query(default="asc"),
 
     limit: int = Query(default=50, ge=1, le=200),
@@ -90,7 +89,9 @@ async def get_organization_by_id(org_id: int, db: AsyncSession = Depends(get_db)
         "digital_env_e": org.digital_env_e,
         "data_protection_z": org.data_protection_z,
         "data_analytics_d": org.data_analytics_d,
-        "automation_a": org.automation_a
+        "automation_a": org.automation_a,
+        "members_count": org.members_count,
+        "teams_count": org.teams_count
     }
 
 

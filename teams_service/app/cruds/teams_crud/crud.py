@@ -1,4 +1,5 @@
 from sqlalchemy.future import select
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from services.user_profile_client import UserProfileClient
 from services.db_checker import OrgsClient
@@ -492,3 +493,28 @@ class TeamCRUD:
             "teachers": teacher_count,
             "total": len(members)
         }
+    
+    @staticmethod
+    async def get_team_count_by_id(
+        db: AsyncSession,
+        org_ids: list[int]
+    ) -> dict[int, int]:
+        if not org_ids:
+            return {}
+        
+        query = (
+            select(Team.organization_id, func.count(Team.id))
+            .where(Team.organization_id.in_(org_ids))
+            .group_by(Team.organization_id)
+        )
+        
+        res = await db.execute(query)
+        rows = res.all()
+        
+        counts = {org_id: 0 for org_id in org_ids}
+
+        for org_id, cnt in rows:
+            if org_id in counts:
+                counts[org_id] = cnt
+        
+        return counts

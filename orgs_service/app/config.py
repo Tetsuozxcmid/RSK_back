@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     DB_NAME: str
 
     USERS_SERVICE_URL: str = "https://api.rosdk.ru/users"
+    TEAMS_SERVICE_URL: str = "https://api.rosdk.ru/teams"
     DADATA_TOKEN: str
     DADATA_SECRET: str
 
