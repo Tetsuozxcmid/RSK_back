@@ -21,7 +21,7 @@ team_discovery_router = APIRouter(tags=["Team Discovery"])
 
 
 
-@router.get("/count-by-region")
+@team_management_router.get("/count-by-region")
 async def get_teams_count_by_region(
     region: Optional[str] = Query(None, description="Фильтр по региону"),
     db: AsyncSession = Depends(get_db)
