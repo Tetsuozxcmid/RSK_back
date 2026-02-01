@@ -67,7 +67,7 @@ async def register_user(
                 "name": user.temp_name,
                 "verified": False,
                 "event_type": "user_registered",
-                "role" : user.role
+                "role": user.role.value
             }
 
             message = aio_pika.Message(
