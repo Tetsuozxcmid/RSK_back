@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from db.base import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Boolean, Integer, String, Enum  as sqlEnum
+from sqlalchemy import Boolean, Integer, String, Enum  as sqlEnum, or_
 from routes.users_router.auth_logic import pass_settings
 from enum import Enum 
 from db.base import Base
@@ -52,25 +52,70 @@ class User(Base):
 
     @classmethod
     async def check_user(cls, login: str, password: str, db: AsyncSession):
-
-        result = await db.execute(
-            select(cls).where(
-                (cls.login == login) | (cls.email == login) 
+        try:
+            print(f"\n=== DEBUG check_user ===")
+            print(f"Login/email provided: {login}")
+            print(f"Password length: {len(password)}")
+            
+            # Ищем пользователя по логину ИЛИ email
+            result = await db.execute(
+                select(cls).where(
+                    or_(
+                        cls.login == login,
+                        cls.email == login.lower()
+                    )
+                )
             )
-        )
-        user = result.scalar_one_or_none()
-        
-        if not user or not pass_settings.verify_password(
-            plain_password=password, hashed_password=user.hashed_password
-        ):
+            user = result.scalar_one_or_none()
+            
+            if not user:
+                print(f"DEBUG: No user found with login/email: {login}")
+                return None
+            
+            print(f"DEBUG: User found - ID: {user.id}, Email: {user.email}")
+            print(f"DEBUG: User verified: {user.verified}")
+            print(f"DEBUG: Hashed password in DB: {user.hashed_password}")
+            print(f"DEBUG: Temp password: {user.temp_password}")
+            
+            # Определяем, какой пароль использовать
+            password_to_check = None
+            
+            if user.verified:
+                # Для подтвержденных пользователей используем hashed_password
+                password_to_check = user.hashed_password
+                print(f"DEBUG: Using hashed_password for verified user")
+            else:
+                # Для неподтвержденных используем temp_password
+                password_to_check = user.temp_password
+                print(f"DEBUG: Using temp_password for unverified user")
+            
+            if not password_to_check:
+                print(f"ERROR: No password hash found for user {user.email}")
+                return None
+                
+            # Проверяем пароль
+            print(f"DEBUG: Calling verify_password...")
+            is_valid = pass_settings.verify_password(password, password_to_check)
+            print(f"DEBUG: Password valid: {is_valid}")
+            
+            if is_valid and user.verified:  # Только подтвержденные пользователи могут входить
+                return {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "role": user.role
+                }
+            elif is_valid and not user.verified:
+                print(f"DEBUG: User {user.email} is not verified yet")
+                return None
+            else:
+                print(f"DEBUG: Password invalid for user {user.email}")
+                return None
+                
+        except Exception as e:
+            print(f"ERROR in check_user: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
             return None
-        
-        if not user.verified:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Email not verified. Please check your email for confirmation."
-            )
-
-        return {"id": user.id, "login": user.login, "verified": user.verified, "role": user.role.value}
     
     
