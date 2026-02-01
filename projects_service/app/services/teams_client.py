@@ -2,6 +2,7 @@ import httpx
 from fastapi import HTTPException, Request
 from config import settings
 
+
 class TeamsClient:
     @staticmethod
     async def is_user_team_leader(request: Request) -> tuple[bool, int | None]:
@@ -14,10 +15,13 @@ class TeamsClient:
                 response = await client.get(
                     f"{settings.TEAMS_SERVICE_URL}/teams/my_teams/",
                     cookies={"users_access_token": token},
-                    timeout=5.0
+                    timeout=5.0,
                 )
                 if response.status_code != 200:
-                    raise HTTPException(status_code=response.status_code, detail="Team service unavailable")
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail="Team service unavailable",
+                    )
 
                 teams = response.json()
                 for entry in teams:
@@ -27,5 +31,6 @@ class TeamsClient:
                 return False, None
 
         except httpx.RequestError as e:
-            raise HTTPException(status_code=503, detail=f"Teams service error: {str(e)}")
-
+            raise HTTPException(
+                status_code=503, detail=f"Teams service error: {str(e)}"
+            )

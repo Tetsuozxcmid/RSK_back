@@ -1,4 +1,4 @@
-from typing import List, Optional,Dict,Any
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from services.teams_client import TeamsClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,7 +7,11 @@ from cruds.crud import ZvezdaCRUD
 from services.service import get_current_user
 from services.auth_client import get_moderator
 from schemas.proj import (
-    ProjectCreate, ProjectRead, TaskCreate, TaskOut, TaskSubmitRequest
+    ProjectCreate,
+    ProjectRead,
+    TaskCreate,
+    TaskOut,
+    TaskSubmitRequest,
 )
 
 router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
@@ -16,8 +20,7 @@ router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
 # === PROJECTS ===
 @router.post("/projects", response_model=ProjectRead)
 async def create_project(
-    project_data: ProjectCreate,
-    db: AsyncSession = Depends(get_db)
+    project_data: ProjectCreate, db: AsyncSession = Depends(get_db)
 ):
     return await ZvezdaCRUD.create_project(db, project_data)
 
@@ -29,8 +32,7 @@ async def get_project(project_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/projects", response_model=List[ProjectRead])
 async def list_projects(
-    organization_name: Optional[str] = None,
-    db: AsyncSession = Depends(get_db)
+    organization_name: Optional[str] = None, db: AsyncSession = Depends(get_db)
 ):
     return await ZvezdaCRUD.list_projects(db, organization_name)
 
@@ -41,25 +43,22 @@ async def create_task(
     project_id: int,
     task_in: TaskCreate,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+    user_id: int = Depends(get_current_user),
 ):
     return await ZvezdaCRUD.create_task(db, task_in, project_id)
 
+
 @router.delete("/projects/{project_id}")
 async def delete_project(
-    project_id: int,
-    db: AsyncSession = Depends(get_db),
-    user = Depends(get_moderator)
+    project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_moderator)
 ):
     await ZvezdaCRUD.delete_project(db, project_id)
     return {"status": "deleted"}
 
 
-
 @router.get("/tasks", response_model=List[TaskOut])
 async def list_tasks(
-    db: AsyncSession = Depends(get_db),
-    project_id: Optional[int] = None
+    db: AsyncSession = Depends(get_db), project_id: Optional[int] = None
 ):
     return await ZvezdaCRUD.list_tasks(db, project_id)
 
@@ -70,34 +69,42 @@ async def get_task(task_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/tasks/{task_id}/start")
-async def start_task(task_id: int, request: Request, db: AsyncSession = Depends(get_db), user_id: int = Depends(get_current_user)):
-    task = await ZvezdaCRUD.start_task(db=db, task_id=task_id, user_id=user_id, request=request)
+async def start_task(
+    task_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user),
+):
+    task = await ZvezdaCRUD.start_task(
+        db=db, task_id=task_id, user_id=user_id, request=request
+    )
     return task
 
 
 @router.post("/tasks/{task_id}/submit")
 async def submit_task(
     task_id: int,
-    request: Request,  
-    data: TaskSubmitRequest,  
+    request: Request,
+    data: TaskSubmitRequest,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user)  
+    user_id: int = Depends(get_current_user),
 ):
     is_leader, team_id = await TeamsClient.is_user_team_leader(request)
     if not is_leader:
-        raise HTTPException(status_code=403, detail="Only team leaders can submit tasks")
-    
+        raise HTTPException(
+            status_code=403, detail="Only team leaders can submit tasks"
+        )
+
     submission = await ZvezdaCRUD.submit_task(
-        db, 
+        db,
         task_id=task_id,
-        team_id=team_id,  
+        team_id=team_id,
         text_description=data.text_description,
-        result_url=data.result_url
+        result_url=data.result_url,
     )
     return {"submission_id": submission.id, "status": submission.status.value}
+
 
 @router.get("/tasks/{task_id}/submissions")
 async def get_task_submissions(task_id: int, db: AsyncSession = Depends(get_db)):
     return await ZvezdaCRUD.get_task_submissions(db, task_id)
-
-

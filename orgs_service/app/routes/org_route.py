@@ -9,6 +9,7 @@ from schemas import OrgCreateSchema
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
+
 @router.post("/create")
 async def create_org(request: OrgCreateSchema, db: AsyncSession = Depends(get_db)):
     inn = request.inn
@@ -16,23 +17,20 @@ async def create_org(request: OrgCreateSchema, db: AsyncSession = Depends(get_db
     return "ok"
 
 
-
 @router.get("/count")
 async def get_organizations_count(db: AsyncSession = Depends(get_db)):
     count = await OrgsCRUD.get_orgs_count(db)
     return {"count": count}
 
+
 @router.get("/all")
 async def get_all_organizations(
     region: Optional[str] = Query(default=None),
     name: Optional[str] = Query(default=None),
-
     sort_by: Literal["name", "members", "index"] = Query(default="name"),
     order: Literal["asc", "desc"] = Query(default="asc"),
-
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-
     db: AsyncSession = Depends(get_db),
 ):
     orgs = await OrgsCRUD.get_orgs(
@@ -45,6 +43,7 @@ async def get_all_organizations(
         offset=offset,
     )
     return orgs
+
 
 @router.get("/import_from_excel")
 def import_from_excel():
@@ -73,6 +72,7 @@ async def get_organization(org_name: str, db: AsyncSession = Depends(get_db)):
     org = await OrgsCRUD.get_org(db, org_name)
     return {"id": org.id, "name": org.name}
 
+
 @router.get("/org/{org_id}")
 async def get_organization_by_id(org_id: int, db: AsyncSession = Depends(get_db)):
     org = await OrgsCRUD.get_org_by_id(db, org_id)
@@ -91,7 +91,5 @@ async def get_organization_by_id(org_id: int, db: AsyncSession = Depends(get_db)
         "data_analytics_d": org.data_analytics_d,
         "automation_a": org.automation_a,
         "members_count": org.members_count,
-        "teams_count": org.teams_count
+        "teams_count": org.teams_count,
     }
-
-

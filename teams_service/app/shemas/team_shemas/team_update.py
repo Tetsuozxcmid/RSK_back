@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from db.models.teams_enums.enums import DirectionEnum
 from typing import Optional
 
+
 class TeamUpdate(BaseModel):
     name: Optional[str] = Field(None, title="Название команды")
     direction: Optional[DirectionEnum] = Field(None, title="Направление команды")

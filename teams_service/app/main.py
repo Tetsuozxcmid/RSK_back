@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from routes.teams_router.router import router as team_router
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title='FastAPI',description='xxx',root_path="/teams")
+app = FastAPI(title="FastAPI", description="xxx", root_path="/teams")
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,4 +13,3 @@ app.add_middleware(
 )
 
 app.include_router(team_router)
-

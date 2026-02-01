@@ -1,23 +1,24 @@
 import smtplib
-import asyncio
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from fastapi import HTTPException
 from config import settings
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-async def send_ok_email(recipient_email: str,description: str):
+
+async def send_ok_email(recipient_email: str, description: str):
     try:
         message = MIMEMultipart()
-        message['From'] = settings.SENDER_EMAIL
-        message['To'] = recipient_email
-        message['Subject'] = 'Решение о курсе — РСК'
+        message["From"] = settings.SENDER_EMAIL
+        message["To"] = recipient_email
+        message["Subject"] = "Решение о курсе — РСК"
 
-        confirmation_message = f"Привет твое решение было одобрено администрацией,можешь взять еще задач!"
-        
+        confirmation_message = (
+            "Привет твое решение было одобрено администрацией,можешь взять еще задач!"
+        )
+
         html_body = f"""
 <!DOCTYPE html>
 <html lang="ru">
@@ -151,29 +152,31 @@ async def send_ok_email(recipient_email: str,description: str):
     </body>
 </html>
         """
-        
-        message.attach(MIMEText(html_body, 'html'))
+
+        message.attach(MIMEText(html_body, "html"))
 
         with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-            server.starttls()  
+            server.starttls()
             server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
             server.sendmail(settings.SENDER_EMAIL, recipient_email, message.as_string())
-            
+
         logger.info(f"Confirmation email sent to {recipient_email}")
-            
+
     except Exception as e:
-        logger.error(f"Failed to send confirmation email to {recipient_email}: {str(e)}")
+        logger.error(
+            f"Failed to send confirmation email to {recipient_email}: {str(e)}"
+        )
 
 
-async def send_bad_email(recipient_email: str,description: str):
+async def send_bad_email(recipient_email: str, description: str):
     try:
         message = MIMEMultipart()
-        message['From'] = settings.SENDER_EMAIL
-        message['To'] = recipient_email
-        message['Subject'] = 'Решение о курсе  — РСК'
+        message["From"] = settings.SENDER_EMAIL
+        message["To"] = recipient_email
+        message["Subject"] = "Решение о курсе  — РСК"
 
-        confirmation_message = f"Привет твое решение было отклонено администрацией,можешь попробовать еще раз!"
-        
+        confirmation_message = "Привет твое решение было отклонено администрацией,можешь попробовать еще раз!"
+
         html_body = f"""
 <!DOCTYPE html>
 <html lang="ru">
@@ -307,16 +310,17 @@ async def send_bad_email(recipient_email: str,description: str):
     </body>
 </html>
         """
-        
-        message.attach(MIMEText(html_body, 'html'))
+
+        message.attach(MIMEText(html_body, "html"))
 
         with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-            server.starttls()  
+            server.starttls()
             server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
             server.sendmail(settings.SENDER_EMAIL, recipient_email, message.as_string())
-            
+
         logger.info(f"Confirmation email sent to {recipient_email}")
-            
+
     except Exception as e:
-        logger.error(f"Failed to send confirmation email to {recipient_email}: {str(e)}")
-        
+        logger.error(
+            f"Failed to send confirmation email to {recipient_email}: {str(e)}"
+        )

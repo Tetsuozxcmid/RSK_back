@@ -39,7 +39,9 @@ async def yandex_callback(
     db: AsyncSession = Depends(get_db),
     rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection),
 ):
-    print(f"[YANDEX DEBUG {time.time()}] Callback started, code: {code}, error: {error}")
+    print(
+        f"[YANDEX DEBUG {time.time()}] Callback started, code: {code}, error: {error}"
+    )
 
     if error:
         return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error={error}")
@@ -48,7 +50,6 @@ async def yandex_callback(
         return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error=code_missing")
 
     try:
-        
         async with httpx.AsyncClient() as client:
             token_resp = await client.post(
                 "https://oauth.yandex.com/token",
@@ -66,24 +67,26 @@ async def yandex_callback(
 
             if not access_token:
                 print(f"[YANDEX ERROR] Token response: {token_data}")
-                return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error=token_not_received")
+                return RedirectResponse(
+                    f"{settings.YANDEX_FRONTEND_URL}?error=token_not_received"
+                )
 
-           
             user_resp = await client.get(
                 "https://login.yandex.ru/info?format=json",
-                headers={"Authorization": f"OAuth {access_token}"}
+                headers={"Authorization": f"OAuth {access_token}"},
             )
             user_data = user_resp.json()
 
         email = user_data.get("default_email")
         if not email:
-            return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error=email_not_provided")
+            return RedirectResponse(
+                f"{settings.YANDEX_FRONTEND_URL}?error=email_not_provided"
+            )
 
-      
         result = await db.execute(
             select(UserCRUD.model).where(
                 UserCRUD.model.provider_id == str(user_data["id"]),
-                UserCRUD.model.auth_provider == "yandex"
+                UserCRUD.model.auth_provider == "yandex",
             )
         )
         existing_user = result.scalar_one_or_none()
@@ -93,24 +96,28 @@ async def yandex_callback(
             print(f"[YANDEX DEBUG] User already exists, id: {user.id}")
         else:
             try:
-                
                 user = await UserCRUD.create_oauth_user(
                     db=db,
                     email=email,
-                    name=user_data.get("real_name") or user_data.get("display_name") or "",
+                    name=user_data.get("real_name")
+                    or user_data.get("display_name")
+                    or "",
                     provider="yandex",
                     provider_id=str(user_data["id"]),
-                    role=UserRole.STUDENT
+                    role=UserRole.STUDENT,
                 )
                 print(f"[YANDEX DEBUG] New user created, id: {user.id}")
-            except Exception as e:
+            except Exception:
                 traceback.print_exc()
-                return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error=user_creation_failed")
+                return RedirectResponse(
+                    f"{settings.YANDEX_FRONTEND_URL}?error=user_creation_failed"
+                )
 
-     
         try:
             channel = await rabbitmq.channel()
-            exchange = await channel.declare_exchange("user_events", type="direct", durable=True)
+            exchange = await channel.declare_exchange(
+                "user_events", type="direct", durable=True
+            )
 
             user_event = {
                 "user_id": user.id,
@@ -133,28 +140,25 @@ async def yandex_callback(
         except Exception as e:
             print(f"[YANDEX WARNING] Failed to publish RabbitMQ event: {e}")
 
-        
         jwt_token = await create_access_token(
             {"sub": str(user.id), "role": user.role.value}
         )
 
-        
         response = RedirectResponse(settings.YANDEX_FRONTEND_URL)
         response.set_cookie(
             key=COOKIE_NAME,
             value=jwt_token,
             httponly=True,
-            secure=True,  
-            samesite="none",  
-            domain=".rosdk.ru",  
+            secure=True,
+            samesite="none",
+            domain=".rosdk.ru",
             path="/",
-            max_age=3600 * 24 * 7
+            max_age=3600 * 24 * 7,
         )
 
         print(f"[YANDEX DEBUG] Callback completed for user_id: {user.id}")
         return response
 
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         return RedirectResponse(f"{settings.YANDEX_FRONTEND_URL}?error=internal_error")
-

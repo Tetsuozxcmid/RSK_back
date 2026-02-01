@@ -6,11 +6,9 @@ class Settings(BaseSettings):
     ADMIN_IDS: str
     ADMIN_SECRET_KEY: str
     RSK_ORGS_URL: str
-    
 
     @property
     def admin_ids(self) -> List[int]:
-
         return [int(id_.strip()) for id_ in self.ADMIN_IDS.split(",")]
 
     model_config = SettingsConfigDict(

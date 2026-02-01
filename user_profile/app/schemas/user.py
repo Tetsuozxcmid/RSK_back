@@ -14,12 +14,12 @@ class ProfileResponse(BaseModel):
     Type: Optional[UserEnum] = None
     Organization: Optional[str] = None
     Organization_id: Optional[int] = None
-    team: Optional[str] = None  
-    team_id: Optional[int] = None  
-    
+    team: Optional[str] = None
+    team_id: Optional[int] = None
 
     class Config:
         from_attributes = True
+
 
 class ProfileCreateSchema(BaseModel):
     NameIRL: Optional[str] = None
@@ -31,7 +31,6 @@ class ProfileCreateSchema(BaseModel):
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
     Organization: Optional[str] = None
-    
 
 
 class ProfileUpdate(BaseModel):
@@ -44,14 +43,14 @@ class ProfileUpdate(BaseModel):
     Type: Optional[UserEnum] = None
     Organization: Optional[str] = None
 
+
 class ProfileJoinedTeamUpdate(BaseModel):
-    user_id: int  
+    user_id: int
     team: Optional[str] = None
     team_id: Optional[int] = None
+
 
 class ProfileJoinedOrg(BaseModel):
     user_id: int
     Organization: Optional[str] = None
     Organization_id: Optional[int] = None
-
-    

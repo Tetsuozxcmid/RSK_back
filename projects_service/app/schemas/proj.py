@@ -2,7 +2,6 @@ from enum import Enum
 from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel
 
 
 class TaskStatus(str, Enum):
@@ -28,8 +27,9 @@ CATEGORY_MAP = {
     "Среда": CategoryEnum.ENVIRONMENT,
     "Защита": CategoryEnum.PROTECTION,
     "Данные": CategoryEnum.DATA,
-    "Автоматизация": CategoryEnum.AUTOMATION
+    "Автоматизация": CategoryEnum.AUTOMATION,
 }
+
 
 class ProjectBase(BaseModel):
     title: str
@@ -39,7 +39,6 @@ class ProjectBase(BaseModel):
     star_category: CategoryEnum
     level_number: int = 1
 
-    
     @field_validator("star_category", mode="before")
     @classmethod
     def map_russian_category(cls, v):
@@ -65,7 +64,6 @@ class TaskBase(BaseModel):
     description: Optional[str] = None
     prize_points: int = 0
     materials: Optional[List[dict]] = []
-
 
 
 class TaskRead(TaskBase):
@@ -100,16 +98,17 @@ class TaskSubmissionRead(TaskSubmissionBase):
     reviewed_at: Optional[datetime]
 
 
-
 class TaskSubmitRequest(BaseModel):
     text_description: Optional[str] = None
     result_url: Optional[str] = None
+
 
 class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
     prize_points: Optional[int] = 0
     materials: Optional[List[dict]] = []
+
 
 class TaskOut(BaseModel):
     id: int
@@ -122,12 +121,11 @@ class TaskOut(BaseModel):
 
     class Config:
         from_attributes = True
-    
+
+
 class TaskOff(BaseModel):
     pass
 
 
-
 ProjectRead.update_forward_refs()
 TaskRead.update_forward_refs()
-

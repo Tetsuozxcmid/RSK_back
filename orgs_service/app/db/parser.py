@@ -66,7 +66,9 @@ def import_excel_to_sql(
     if not bad_types.empty:
         print("❌ Найдены неизвестные значения type в Excel:")
         print(bad_types[["full_name", "kpp", "type"]].head(20))
-        raise ValueError("Исправь значения в колонке type в Excel (они не совпадают с OrgType)")
+        raise ValueError(
+            "Исправь значения в колонке type в Excel (они не совпадают с OrgType)"
+        )
 
     # 10) inn -> число
     df["inn"] = pd.to_numeric(df["inn"], errors="coerce")

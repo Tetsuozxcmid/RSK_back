@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 class OrgType(StrEnum):
     VUZ = "ВУЗ"
     COLLEGE = "Колледж"

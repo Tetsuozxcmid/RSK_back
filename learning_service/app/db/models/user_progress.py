@@ -8,5 +8,7 @@ class UserProgress(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    course_id: Mapped[int] = mapped_column(Integer, ForeignKey("courses.id"), nullable=False)
+    course_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("courses.id"), nullable=False
+    )
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

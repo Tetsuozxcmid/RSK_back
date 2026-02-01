@@ -5,8 +5,7 @@ from sqlalchemy import func
 
 from db.models.user import User
 from fastapi import HTTPException
-from schemas.user import ProfileResponse, ProfileUpdate,ProfileJoinedTeamUpdate
-from services.parser import org_parser
+from schemas.user import ProfileResponse, ProfileUpdate
 
 
 class ProfileCRUD:
@@ -25,7 +24,7 @@ class ProfileCRUD:
             Description=profile_data.Description,
             Region=profile_data.Region,
             Type=profile_data.Type,
-            Organization=profile_data.Organization
+            Organization=profile_data.Organization,
         )
 
         db.add(new_profile)
@@ -40,35 +39,39 @@ class ProfileCRUD:
             raise HTTPException(
                 status_code=500, detail=f"Error while registering team: {str(e)}"
             )
-        
-    
-        
+
     @staticmethod
-    async def get_my_profile(db:AsyncSession, user_id: int):
+    async def get_my_profile(db: AsyncSession, user_id: int):
         existing_profile = await db.execute(select(User).where(User.id == user_id))
 
         profile = existing_profile.scalar_one_or_none()
 
         if not profile:
-            raise HTTPException(
-                status_code=404, detail="Profile not found"
-            )
+            raise HTTPException(status_code=404, detail="Profile not found")
         return ProfileResponse.model_validate(profile)
-    
+
     @staticmethod
-    async def update_my_profile(db: AsyncSession, update_data: ProfileUpdate, user_id: int):
+    async def update_my_profile(
+        db: AsyncSession, update_data: ProfileUpdate, user_id: int
+    ):
         result = await db.execute(select(User).where(User.id == user_id))
         existing_profile = result.scalar_one_or_none()
 
-        if not existing_profile: 
-            raise HTTPException(
-                status_code=404, detail="Profile not found"
-            )
-        
-        update_dict = update_data.dict(exclude_unset=True)
-        
+        if not existing_profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
 
-        for field in ["NameIRL", "Surname", "Patronymic", "Description", "Region", "Organization", "email", "Type"]:
+        update_dict = update_data.dict(exclude_unset=True)
+
+        for field in [
+            "NameIRL",
+            "Surname",
+            "Patronymic",
+            "Description",
+            "Region",
+            "Organization",
+            "email",
+            "Type",
+        ]:
             if field in update_dict:
                 setattr(existing_profile, field, update_dict[field])
 
@@ -78,9 +81,7 @@ class ProfileCRUD:
             return existing_profile
         except Exception as e:
             await db.rollback()
-            raise HTTPException(
-                status_code=400, detail=f"something got wrong {e}"
-            )
+            raise HTTPException(status_code=400, detail=f"something got wrong {e}")
 
     @staticmethod
     async def get_all_users_profiles(db: AsyncSession):
@@ -89,7 +90,6 @@ class ProfileCRUD:
 
     @staticmethod
     async def update_profile(update_data: ProfileUpdate, db: AsyncSession):
-
         result = await db.execute(select(User).where(User.id == update_data.id))
         existing_profile = result.scalar_one_or_none()
 
@@ -109,12 +109,11 @@ class ProfileCRUD:
             raise HTTPException(
                 status_code=500, detail=f"Error while updating profile: {str(e)}"
             )
-        
 
     @staticmethod
-    async def update_profile_joined_team(db: AsyncSession, user_id: int, team_name: str, team_id: int):
-        
-        
+    async def update_profile_joined_team(
+        db: AsyncSession, user_id: int, team_name: str, team_id: int
+    ):
         result = await db.execute(select(User).where(User.id == user_id))
         existing_profile = result.scalar_one_or_none()
 
@@ -134,10 +133,11 @@ class ProfileCRUD:
             raise HTTPException(
                 status_code=500, detail=f"Error while updating profile: {str(e)}"
             )
-        
+
     @staticmethod
-    async def update_profile_joined_org(db: AsyncSession, user_id: int, organization_name: str, organization_id: int):
-        
+    async def update_profile_joined_org(
+        db: AsyncSession, user_id: int, organization_name: str, organization_id: int
+    ):
         result = await db.execute(select(User).where(User.id == user_id))
         existing_profile = result.scalar_one_or_none()
 
@@ -150,32 +150,27 @@ class ProfileCRUD:
         try:
             await db.commit()
             await db.refresh(existing_profile)
-            logging.info(f"User {user_id} team is in org '{organization_name}' (ID: {organization_id})")
+            logging.info(
+                f"User {user_id} team is in org '{organization_name}' (ID: {organization_id})"
+            )
             return existing_profile
         except Exception as e:
             await db.rollback()
             raise HTTPException(
                 status_code=500, detail=f"Error while updating profile: {str(e)}"
             )
-        
 
     @staticmethod
-    async def get_users_by_org_id(
-        db: AsyncSession,
-        org_id: int
-    ):
+    async def get_users_by_org_id(db: AsyncSession, org_id: int):
         result = await db.execute(select(User).where(User.Organization_id == org_id))
         return result.scalars().all()
-    
+
     @staticmethod
-    async def get_member_count_by_id(
-        db: AsyncSession,
-        org_ids: list[int]
-    ):
+    async def get_member_count_by_id(db: AsyncSession, org_ids: list[int]):
         res = await db.execute(
-        select(User.Organization_id, func.count(User.id))
-        .where(User.Organization_id.in_(org_ids))
-        .group_by(User.Organization_id)
+            select(User.Organization_id, func.count(User.id))
+            .where(User.Organization_id.in_(org_ids))
+            .group_by(User.Organization_id)
         )
         rows = res.all()
 

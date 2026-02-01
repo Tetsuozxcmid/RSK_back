@@ -1,5 +1,5 @@
-from pathlib import Path
-from pydantic_settings import BaseSettings,SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     DB_HOST: str
@@ -27,20 +27,19 @@ class Settings(BaseSettings):
     YANDEX_CLIENT_ID: str
     YANDEX_CLIENT_SECRET: str
     YANDEX_REDIRECT_URI: str
-    
+
     YANDEX_FRONTEND_URL: str
 
     FRONTEND_URL: str
-    
 
     @property
     def DATABASE_URL(self):
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-    
+
     @property
     def RABBIT_URL(self):
         return f"{self.RABBITMQ_URL}"
-    
+
     @property
     def URL_TOKEN(self):
         return f"{self.URL_FOR_TOKEN}"
@@ -57,22 +56,17 @@ class Settings(BaseSettings):
     def REDIRECT_URI_YANDEX(self):
         return self.YANDEX_REDIRECT_URI
 
-    @property  
+    @property
     def FRONTEND_URL(self):
         return self.YANDEX_FRONTEND_URL
-        
-    model_config = SettingsConfigDict(env_file='.env',env_file_encoding='utf-8',extra='ignore')
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
 
-settings = Settings() # type: ignore
+settings = Settings()  # type: ignore
+
 
 def get_auth_data():
-    return {"secret_key" : settings.SECRET_KEY,"algorithm" : settings.ALGORITHM}
-
-
-
-
-
-
-    
-
+    return {"secret_key": settings.SECRET_KEY, "algorithm": settings.ALGORITHM}

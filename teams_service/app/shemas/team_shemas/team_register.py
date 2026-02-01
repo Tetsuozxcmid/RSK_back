@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Optional
 from db.models.teams_enums.enums import DirectionEnum
+
 
 class TeamRegister(BaseModel):
     name: str = Field(..., title="Название команды")

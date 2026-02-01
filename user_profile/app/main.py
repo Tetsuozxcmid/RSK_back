@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 consumer_task = None
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
     logger.info("=== STARTUP: Creating database tables ===")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -29,8 +29,10 @@ async def lifespan(app: FastAPI):
 
     logger.info("=== STARTUP: Starting RabbitMQ consumer ===")
     global consumer_task
-    consumer_task = asyncio.create_task(consume_user_created_events(settings.RABBITMQ_URL))
-    
+    consumer_task = asyncio.create_task(
+        consume_user_created_events(settings.RABBITMQ_URL)
+    )
+
     def handle_task_result(task: asyncio.Task) -> None:
         try:
             task.result()
@@ -39,9 +41,8 @@ async def lifespan(app: FastAPI):
 
     consumer_task.add_done_callback(handle_task_result)
     logger.info("=== STARTUP: RabbitMQ consumer started ===")
-    
+
     yield
-    
 
     logger.info("=== SHUTDOWN: Cancelling RabbitMQ consumer ===")
     if consumer_task:
@@ -52,11 +53,8 @@ async def lifespan(app: FastAPI):
             pass
     logger.info("=== SHUTDOWN: Complete ===")
 
-app = FastAPI(
-    title='User Profile Service', 
-    root_path='/users',
-    lifespan=lifespan
-)
+
+app = FastAPI(title="User Profile Service", root_path="/users", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -68,6 +66,10 @@ app.add_middleware(
 
 app.include_router(router)
 
+
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "consumer_running": consumer_task is not None and not consumer_task.done()}
+    return {
+        "status": "healthy",
+        "consumer_running": consumer_task is not None and not consumer_task.done(),
+    }

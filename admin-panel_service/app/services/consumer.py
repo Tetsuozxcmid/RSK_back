@@ -4,6 +4,7 @@ import json
 from config import settings
 from handlers.projects import handle as project_handler
 
+
 class RabbitMQConsumer:
     def __init__(self):
         self.url: str = settings.RABBIT_URL
@@ -17,13 +18,11 @@ class RabbitMQConsumer:
         self.channel = await self.connection.channel()
 
         self.exchange = await self.channel.declare_exchange(
-            name="admin.commands", type=aio_pika.ExchangeType.TOPIC,
-            durable=True
+            name="admin.commands", type=aio_pika.ExchangeType.TOPIC, durable=True
         )
 
         self.queue = await self.channel.declare_queue(
-            name="admin.commands.queue",
-            durable=True
+            name="admin.commands.queue", durable=True
         )
 
         await self.queue.bind(exchange=self.exchange, routing_key="projects.*")
@@ -34,7 +33,8 @@ class RabbitMQConsumer:
             data = json.loads(message.body.decode())
             routing_key = message.routing_key
 
-            if routing_key is None: return
-            
+            if routing_key is None:
+                return
+
             if routing_key.startswith("projects"):
                 await project_handler(data=data)

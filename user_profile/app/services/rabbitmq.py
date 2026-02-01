@@ -11,20 +11,16 @@ ROLE_MAPPING = {
     "moder": UserEnum.Moder,
 }
 
+
 async def consume_user_created_events(rabbitmq_url: str):
     connection = await aio_pika.connect_robust(rabbitmq_url)
     channel = await connection.channel()
 
     exchange = await channel.declare_exchange(
-        "user_events",
-        type="direct",
-        durable=True
+        "user_events", type="direct", durable=True
     )
 
-    queue = await channel.declare_queue(
-        "user_profile_queue",
-        durable=True
-    )
+    queue = await channel.declare_queue("user_profile_queue", durable=True)
 
     await queue.bind(exchange, routing_key="user.created")
 
@@ -62,17 +58,18 @@ async def consume_user_created_events(rabbitmq_url: str):
                             NameIRL=name or "",
                             email=email,
                             Surname="",
-                            Type=user_role
+                            Type=user_role,
                         )
                         session.add(new_profile)
                         await session.commit()
                         print(f"[CONSUMER] Profile created for user_id={user_id}")
                     else:
-                        print(f"[CONSUMER] Profile already exists for user_id={user_id}")
+                        print(
+                            f"[CONSUMER] Profile already exists for user_id={user_id}"
+                        )
 
                 await message.ack()
 
             except Exception as e:
                 print(f"[CONSUMER] Error processing message: {e}")
                 await message.nack(requeue=False)
-
