@@ -56,7 +56,7 @@ class ProjectRead(ProjectBase):
     tasks: List["TaskRead"] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TaskBase(BaseModel):
@@ -75,7 +75,7 @@ class TaskRead(TaskBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TaskSubmissionBase(BaseModel):
