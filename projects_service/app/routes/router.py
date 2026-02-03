@@ -7,6 +7,7 @@ from cruds.crud import ZvezdaCRUD
 from services.service import get_current_user
 from services.auth_client import require_role
 from services.teams_client import TeamsClient
+from services.auth_client import get_moderator
 from db.models.projects import TaskStatus
 from schemas.proj import (
     ProjectCreate,
@@ -18,46 +19,45 @@ from schemas.proj import (
 )
 
 # Исправленные роли
-get_admin = require_role("ADMIN")
-get_moder = require_role("MODER")
+
 
 router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
 
 # === ADMIN ===
 @router.post("/projects", response_model=ProjectRead)
-async def create_project(data: ProjectCreate, db: AsyncSession = Depends(get_db), _=Depends(get_admin)):
+async def create_project(data: ProjectCreate, db: AsyncSession = Depends(get_db), _=Depends(get_moderator)):
     return await ZvezdaCRUD.create_project(db, data)
 
 @router.patch("/projects/{project_id}", response_model=ProjectRead)
-async def update_project(project_id: int, data: ProjectCreate, db: AsyncSession = Depends(get_db), _=Depends(get_admin)):
+async def update_project(project_id: int, data: ProjectCreate, db: AsyncSession = Depends(get_db), _=Depends(get_moderator)):
     return await ZvezdaCRUD.update_project(db, project_id, data)
 
 @router.delete("/projects/{project_id}")
-async def delete_project(project_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_admin)):
+async def delete_project(project_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_moderator)):
     await ZvezdaCRUD.delete_project(db, project_id)
     return {"status": "deleted"}
 
 @router.post("/projects/{project_id}/tasks", response_model=TaskOut)
-async def create_task(project_id: int, data: TaskCreate, db: AsyncSession = Depends(get_db), _=Depends(get_admin)):
+async def create_task(project_id: int, data: TaskCreate, db: AsyncSession = Depends(get_db), _=Depends(get_moderator)):
     return await ZvezdaCRUD.create_task(db, data, project_id)
 
 @router.patch("/tasks/{task_id}", response_model=TaskOut)
-async def update_task(task_id: int, data: TaskCreate, db: AsyncSession = Depends(get_db), _=Depends(get_admin)):
+async def update_task(task_id: int, data: TaskCreate, db: AsyncSession = Depends(get_db), _=Depends(get_moderator)):
     return await ZvezdaCRUD.update_task(db, task_id, data)
 
 @router.delete("/tasks/{task_id}")
-async def delete_task(task_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_admin)):
+async def delete_task(task_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_moderator)):
     await ZvezdaCRUD.delete_task(db, task_id)
     return {"status": "deleted"}
 
 # === MODERATOR ===
 @router.get("/moderator/tasks", response_model=List[TaskSubmissionRead])
-async def get_moder_tasks(db: AsyncSession = Depends(get_db), user_id: int = Depends(get_current_user), _=Depends(get_moder)):
+async def get_moder_tasks(db: AsyncSession = Depends(get_db), user_id: int = Depends(get_current_user), _=Depends(get_moderator)):
     return await ZvezdaCRUD.get_tasks_for_review(db, user_id)
 
 @router.post("/moderator/{submission_id}/review")
 async def review_task(submission_id: int, status: TaskStatus, description: Optional[str] = None, 
-                       db: AsyncSession = Depends(get_db), user_id: int = Depends(get_current_user), _=Depends(get_moder)):
+                       db: AsyncSession = Depends(get_db), user_id: int = Depends(get_current_user), _=Depends(get_moderator)):
     return await ZvezdaCRUD.review_submission(db, submission_id, user_id, status, description)
 
 # === PUBLIC / USER ===
