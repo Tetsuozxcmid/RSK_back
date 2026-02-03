@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     ALGORITHM: str
 
     TEAMS_SERVICE_URL: str
+    AUTH_SERVICE_URL: str
 
     @property
     def DATABASE_URL(self):
