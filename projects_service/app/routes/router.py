@@ -18,7 +18,6 @@ from schemas.proj import (
 )
 
 # Зависимости для проверки ролей
-get_admin = require_role("ADMIN")
 get_moder = require_role("MODER")
 
 router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
@@ -30,7 +29,7 @@ router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
 async def create_project(
     project_data: ProjectCreate, 
     db: AsyncSession = Depends(get_db),
-    admin=Depends(get_admin)
+    admin=Depends(get_moder)
 ):
     """Создание нового проекта (ADMIN)."""
     return await ZvezdaCRUD.create_project(db, project_data)
@@ -41,7 +40,7 @@ async def update_project(
     project_id: int, 
     project_data: ProjectCreate, 
     db: AsyncSession = Depends(get_db), 
-    admin=Depends(get_admin)
+    admin=Depends(get_moder)
 ):
     """Редактирование проекта (ADMIN)."""
     return await ZvezdaCRUD.update_project(db, project_id, project_data)
@@ -51,7 +50,7 @@ async def update_project(
 async def delete_project(
     project_id: int, 
     db: AsyncSession = Depends(get_db), 
-    admin=Depends(get_admin)
+    admin=Depends(get_moder)
 ):
     """Удаление проекта (ADMIN)."""
     await ZvezdaCRUD.delete_project(db, project_id)
@@ -63,7 +62,7 @@ async def create_task(
     project_id: int,
     task_in: TaskCreate,
     db: AsyncSession = Depends(get_db),
-    admin=Depends(get_admin)
+    admin=Depends(get_moder)
 ):
     """Создание задания в проекте (ADMIN)."""
     return await ZvezdaCRUD.create_task(db, task_in, project_id)
@@ -74,7 +73,7 @@ async def update_task(
     task_id: int,
     task_data: TaskCreate,
     db: AsyncSession = Depends(get_db),
-    admin=Depends(get_admin)
+    admin=Depends(get_moder)
 ):
     """Редактирование задания (ADMIN)."""
     return await ZvezdaCRUD.update_task(db, task_id, task_data)
@@ -84,7 +83,7 @@ async def update_task(
 async def delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    admin=Depends(get_admin)
+    admin=Depends(get_moder)
 ):
     """Удаление задания (ADMIN)."""
     await ZvezdaCRUD.delete_task(db, task_id)
