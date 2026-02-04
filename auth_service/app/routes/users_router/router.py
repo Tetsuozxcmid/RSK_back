@@ -216,19 +216,15 @@ async def get_all_users(db: AsyncSession = Depends(get_db)):
         if users:
             print(f"Первый пользователь: {users[0]}")
             print(f"verified поле: {users[0].get('verified')}")
-            print(f"Тип: {type(users[0])}")
-        
         
         active_count = len([user for user in users if user.get("verified", False)])
         print(f"Активных пользователей: {active_count}")
         print(f"========================")
         
-        from main import ACTIVE_USERS, SERVICE_NAME
-        ACTIVE_USERS.labels(service=SERVICE_NAME).set(active_count)
+       
+        update_active_users_metric(active_count)
         
         return users
-    except HTTPException:
-        raise
     except Exception as e:
         print(f"ERROR in get_all_users: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch users: {str(e)}")
@@ -266,6 +262,13 @@ async def get_user_by_id(user_id: int, db: AsyncSession = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=404, detail=f"user with id {user_id} not found")
 
+
+def update_active_users_metric(active_count: int):
+    try:
+        from main import ACTIVE_USERS, SERVICE_NAME
+        ACTIVE_USERS.labels(service=SERVICE_NAME).set(active_count)
+    except ImportError as e:
+        print(f"Warning: Could not update metric: {e}")
 
 router.include_router(auth_router)
 router.include_router(email_router)
