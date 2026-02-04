@@ -50,7 +50,7 @@ async def update_metrics_periodically():
                 verified_count = result.scalar() or 0
                 
                
-                stmt_total = select(func.count())
+                stmt_total = select(func.count()).select_from(User)
                 result_total = await session.execute(stmt_total)
                 total_count = result_total.scalar() or 0
                 
