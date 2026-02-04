@@ -27,10 +27,7 @@ from services.rabbitmq import get_rabbitmq_connection
 from aio_pika.abc import AbstractRobustConnection
 from services.yandex_oauth import yandex_router
 from services.vk_oauth import vk_router
-from metrics import (
-    SERVICE_NAME,
-    ACTIVE_USERS
-)
+
 import time
 
 
@@ -214,14 +211,26 @@ async def resend_confirmation(
 async def get_all_users(db: AsyncSession = Depends(get_db)):  
     try:
         users = await UserCRUD.get_all_users(db)
+        print(f"=== DEBUG: get_all_users ===")
         print(f"Получено пользователей: {len(users)}")
-        print(f"Первый пользователь: {users[0] if users else 'нет'}")
+        if users:
+            print(f"Первый пользователь: {users[0]}")
+            print(f"verified поле: {users[0].get('verified')}")
+            print(f"Тип: {type(users[0])}")
+        
+        
         active_count = len([user for user in users if user.get("verified", False)])
-        ACTIVE_USERS.labels(SERVICE_NAME).set(active_count)
+        print(f"Активных пользователей: {active_count}")
+        print(f"========================")
+        
+        from main import ACTIVE_USERS, SERVICE_NAME
+        ACTIVE_USERS.labels(service=SERVICE_NAME).set(active_count)
+        
         return users
     except HTTPException:
         raise
     except Exception as e:
+        print(f"ERROR in get_all_users: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch users: {str(e)}")
 
 

@@ -137,6 +137,7 @@ class UserCRUD:
                 status_code=500, detail=f"Error confirming email: {str(e)}"
             )
 
+    @staticmethod
     async def get_all_users(db: AsyncSession):
         try:
             result = await db.execute(select(User))
@@ -145,7 +146,19 @@ class UserCRUD:
             if not users:
                 return []
 
-            return [UserOut.from_orm(User) for User in users]
+            
+            users_list = []
+            for user in users:
+                users_list.append({
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "verified": user.verified,  
+                    "role": user.role.value if hasattr(user.role, 'value') else str(user.role)
+                })
+            
+            return users_list
+        
         except Exception as e:
             raise HTTPException(
                 status_code=500, detail=f"Error while fetching users: {str(e)}"
