@@ -49,6 +49,8 @@ services:
       - "traefik.http.routers.auth.entrypoints=websecure"
       - "traefik.http.routers.auth.tls.certresolver=le"
       - "traefik.http.services.auth.loadbalancer.server.port=8002"
+      - "traefik.http.middlewares.auth-strip.stripprefix.prefixes=/auth"
+      - "traefik.http.routers.auth.middlewares=auth-strip"
 
   rsk_auth_db:
     image: postgres:17-alpine
