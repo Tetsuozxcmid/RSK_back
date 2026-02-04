@@ -69,7 +69,7 @@ class UserCRUD:
         name: str,
         provider: str,
         provider_id: str,
-        email: str = None,  # ← теперь правильно
+        email: str = None,  
         role: UserRole = UserRole.STUDENT,
     ):
         result = await db.execute(
@@ -79,7 +79,7 @@ class UserCRUD:
         )
         existing_user = result.scalar_one_or_none()
         if existing_user:
-            return existing_user, False  # User already exists, not created
+            return existing_user, False 
 
         new_user = User(
             name=name,
@@ -96,7 +96,7 @@ class UserCRUD:
         try:
             await db.commit()
             await db.refresh(new_user)
-            return new_user, True  # New user created
+            return new_user, True  
         except Exception as e:
             await db.rollback()
             raise HTTPException(

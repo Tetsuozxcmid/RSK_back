@@ -1,0 +1,52 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  
+  - job_name: "auth_service"
+    metrics_path: /auth/metrics
+    static_configs:
+      - targets: ["rsk_auth_app:8002"]
+
+  - job_name: "profile_service"
+    metrics_path: /users/metrics
+    static_configs:
+      - targets: ["rsk_profile_app:8003"]
+
+  - job_name: "teams_service"
+    metrics_path: /teams/metrics
+    static_configs:
+      - targets: ["rsk_teams_app:8004"]
+
+  - job_name: "orgs_service"
+    metrics_path: /orgs/metrics
+    static_configs:
+      - targets: ["rsk_orgs_app:8005"]
+
+  - job_name: "projects_service"
+    metrics_path: /projects/metrics
+    static_configs:
+      - targets: ["rsk_projects_app:8010"]
+
+  - job_name: "learning_service"
+    metrics_path: /learning/metrics
+    static_configs:
+      - targets: ["rsk_learning_app:8011"]
+
+  
+  - job_name: "rabbitmq"
+    static_configs:
+      - targets: ["rabbitmq:15692"]
+
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis_exporter:9121"]
+
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres_exporter:9187"]
+
+  - job_name: "node"
+    static_configs:
+      - targets: ["node-exporter:9100"]

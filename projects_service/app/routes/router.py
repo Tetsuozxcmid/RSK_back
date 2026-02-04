@@ -18,7 +18,7 @@ from schemas.proj import (
     TaskSubmissionRead,
 )
 
-# Исправленные роли
+
 
 
 router = APIRouter(prefix="/zvezda", tags=["Zvezda"])

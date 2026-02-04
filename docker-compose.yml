@@ -266,6 +266,49 @@ services:
     networks:
       - shared_network
 
+    prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - shared_network
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - shared_network
+
+  node-exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
+    networks:
+      - shared_network
+
+  redis_exporter:
+    image: oliver006/redis_exporter
+    container_name: redis-exporter
+    command:
+      - "--redis.addr=redis://redis:6379"
+    networks:
+      - shared_network
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgresql://${DB_AUTH_USER}:${DB_AUTH_PASSWORD}@rsk_auth_db:5432/${DB_AUTH_NAME}?sslmode=disable
+    networks:
+      - shared_network
+
+
 volumes:
   redis_data:
   auth_postgres_data:
@@ -278,3 +321,5 @@ volumes:
 networks:
   shared_network:
     external: true
+
+

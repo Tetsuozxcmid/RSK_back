@@ -1,15 +1,36 @@
 import asyncio
 import os
+import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import Counter, Histogram, generate_latest
+
 from routes.profile_routers.router import router
 from services.rabbitmq import consume_user_created_events
 from config import settings
 from db.base import Base
 from db.session import engine
-from fastapi.middleware.cors import CORSMiddleware
 from services.parser import org_parser
 import logging
+
+
+
+SERVICE_NAME = "profile_service"
+
+REQUEST_COUNT = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["service", "method", "path", "status"],
+)
+
+REQUEST_LATENCY = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request latency",
+    ["service", "path"],
+)
+
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,7 +75,36 @@ async def lifespan(app: FastAPI):
     logger.info("=== SHUTDOWN: Complete ===")
 
 
-app = FastAPI(title="User Profile Service", root_path="/users", lifespan=lifespan)
+app = FastAPI(
+    title="User Profile Service",
+    root_path="/users",
+    lifespan=lifespan,
+)
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+
+    duration = time.time() - start
+    path = request.url.path
+
+    REQUEST_COUNT.labels(
+        SERVICE_NAME,
+        request.method,
+        path,
+        response.status_code,
+    ).inc()
+
+    REQUEST_LATENCY.labels(
+        SERVICE_NAME,
+        path,
+    ).observe(duration)
+
+    return response
+
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,6 +115,13 @@ app.add_middleware(
 )
 
 app.include_router(router)
+
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    return Response(generate_latest(), media_type="text/plain")
+
 
 
 @app.get("/health")
