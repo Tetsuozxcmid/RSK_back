@@ -266,7 +266,7 @@ services:
     networks:
       - shared_network
 
-    prometheus:
+  prometheus:
     image: prom/prometheus
     container_name: prometheus
     volumes:
