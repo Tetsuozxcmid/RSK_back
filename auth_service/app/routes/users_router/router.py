@@ -29,8 +29,6 @@ from services.yandex_oauth import yandex_router
 from services.vk_oauth import vk_router
 from metrics import (
     SERVICE_NAME,
-    REQUEST_COUNT,
-    REQUEST_LATENCY,
     ACTIVE_USERS
 )
 import time
