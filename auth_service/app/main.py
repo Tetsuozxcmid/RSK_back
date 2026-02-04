@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import Counter, Histogram, generate_latest
+from prometheus_client import Counter, Gauge, Histogram, generate_latest
 import time
 
 from routes.users_router.router import router as user_router
@@ -18,6 +18,12 @@ REQUEST_LATENCY = Histogram(
     "http_request_duration_seconds",
     "HTTP request latency",
     ["service", "path"]
+)
+
+ACTIVE_USERS = Gauge(
+    "active_users_total",
+    "Total active users",
+    ["service"]
 )
 
 SERVICE_NAME = "auth_service"

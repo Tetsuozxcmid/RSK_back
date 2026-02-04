@@ -1,4 +1,6 @@
 import json
+
+from prometheus_client import Gauge
 import aio_pika
 from fastapi import (
     APIRouter,
@@ -25,6 +27,8 @@ from services.rabbitmq import get_rabbitmq_connection
 from aio_pika.abc import AbstractRobustConnection
 from services.yandex_oauth import yandex_router
 from services.vk_oauth import vk_router
+from main import (SERVICE_NAME,ACTIVE_USERS)
+import time
 
 
 router = APIRouter(prefix="/users_interaction")
@@ -204,9 +208,13 @@ async def resend_confirmation(
 
 
 @user_management_router.get("/get_users/", description="Для админа будет токен")
-async def get_all_users(db: AsyncSession = Depends(get_db)):
+async def get_all_users(db: AsyncSession = Depends(get_db)):  
     try:
         users = await UserCRUD.get_all_users(db)
+        print(f"Получено пользователей: {len(users)}")
+        print(f"Первый пользователь: {users[0] if users else 'нет'}")
+        active_count = len([user for user in users if user.get("verified", False)])
+        ACTIVE_USERS.labels(SERVICE_NAME).set(active_count)
         return users
     except HTTPException:
         raise
