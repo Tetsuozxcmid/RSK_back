@@ -15,7 +15,6 @@ from services.parser import org_parser
 import logging
 
 
-
 SERVICE_NAME = "profile_service"
 
 REQUEST_COUNT = Counter(
@@ -29,7 +28,6 @@ REQUEST_LATENCY = Histogram(
     "HTTP request latency",
     ["service", "path"],
 )
-
 
 
 logging.basicConfig(level=logging.INFO)
@@ -105,7 +103,6 @@ async def metrics_middleware(request: Request, call_next):
     return response
 
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -117,11 +114,9 @@ app.add_middleware(
 app.include_router(router)
 
 
-
 @app.get("/metrics", include_in_schema=False)
 def metrics():
     return Response(generate_latest(), media_type="text/plain")
-
 
 
 @app.get("/health")

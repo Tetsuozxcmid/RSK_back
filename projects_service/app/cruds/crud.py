@@ -40,14 +40,14 @@ class ZvezdaCRUD:
         project = await db.get(Project, project_id)
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
-        
+
         # Обновляем только присланные поля
         for key, value in project_data.dict(exclude_unset=True).items():
             if key == "star_category":
                 setattr(project, key, value.value)
             else:
                 setattr(project, key, value)
-        
+
         await db.commit()
         await db.refresh(project)
         return project
@@ -80,10 +80,10 @@ class ZvezdaCRUD:
         task = await db.get(Task, task_id)
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
-        
+
         for key, value in task_data.dict(exclude_unset=True).items():
             setattr(task, key, value)
-            
+
         await db.commit()
         await db.refresh(task)
         return task
@@ -99,7 +99,9 @@ class ZvezdaCRUD:
     # === ФУНКЦИИ МОДЕРАТОРА (MODER) ===
 
     @staticmethod
-    async def get_tasks_for_review(db: AsyncSession, moderator_id: int) -> List[TaskSubmission]:
+    async def get_tasks_for_review(
+        db: AsyncSession, moderator_id: int
+    ) -> List[TaskSubmission]:
         """
         Выдает 5 заданий на проверку.
         1. Сначала возвращает те, что уже закреплены за этим модером и 10 минут еще не истекли.
@@ -113,7 +115,7 @@ class ZvezdaCRUD:
             and_(
                 TaskSubmission.moderator_id == moderator_id,
                 TaskSubmission.reviewed_at == None,
-                TaskSubmission.submitted_at >= lock_limit
+                TaskSubmission.submitted_at >= lock_limit,
             )
         )
         result = await db.execute(query_current)
@@ -124,37 +126,43 @@ class ZvezdaCRUD:
 
         # 2. Добираем новые задания (статус SUBMITTED, никем не заняты ИЛИ бронь другого модера истекла)
         needed = 5 - len(current_tasks)
-        query_new = select(TaskSubmission).where(
-            and_(
-                TaskSubmission.status == TaskStatus.SUBMITTED,
-                or_(
-                    TaskSubmission.moderator_id == None,
-                    TaskSubmission.submitted_at < lock_limit
+        query_new = (
+            select(TaskSubmission)
+            .where(
+                and_(
+                    TaskSubmission.status == TaskStatus.SUBMITTED,
+                    or_(
+                        TaskSubmission.moderator_id == None,
+                        TaskSubmission.submitted_at < lock_limit,
+                    ),
                 )
             )
-        ).limit(needed)
-        
+            .limit(needed)
+        )
+
         new_res = await db.execute(query_new)
         new_tasks = new_res.scalars().all()
 
         # Фиксируем время выдачи (submitted_at) и ID модератора
         for sub in new_tasks:
             sub.moderator_id = moderator_id
-            sub.submitted_at = now  # Перезаписываем время для отсчета 10 минут модератору
+            sub.submitted_at = (
+                now  # Перезаписываем время для отсчета 10 минут модератору
+            )
             db.add(sub)
-        
+
         if new_tasks:
             await db.commit()
-            
+
         return list(current_tasks) + list(new_tasks)
 
     @staticmethod
     async def review_submission(
-        db: AsyncSession, 
-        submission_id: int, 
-        moderator_id: int, 
-        status: TaskStatus, 
-        description: Optional[str] = None
+        db: AsyncSession,
+        submission_id: int,
+        moderator_id: int,
+        status: TaskStatus,
+        description: Optional[str] = None,
     ):
         """
         Проверка задания. Проверяет права модератора и лимит времени.
@@ -166,14 +174,18 @@ class ZvezdaCRUD:
 
         if not submission:
             raise HTTPException(404, "Submission not found")
-        
+
         # Проверка: закреплено ли задание за этим модером
         if submission.moderator_id != moderator_id:
-            raise HTTPException(403, "This task is assigned to another moderator or not locked by you")
+            raise HTTPException(
+                403, "This task is assigned to another moderator or not locked by you"
+            )
 
         # Проверка: не истекли ли 10 минут
         if submission.submitted_at < (datetime.utcnow() - timedelta(minutes=10)):
-            raise HTTPException(400, "Lock period (10 min) expired. Please fetch tasks again.")
+            raise HTTPException(
+                400, "Lock period (10 min) expired. Please fetch tasks again."
+            )
 
         task = await db.get(Task, submission.task_id)
 
@@ -184,11 +196,13 @@ class ZvezdaCRUD:
         else:
             submission.status = TaskStatus.REJECTED
             task.status = TaskStatus.IN_PROGRESS  # Возвращаем в работу команде
-            
+
         submission.reviewed_at = datetime.utcnow()
         if description:
-            submission.text_description = f"{submission.text_description or ''}\n\nMOD_NOTE: {description}"
-        
+            submission.text_description = (
+                f"{submission.text_description or ''}\n\nMOD_NOTE: {description}"
+            )
+
         db.add(submission)
         db.add(task)
         await db.commit()
@@ -200,7 +214,9 @@ class ZvezdaCRUD:
     @staticmethod
     async def get_project(db: AsyncSession, project_id: int):
         result = await db.execute(
-            select(Project).options(selectinload(Project.tasks)).where(Project.id == project_id)
+            select(Project)
+            .options(selectinload(Project.tasks))
+            .where(Project.id == project_id)
         )
         project = result.scalar_one_or_none()
         if not project:
@@ -224,7 +240,9 @@ class ZvezdaCRUD:
         return task
 
     @staticmethod
-    async def start_task(db: AsyncSession, task_id: int, user_id: int, request: Request):
+    async def start_task(
+        db: AsyncSession, task_id: int, user_id: int, request: Request
+    ):
         is_leader, team_id = await TeamsClient.is_user_team_leader(request)
         if not is_leader:
             raise HTTPException(403, "Only team leaders can take tasks")
@@ -242,12 +260,18 @@ class ZvezdaCRUD:
         return task
 
     @staticmethod
-    async def submit_task(db: AsyncSession, task_id: int, team_id: int, text_description: str = None, result_url: str = None):
+    async def submit_task(
+        db: AsyncSession,
+        task_id: int,
+        team_id: int,
+        text_description: str = None,
+        result_url: str = None,
+    ):
         task = await ZvezdaCRUD.get_task(db, task_id)
 
         if task.team_id != team_id:
             raise HTTPException(403, "This team is not assigned to the task")
-        
+
         submission = TaskSubmission(
             task_id=task_id,
             team_id=team_id,
@@ -273,5 +297,7 @@ class ZvezdaCRUD:
 
     @staticmethod
     async def get_task_submissions(db: AsyncSession, task_id: int):
-        result = await db.execute(select(TaskSubmission).where(TaskSubmission.task_id == task_id))
+        result = await db.execute(
+            select(TaskSubmission).where(TaskSubmission.task_id == task_id)
+        )
         return result.scalars().all()

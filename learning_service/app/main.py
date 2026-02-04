@@ -12,7 +12,6 @@ from services.assignement import assignment_service
 from config import settings
 
 
-
 SERVICE_NAME = "learning_service"
 
 REQUEST_COUNT = Counter(
@@ -28,13 +27,11 @@ REQUEST_LATENCY = Histogram(
 )
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    
     await assignment_service.connect()
     yield
-   
+
     await assignment_service.close()
 
 
@@ -70,7 +67,6 @@ async def metrics_middleware(request: Request, call_next):
     return response
 
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -78,7 +74,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
@@ -90,9 +85,6 @@ app.include_router(
 )
 
 
-
-
 @app.get("/metrics", include_in_schema=False)
 def metrics():
     return Response(generate_latest(), media_type="text/plain")
-

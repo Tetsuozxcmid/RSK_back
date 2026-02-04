@@ -40,32 +40,40 @@ def _get_metric_active_users():
     """Получает метрику active_users_total (lazy import для избежания циклической зависимости)"""
     try:
         from main import ACTIVE_USERS
+
         return ACTIVE_USERS
     except ImportError as e:
         print(f"Warning: Could not import ACTIVE_USERS: {e}")
         return None
 
+
 def _get_service_name():
     """Получает название сервиса"""
     try:
         from main import SERVICE_NAME
+
         return SERVICE_NAME
     except ImportError:
         return "auth_service"
+
 
 def update_active_users_metric(active_count: int):
     """Обновляет метрику активных пользователей"""
     metric = _get_metric_active_users()
     service_name = _get_service_name()
-    
+
     if metric and service_name:
         try:
             metric.labels(service=service_name).set(active_count)
-            print(f"✓ Metric updated: active_users_total{{{service_name}}} = {active_count}")
+            print(
+                f"✓ Metric updated: active_users_total{{{service_name}}} = {active_count}"
+            )
         except Exception as e:
             print(f"✗ Error updating metric: {e}")
     else:
         print(f"⚠ Could not update metric: metric={metric}, service={service_name}")
+
+
 # ========================================================================
 
 
@@ -198,7 +206,7 @@ async def confirm_email(
         await exchange.publish(message, routing_key="user.verified")
     except Exception as e:
         print(f"Failed to send RabbitMQ message: {e}")
-    
+
     current_dir = Path(__file__).parent
     html_file_path = current_dir / "mailsend.html"
     if html_file_path.exists():
@@ -239,30 +247,30 @@ async def resend_confirmation(
 
 
 @user_management_router.get("/get_users/", description="Для админа будет токен")
-async def get_all_users(db: AsyncSession = Depends(get_db)):  
+async def get_all_users(db: AsyncSession = Depends(get_db)):
     try:
         users = await UserCRUD.get_all_users(db)
-        
-        print(f"\n{'='*60}")
+
+        print(f"\n{'=' * 60}")
         print(f"DEBUG get_all_users:")
         print(f"  Всего пользователей: {len(users)}")
-        
+
         if users:
             print(f"  Первый пользователь: {users[0]}")
             print(f"  Поле 'verified': {users[0].get('verified')}")
-        
+
         # Считаем активных пользователей
         active_count = 0
         for user in users:
             if user.get("verified", False):
                 active_count += 1
-        
+
         print(f"  Активных пользователей: {active_count}")
-        print(f"{'='*60}\n")
-        
+        print(f"{'=' * 60}\n")
+
         # Обновляем метрику
         update_active_users_metric(active_count)
-        
+
         return users
     except Exception as e:
         print(f"ERROR in get_all_users: {e}")
@@ -309,17 +317,17 @@ async def test_metric():
     try:
         # Устанавливаем тестовое значение
         update_active_users_metric(777)
-        
+
         # Проверяем текущее значение
         metric = _get_metric_active_users()
         service_name = _get_service_name()
-        
+
         return {
             "message": "Test metric endpoint",
             "metric": "active_users_total",
             "service": service_name,
             "test_value": 777,
-            "metric_object": str(metric) if metric else "Not found"
+            "metric_object": str(metric) if metric else "Not found",
         }
     except Exception as e:
         return {"error": str(e)}
@@ -335,9 +343,11 @@ async def health_check():
         "endpoints": {
             "metrics": "/auth/metrics",
             "test_metric": "/auth/users_interaction/test-metric",
-            "get_users": "/auth/users_interaction/get_users"
-        }
+            "get_users": "/auth/users_interaction/get_users",
+        },
     }
+
+
 # ========================================================================
 
 

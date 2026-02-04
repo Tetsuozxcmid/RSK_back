@@ -69,7 +69,7 @@ class UserCRUD:
         name: str,
         provider: str,
         provider_id: str,
-        email: str = None,  
+        email: str = None,
         role: UserRole = UserRole.STUDENT,
     ):
         result = await db.execute(
@@ -79,7 +79,7 @@ class UserCRUD:
         )
         existing_user = result.scalar_one_or_none()
         if existing_user:
-            return existing_user, False 
+            return existing_user, False
 
         new_user = User(
             name=name,
@@ -96,7 +96,7 @@ class UserCRUD:
         try:
             await db.commit()
             await db.refresh(new_user)
-            return new_user, True  
+            return new_user, True
         except Exception as e:
             await db.rollback()
             raise HTTPException(
@@ -146,19 +146,22 @@ class UserCRUD:
             if not users:
                 return []
 
-            
             users_list = []
             for user in users:
-                users_list.append({
-                    "id": user.id,
-                    "name": user.name,
-                    "email": user.email,
-                    "verified": user.verified,  
-                    "role": user.role.value if hasattr(user.role, 'value') else str(user.role)
-                })
-            
+                users_list.append(
+                    {
+                        "id": user.id,
+                        "name": user.name,
+                        "email": user.email,
+                        "verified": user.verified,
+                        "role": user.role.value
+                        if hasattr(user.role, "value")
+                        else str(user.role),
+                    }
+                )
+
             return users_list
-        
+
         except Exception as e:
             raise HTTPException(
                 status_code=500, detail=f"Error while fetching users: {str(e)}"

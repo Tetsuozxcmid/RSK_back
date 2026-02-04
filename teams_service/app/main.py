@@ -6,7 +6,6 @@ from prometheus_client import Counter, Histogram, generate_latest
 from routes.teams_router.router import router as team_router
 
 
-
 SERVICE_NAME = "teams_service"
 
 REQUEST_COUNT = Counter(
@@ -20,7 +19,6 @@ REQUEST_LATENCY = Histogram(
     "HTTP request latency",
     ["service", "path"],
 )
-
 
 
 app = FastAPI(
@@ -53,7 +51,6 @@ async def metrics_middleware(request: Request, call_next):
     return response
 
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -65,8 +62,6 @@ app.add_middleware(
 app.include_router(team_router)
 
 
-
 @app.get("/metrics", include_in_schema=False)
 def metrics():
     return Response(generate_latest(), media_type="text/plain")
-

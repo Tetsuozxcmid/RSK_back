@@ -52,7 +52,6 @@ class User(Base):
             print(f"Login/email provided: {login}")
             print(f"Password length: {len(password)}")
 
-           
             result = await db.execute(
                 select(cls).where(or_(cls.login == login, cls.email == login.lower()))
             )
@@ -67,15 +66,12 @@ class User(Base):
             print(f"DEBUG: Hashed password in DB: {user.hashed_password}")
             print(f"DEBUG: Temp password: {user.temp_password}")
 
-       
             password_to_check = None
 
             if user.verified:
-               
                 password_to_check = user.hashed_password
                 print("DEBUG: Using hashed_password for verified user")
             else:
-               
                 password_to_check = user.temp_password
                 print("DEBUG: Using temp_password for unverified user")
 
@@ -83,14 +79,11 @@ class User(Base):
                 print(f"ERROR: No password hash found for user {user.email}")
                 return None
 
-         
             print("DEBUG: Calling verify_password...")
             is_valid = pass_settings.verify_password(password, password_to_check)
             print(f"DEBUG: Password valid: {is_valid}")
 
-            if (
-                is_valid and user.verified
-            ):  
+            if is_valid and user.verified:
                 return {
                     "id": user.id,
                     "name": user.name,

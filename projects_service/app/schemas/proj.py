@@ -3,12 +3,14 @@ from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from datetime import datetime
 
+
 class TaskStatus(str, Enum):
     NOT_STARTED = "NOT_STARTED"
     IN_PROGRESS = "IN_PROGRESS"
     SUBMITTED = "SUBMITTED"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
+
 
 class CategoryEnum(str, Enum):
     KNOWLEDGE = "KNOWLEDGE"
@@ -18,6 +20,7 @@ class CategoryEnum(str, Enum):
     DATA = "DATA"
     AUTOMATION = "AUTOMATION"
 
+
 CATEGORY_MAP = {
     "Знания": CategoryEnum.KNOWLEDGE,
     "Взаимодействие": CategoryEnum.INTERACTION,
@@ -26,6 +29,7 @@ CATEGORY_MAP = {
     "Данные": CategoryEnum.DATA,
     "Автоматизация": CategoryEnum.AUTOMATION,
 }
+
 
 class ProjectBase(BaseModel):
     title: str
@@ -45,8 +49,10 @@ class ProjectBase(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ProjectCreate(ProjectBase):
     pass
+
 
 class TaskBase(BaseModel):
     title: str
@@ -57,6 +63,7 @@ class TaskBase(BaseModel):
     class Config:
         from_attributes = True
 
+
 class TaskRead(TaskBase):
     id: int
     project_id: int
@@ -65,14 +72,17 @@ class TaskRead(TaskBase):
     leader_id: Optional[int] = None
     created_at: datetime
 
+
 class ProjectRead(ProjectBase):
     id: int
     tasks: List[TaskRead] = []
+
 
 class TaskOut(TaskBase):
     id: int
     project_id: int
     status: TaskStatus
+
 
 class TaskSubmissionRead(BaseModel):
     id: int
@@ -88,12 +98,15 @@ class TaskSubmissionRead(BaseModel):
     class Config:
         from_attributes = True
 
+
 class TaskSubmitRequest(BaseModel):
     text_description: Optional[str] = None
     result_url: Optional[str] = None
 
+
 class TaskCreate(TaskBase):
     pass
+
 
 # Для Pydantic V2 используем model_rebuild
 ProjectRead.model_rebuild()
