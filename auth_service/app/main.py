@@ -8,7 +8,7 @@ from sqlalchemy import select, func
 
 from routes.users_router.router import router as user_router
 from services.rabbitmq import init_rabbitmq
-from db.session import async_session
+from db.session import async_session_maker
 from db.models.user import User
 
 
@@ -43,7 +43,7 @@ async def update_metrics_periodically():
     
     while True:
         try:
-            async with async_session() as session:
+            async with async_session_maker() as session:
                 
                 stmt_verified = select(func.count()).where(User.verified == True)
                 result = await session.execute(stmt_verified)
@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
     
    
     try:
-        async with async_session() as session:
+        async with async_session_maker() as session:
             stmt = select(func.count()).where(User.verified == True)
             result = await session.execute(stmt)
             initial_count = result.scalar() or 0
@@ -173,7 +173,7 @@ app.include_router(user_router)
 async def update_metrics_now():
     
     try:
-        async with async_session() as session:
+        async with async_session_maker() as session:
             stmt_verified = select(func.count()).where(User.verified == True)
             result = await session.execute(stmt_verified)
             verified_count = result.scalar() or 0
