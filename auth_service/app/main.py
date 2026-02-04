@@ -20,11 +20,7 @@ REQUEST_LATENCY = Histogram(
     ["service", "path"]
 )
 
-ACTIVE_USERS = Gauge(
-    "active_users_total",
-    "Total active users",
-    ["service"]
-)
+
 
 SERVICE_NAME = "auth_service"
 
