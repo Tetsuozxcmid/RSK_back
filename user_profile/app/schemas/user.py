@@ -7,7 +7,7 @@ class OrganizationSimple(BaseModel):
     name: str
     full_name: Optional[str] = None
     short_name: Optional[str] = None
-    inn: Optional[str] = None
+    inn: Optional[int] = None
     region: Optional[str] = None
     type: Optional[str] = None
     
