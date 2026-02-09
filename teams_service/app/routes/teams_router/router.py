@@ -10,6 +10,7 @@ from cruds.teams_crud.crud import TeamCRUD
 from shemas.team_shemas.team_update import TeamUpdate
 from db.session import get_db
 from services.grabber import get_current_user
+from services.orgs_client import OrgsClient
 import logging
 
 router = APIRouter(prefix="/teams")
@@ -60,6 +61,8 @@ async def register_team(
         "message": "Team registered successfully",
         "team_id": team.id,
         "leader_id": leader_id,
+        "organization_id": team.organization_id,
+        "organization_name": team.organization_name,
     }
 
 
@@ -177,6 +180,20 @@ async def get_team_by_id(team_id: int, db: AsyncSession = Depends(get_db)):
                     "role": await TeamCRUD.get_user_role(team.leader_id),
                 }
 
+        
+        organization_info = None
+        if team.organization_id:
+            org_data = await OrgsClient.get_organization_by_id(team.organization_id)
+            if org_data:
+                organization_info = {
+                    "id": team.organization_id,
+                    "name": org_data.get("short_name") or org_data.get("full_name"),
+                    "full_name": org_data.get("full_name"),
+                    "short_name": org_data.get("short_name"),
+                    "region": org_data.get("region"),
+                    "type": org_data.get("type"),
+                }
+
         return {
             "team_info": {
                 "id": team.id,
@@ -185,8 +202,9 @@ async def get_team_by_id(team_id: int, db: AsyncSession = Depends(get_db)):
                 "region": team.region,
                 "leader_id": team.leader_id,
                 "leader_info": leader_info,
-                "organization_name": team.organization_name,
                 "organization_id": team.organization_id,
+                "organization_name": team.organization_name,
+                "organization_info": organization_info,  
                 "points": team.points,
                 "description": team.description,
                 "tasks_completed": team.tasks_completed,
