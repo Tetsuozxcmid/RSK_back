@@ -19,7 +19,7 @@ from cruds.users_crud.crud import UserCRUD
 from services.jwt import create_access_token
 from services.emailsender import send_confirmation_email
 import asyncio
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pathlib import Path
 from services.rabbitmq import get_rabbitmq_connection
 from aio_pika.abc import AbstractRobustConnection
@@ -157,20 +157,30 @@ async def auth_user(
     return "Access successed"
 
 
-@auth_router.post("/logout/", response_model=dict)
-async def logout_user(response: Response) -> dict:
+@auth_router.post("/logout/")
+async def logout_user():
+    response = JSONResponse(content={"message": "Successfully logged out"})
+    
+    
     response.delete_cookie(
         key="users_access_token",
         path="/",
-        domain=".rosdk.ru",
+        domain=".rosdk.ru",  
         secure=True,
         httponly=True,
-        samesite="none",
+        samesite="none"  
     )
-
-    response.delete_cookie(key="userData", path="/", domain=".rosdk.ru")
-
-    return {"message": "Successfully logged out"}
+    
+    
+    response.delete_cookie(
+        key="userData",
+        path="/",
+        domain=".rosdk.ru",  
+        secure=True,
+        samesite="none"
+    )
+    
+    return response
 
 
 @email_router.get("/confirm-email")
@@ -259,7 +269,7 @@ async def get_all_users(db: AsyncSession = Depends(get_db)):
             print(f"  Первый пользователь: {users[0]}")
             print(f"  Поле 'verified': {users[0].get('verified')}")
 
-        # Считаем активных пользователей
+       
         active_count = 0
         for user in users:
             if user.get("verified", False):
@@ -268,7 +278,7 @@ async def get_all_users(db: AsyncSession = Depends(get_db)):
         print(f"  Активных пользователей: {active_count}")
         print(f"{'=' * 60}\n")
 
-        # Обновляем метрику
+        
         update_active_users_metric(active_count)
 
         return users
