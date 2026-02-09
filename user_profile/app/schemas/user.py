@@ -41,7 +41,7 @@ class ProfileUpdate(BaseModel):
     Description: Optional[str] = None
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
-    Organization: Optional[str] = None
+    Organization: Optional[int]
 
 
 class ProfileJoinedTeamUpdate(BaseModel):
