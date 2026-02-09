@@ -5,7 +5,8 @@ from sqlalchemy import func
 
 from db.models.user import User
 from fastapi import HTTPException
-from schemas.user import ProfileResponse, ProfileUpdate
+from schemas.user import OrganizationSimple, ProfileResponse, ProfileUpdate
+from services.orgs_client import OrgsClient
 
 
 class ProfileCRUD:
@@ -43,12 +44,47 @@ class ProfileCRUD:
     @staticmethod
     async def get_my_profile(db: AsyncSession, user_id: int):
         existing_profile = await db.execute(select(User).where(User.id == user_id))
-
         profile = existing_profile.scalar_one_or_none()
 
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found")
-        return ProfileResponse.model_validate(profile)
+        
+        
+        organization_info = None
+        if profile.Organization_id and profile.Organization_id > 0:
+            org_data = await OrgsClient.get_organization_by_id(profile.Organization_id)
+            
+            if org_data:
+                
+                organization_info = OrganizationSimple(
+                    id=org_data.get("id"),
+                    name=org_data.get("short_name") or org_data.get("full_name"),
+                    full_name=org_data.get("full_name"),
+                    short_name=org_data.get("short_name"),
+                    inn=org_data.get("inn"),
+                    region=org_data.get("region"),
+                    type=org_data.get("type"),
+                    
+                )
+        
+        
+        profile_data = {
+            "NameIRL": profile.NameIRL,
+            "email": profile.email,
+            "username": profile.username,
+            "Surname": profile.Surname,
+            "Patronymic": profile.Patronymic,
+            "Description": profile.Description,
+            "Region": profile.Region,
+            "Type": profile.Type,
+            "Organization_id": profile.Organization_id,
+            "Organization": organization_info,  
+            "team": profile.team,
+            "team_id": profile.team_id,
+            "is_learned": profile.is_learned
+        }
+        
+        return ProfileResponse(**profile_data)
 
     @staticmethod
     async def update_my_profile(

@@ -1,8 +1,18 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from db.models.user_enum import UserEnum
 
-
+class OrganizationSimple(BaseModel):
+    id: int
+    name: str
+    full_name: Optional[str] = None
+    short_name: Optional[str] = None
+    inn: Optional[str] = None
+    region: Optional[str] = None
+    type: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+    
 class ProfileResponse(BaseModel):
     NameIRL: Optional[str] = None
     email: Optional[str] = None
@@ -12,7 +22,7 @@ class ProfileResponse(BaseModel):
     Description: Optional[str] = None
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
-    Organization: Optional[str] = None
+    Organization: Optional[OrganizationSimple] = None
     Organization_id: Optional[int] = None
     team: Optional[str] = None
     team_id: Optional[int] = None
