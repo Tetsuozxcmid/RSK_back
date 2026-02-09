@@ -68,7 +68,7 @@ class ProfileCRUD:
             "Patronymic",
             "Description",
             "Region",
-            "Organization",
+            "Organization_id",  
             "email",
             "Type",
         ]:
