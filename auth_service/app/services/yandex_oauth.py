@@ -7,6 +7,7 @@ import aio_pika
 import json
 import time
 import traceback
+from sqlalchemy import select
 
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
