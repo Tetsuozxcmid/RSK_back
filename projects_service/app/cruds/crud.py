@@ -11,7 +11,7 @@ from services.teams_client import TeamsClient
 
 
 class ZvezdaCRUD:
-    # === АДМИНИСТРАТИВНЫЕ ФУНКЦИИ (ADMIN) ===
+    
 
     @staticmethod
     async def create_project(db: AsyncSession, project_data):
@@ -27,7 +27,7 @@ class ZvezdaCRUD:
         await db.commit()
         await db.refresh(project)
 
-        # Возвращаем с подгруженными задачами для соответствия схеме
+        
         result = await db.execute(
             select(Project)
             .options(selectinload(Project.tasks))
@@ -41,7 +41,7 @@ class ZvezdaCRUD:
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        # Обновляем только присланные поля
+        
         for key, value in project_data.dict(exclude_unset=True).items():
             if key == "star_category":
                 setattr(project, key, value.value)
@@ -96,21 +96,17 @@ class ZvezdaCRUD:
         await db.delete(task)
         await db.commit()
 
-    # === ФУНКЦИИ МОДЕРАТОРА (MODER) ===
+    
 
     @staticmethod
     async def get_tasks_for_review(
         db: AsyncSession, moderator_id: int
     ) -> List[TaskSubmission]:
-        """
-        Выдает 5 заданий на проверку.
-        1. Сначала возвращает те, что уже закреплены за этим модером и 10 минут еще не истекли.
-        2. Если их меньше 5, добирает новые свободные задания.
-        """
+        
         now = datetime.utcnow()
         lock_limit = now - timedelta(minutes=10)
 
-        # 1. Проверяем текущие активные брони модератора
+        
         query_current = select(TaskSubmission).where(
             and_(
                 TaskSubmission.moderator_id == moderator_id,
@@ -124,7 +120,7 @@ class ZvezdaCRUD:
         if len(current_tasks) >= 5:
             return current_tasks[:5]
 
-        # 2. Добираем новые задания (статус SUBMITTED, никем не заняты ИЛИ бронь другого модера истекла)
+        
         needed = 5 - len(current_tasks)
         query_new = (
             select(TaskSubmission)
@@ -143,11 +139,11 @@ class ZvezdaCRUD:
         new_res = await db.execute(query_new)
         new_tasks = new_res.scalars().all()
 
-        # Фиксируем время выдачи (submitted_at) и ID модератора
+        
         for sub in new_tasks:
             sub.moderator_id = moderator_id
             sub.submitted_at = (
-                now  # Перезаписываем время для отсчета 10 минут модератору
+                now  
             )
             db.add(sub)
 
@@ -164,9 +160,7 @@ class ZvezdaCRUD:
         status: TaskStatus,
         description: Optional[str] = None,
     ):
-        """
-        Проверка задания. Проверяет права модератора и лимит времени.
-        """
+        
         result = await db.execute(
             select(TaskSubmission).where(TaskSubmission.id == submission_id)
         )
@@ -175,13 +169,13 @@ class ZvezdaCRUD:
         if not submission:
             raise HTTPException(404, "Submission not found")
 
-        # Проверка: закреплено ли задание за этим модером
+        
         if submission.moderator_id != moderator_id:
             raise HTTPException(
                 403, "This task is assigned to another moderator or not locked by you"
             )
 
-        # Проверка: не истекли ли 10 минут
+        
         if submission.submitted_at < (datetime.utcnow() - timedelta(minutes=10)):
             raise HTTPException(
                 400, "Lock period (10 min) expired. Please fetch tasks again."
@@ -192,10 +186,10 @@ class ZvezdaCRUD:
         if status == TaskStatus.ACCEPTED:
             submission.status = TaskStatus.ACCEPTED
             task.status = TaskStatus.ACCEPTED
-            # Здесь в будущем вызов TeamsClient для начисления баллов
+            
         else:
             submission.status = TaskStatus.REJECTED
-            task.status = TaskStatus.IN_PROGRESS  # Возвращаем в работу команде
+            task.status = TaskStatus.IN_PROGRESS  
 
         submission.reviewed_at = datetime.utcnow()
         if description:
@@ -209,7 +203,7 @@ class ZvezdaCRUD:
         await db.refresh(submission)
         return submission
 
-    # === ОБЩИЕ ФУНКЦИИ (USERS) ===
+    
 
     @staticmethod
     async def get_project(db: AsyncSession, project_id: int):

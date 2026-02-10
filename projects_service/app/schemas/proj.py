@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, field_validator
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class TaskStatus(str, Enum):
@@ -29,6 +29,11 @@ CATEGORY_MAP = {
     "Данные": CategoryEnum.DATA,
     "Автоматизация": CategoryEnum.AUTOMATION,
 }
+
+
+class TaskReviewRequest(BaseModel):
+    status: TaskStatus
+    description: Optional[str] = None
 
 
 class ProjectBase(BaseModel):
@@ -90,10 +95,24 @@ class TaskSubmissionRead(BaseModel):
     team_id: int
     text_description: Optional[str] = None
     result_url: Optional[str] = None
+
     submitted_at: datetime
+    reviewed_at: Optional[datetime] = None
     status: TaskStatus
     moderator_id: Optional[int] = None
-    reviewed_at: Optional[datetime] = None
+
+    time: Optional[int] = None  
+
+    @field_validator("time", mode="before")
+    @classmethod
+    def calc_time(cls, v, info):
+        submitted_at = info.data.get("submitted_at")
+        if not submitted_at:
+            return None
+
+        expires_at = submitted_at + timedelta(minutes=10)
+        remaining = int((expires_at - datetime.utcnow()).total_seconds())
+        return max(remaining, 0)
 
     class Config:
         from_attributes = True
@@ -108,6 +127,6 @@ class TaskCreate(TaskBase):
     pass
 
 
-# Для Pydantic V2 используем model_rebuild
+
 ProjectRead.model_rebuild()
 TaskRead.model_rebuild()

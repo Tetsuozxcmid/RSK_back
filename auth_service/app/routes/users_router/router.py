@@ -161,7 +161,6 @@ async def auth_user(
 async def logout_user():
     response = JSONResponse(content={"message": "Successfully logged out"})
     
-    
     response.delete_cookie(
         key="users_access_token",
         path="/",
@@ -170,7 +169,6 @@ async def logout_user():
         httponly=True,
         samesite="none"  
     )
-    
     
     response.delete_cookie(
         key="userData",

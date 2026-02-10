@@ -14,6 +14,7 @@ from schemas.proj import (
     ProjectRead,
     TaskCreate,
     TaskOut,
+    TaskReviewRequest,
     TaskSubmitRequest,
     TaskSubmissionRead,
 )
@@ -22,7 +23,7 @@ from schemas.proj import (
 router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
 
 
-# === ADMIN ===
+
 @router.post("/projects", response_model=ProjectRead)
 async def create_project(
     data: ProjectCreate, db: AsyncSession = Depends(get_db), _=Depends(get_moderator)
@@ -76,7 +77,7 @@ async def delete_task(
     return {"status": "deleted"}
 
 
-# === MODERATOR ===
+
 @router.get("/moderator/tasks", response_model=List[TaskSubmissionRead])
 async def get_moder_tasks(
     db: AsyncSession = Depends(get_db),
@@ -89,18 +90,21 @@ async def get_moder_tasks(
 @router.post("/moderator/{submission_id}/review")
 async def review_task(
     submission_id: int,
-    status: TaskStatus,
-    description: Optional[str] = None,
+    data: TaskReviewRequest,
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user),
     _=Depends(get_moderator),
 ):
     return await ZvezdaCRUD.review_submission(
-        db, submission_id, user_id, status, description
+        db,
+        submission_id,
+        user_id,
+        data.status,
+        data.description,
     )
 
 
-# === PUBLIC / USER ===
+
 @router.get("/projects", response_model=List[ProjectRead])
 async def list_projects(org: Optional[str] = None, db: AsyncSession = Depends(get_db)):
     return await ZvezdaCRUD.list_projects(db, org)
