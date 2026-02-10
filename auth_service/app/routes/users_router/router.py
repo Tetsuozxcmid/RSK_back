@@ -152,7 +152,15 @@ async def auth_user(
     access_token = await create_access_token(
         {"sub": str(user["id"]), "role": user["role"]}
     )
-    response.set_cookie(key="users_access_token", value=access_token, httponly=True)
+    response.set_cookie(
+    key="users_access_token",
+    value=access_token,
+    path="/",
+    domain=".rosdk.ru",      
+    secure=True,             
+    httponly=True,
+    samesite="none",
+    )
 
     return "Access successed"
 
@@ -166,13 +174,13 @@ async def auth_user(
 )
 async def logout_user(response: Response):
     response.delete_cookie(
-        key="users_access_token",
-        path="/",
-        domain=".rosdk.ru",
-        secure=True,
-        httponly=True,
-        samesite="none",
-    )
+    key="users_access_token",
+    path="/",
+    domain=".rosdk.ru",
+    secure=True,
+    httponly=True,
+    samesite="none",
+)
 
     response.delete_cookie(
         key="userData",

@@ -5,8 +5,10 @@ from fastapi.security import (
     OAuth2PasswordBearer,
     HTTPBearer,
     HTTPAuthorizationCredentials,
+    status,
 )
-from fastapi import Depends
+
+from fastapi import Depends, HTTPException
 
 security = HTTPBearer()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
