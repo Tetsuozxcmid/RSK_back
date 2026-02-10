@@ -91,6 +91,7 @@ app = FastAPI(
     title="Auth FASTAPI",
     description="Authentication service",
     lifespan=lifespan,
+    root_path="/auth",
 )
 
 
@@ -145,7 +146,8 @@ async def health():
     }
 
 
-app.include_router(user_router,prefix="/auth")
+app.include_router(user_router)
+
 
 
 @app.get("/update-metrics-now")
