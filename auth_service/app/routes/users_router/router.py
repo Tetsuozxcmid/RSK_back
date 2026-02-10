@@ -35,9 +35,9 @@ email_router = APIRouter(tags=["Email Management"])
 user_management_router = APIRouter(tags=["User Management"])
 
 
-# ==================== ФУНКЦИИ ДЛЯ РАБОТЫ С МЕТРИКАМИ ====================
+
 def _get_metric_active_users():
-    """Получает метрику active_users_total (lazy import для избежания циклической зависимости)"""
+   
     try:
         from main import ACTIVE_USERS
 
@@ -48,7 +48,7 @@ def _get_metric_active_users():
 
 
 def _get_service_name():
-    """Получает название сервиса"""
+   
     try:
         from main import SERVICE_NAME
 
@@ -58,7 +58,7 @@ def _get_service_name():
 
 
 def update_active_users_metric(active_count: int):
-    """Обновляет метрику активных пользователей"""
+    
     metric = _get_metric_active_users()
     service_name = _get_service_name()
 
@@ -74,7 +74,7 @@ def update_active_users_metric(active_count: int):
         print(f"⚠ Could not update metric: metric={metric}, service={service_name}")
 
 
-# ========================================================================
+
 
 
 @auth_router.post("/register/")
@@ -157,28 +157,32 @@ async def auth_user(
     return "Access successed"
 
 
-@auth_router.post("/logout/")
-async def logout_user():
-    response = JSONResponse(content={"message": "Successfully logged out"})
-    
+@auth_router.post(
+    "/logout/",
+    status_code=status.HTTP_200_OK,
+    response_model=dict,
+    summary="Logout user",
+    description="Удаляет auth cookies и завершает сессию"
+)
+async def logout_user(response: Response):
     response.delete_cookie(
         key="users_access_token",
         path="/",
-        domain=".rosdk.ru",  
+        domain=".rosdk.ru",
         secure=True,
         httponly=True,
-        samesite="none"  
+        samesite="none",
     )
-    
+
     response.delete_cookie(
         key="userData",
         path="/",
-        domain=".rosdk.ru",  
+        domain=".rosdk.ru",
         secure=True,
-        samesite="none"
+        samesite="none",
     )
-    
-    return response
+
+    return {"message": "Successfully logged out"}
 
 
 @email_router.get("/confirm-email")
