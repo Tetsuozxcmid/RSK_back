@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from typing import Optional, List
 from datetime import datetime, timedelta
 
@@ -101,18 +101,19 @@ class TaskSubmissionRead(BaseModel):
     status: TaskStatus
     moderator_id: Optional[int] = None
 
-    time: Optional[int] = None  
+    time: Optional[int] = None
 
-    @field_validator("time", mode="before")
-    @classmethod
-    def calc_time(cls, v, info):
-        submitted_at = info.data.get("submitted_at")
-        if not submitted_at:
-            return None
+    @model_validator(mode="after")
+    def calculate_time(self):
+        if not self.submitted_at:
+            self.time = None
+            return self
 
-        expires_at = submitted_at + timedelta(minutes=10)
+        expires_at = self.submitted_at + timedelta(minutes=10)
         remaining = int((expires_at - datetime.utcnow()).total_seconds())
-        return max(remaining, 0)
+
+        self.time = max(remaining, 0)
+        return self
 
     class Config:
         from_attributes = True
