@@ -149,7 +149,7 @@ async def health():
 app.include_router(user_router)
 
 
-
+#metrics
 @app.get("/update-metrics-now")
 async def update_metrics_now():
     try:
