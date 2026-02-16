@@ -106,8 +106,11 @@ async def review_task(
 
 
 @router.get("/projects", response_model=List[ProjectRead])
-async def list_projects(org: Optional[str] = None, db: AsyncSession = Depends(get_db)):
-    return await ZvezdaCRUD.list_projects(db, org)
+async def list_projects(
+    organization_id: Optional[int] = None,  
+    db: AsyncSession = Depends(get_db)
+):
+    return await ZvezdaCRUD.list_projects(db, organization_id)
 
 
 @router.get("/projects/{project_id}", response_model=ProjectRead)

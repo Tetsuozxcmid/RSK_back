@@ -50,6 +50,7 @@ class Project(Base):
     description = Column(Text)
 
     organization_name = Column(String)
+    organization_id = Column(Integer)
 
     star_index = Column(Integer, nullable=False, default=0)
     star_category = Column(Enum(CategoryEnum, name="categoryenum"), nullable=False)

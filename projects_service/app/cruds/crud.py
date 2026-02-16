@@ -18,7 +18,7 @@ class ZvezdaCRUD:
         project = Project(
             title=project_data.title,
             description=project_data.description,
-            organization_name=project_data.organization_name,
+            organization_id=project_data.organization_id,
             star_index=project_data.star_index,
             star_category=project_data.star_category.value,
             level_number=project_data.level_number,
@@ -218,10 +218,10 @@ class ZvezdaCRUD:
         return project
 
     @staticmethod
-    async def list_projects(db: AsyncSession, organization_name: str = None):
+    async def list_projects(db: AsyncSession, organization_id: str = None):
         query = select(Project).options(selectinload(Project.tasks))
-        if organization_name:
-            query = query.where(Project.organization_name == organization_name)
+        if organization_id:
+            query = query.where(Project.organization_id == organization_id)
         result = await db.execute(query)
         return result.scalars().all()
 

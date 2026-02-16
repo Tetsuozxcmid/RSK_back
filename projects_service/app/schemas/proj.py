@@ -39,7 +39,7 @@ class TaskReviewRequest(BaseModel):
 class ProjectBase(BaseModel):
     title: str
     description: Optional[str] = None
-    organization_name: Optional[str] = None
+    organization_id: Optional[int] = None  
     star_index: int = 0
     star_category: CategoryEnum
     level_number: int = 1
