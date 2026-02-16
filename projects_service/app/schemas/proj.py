@@ -103,6 +103,13 @@ class TaskSubmissionRead(BaseModel):
 
     time: Optional[int] = None  
 
+    
+    project_id: int
+    project_title: str
+    project_category: CategoryEnum
+    task_title: str
+    task_description: Optional[str] = None
+
     @field_validator("time", mode="before")
     @classmethod
     def calc_time(cls, v, info):

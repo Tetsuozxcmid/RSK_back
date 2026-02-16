@@ -107,11 +107,17 @@ class ZvezdaCRUD:
         lock_limit = now - timedelta(minutes=10)
 
         
-        query_current = select(TaskSubmission).where(
-            and_(
-                TaskSubmission.moderator_id == moderator_id,
-                TaskSubmission.reviewed_at == None,
-                TaskSubmission.submitted_at >= lock_limit,
+        query_current = (
+            select(TaskSubmission)
+            .options(
+                selectinload(TaskSubmission.task).selectinload(Task.project)
+            )
+            .where(
+                and_(
+                    TaskSubmission.moderator_id == moderator_id,
+                    TaskSubmission.reviewed_at == None,
+                    TaskSubmission.submitted_at >= lock_limit,
+                )
             )
         )
         result = await db.execute(query_current)
@@ -124,6 +130,9 @@ class ZvezdaCRUD:
         needed = 5 - len(current_tasks)
         query_new = (
             select(TaskSubmission)
+            .options(
+                selectinload(TaskSubmission.task).selectinload(Task.project)
+            )
             .where(
                 and_(
                     TaskSubmission.status == TaskStatus.SUBMITTED,
@@ -150,7 +159,16 @@ class ZvezdaCRUD:
         if new_tasks:
             await db.commit()
 
-        return list(current_tasks) + list(new_tasks)
+        
+        all_tasks = list(current_tasks) + list(new_tasks)
+        
+        
+        for sub in all_tasks:
+            await db.refresh(sub, attribute_names=["task"])
+            if sub.task:
+                await db.refresh(sub.task, attribute_names=["project"])
+        
+        return all_tasks
 
     @staticmethod
     async def review_submission(
