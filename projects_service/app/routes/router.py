@@ -10,6 +10,7 @@ from services.teams_client import TeamsClient
 from services.auth_client import get_moderator
 from db.models.projects import TaskStatus
 from schemas.proj import (
+    ModeratorTaskRead,
     ProjectCreate,
     ProjectRead,
     TaskCreate,
@@ -78,7 +79,7 @@ async def delete_task(
 
 
 
-@router.get("/moderator/tasks", response_model=List[TaskSubmissionRead])
+@router.get("/moderator/tasks", response_model=List[ModeratorTaskRead])
 async def get_moder_tasks(
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user),

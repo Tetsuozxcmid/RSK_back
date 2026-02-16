@@ -133,6 +133,36 @@ class TaskSubmitRequest(BaseModel):
 class TaskCreate(TaskBase):
     pass
 
+class ModeratorTaskRead(TaskSubmissionRead):
+    project_id: int
+    project_title: str
+    project_category: CategoryEnum
+    task_title: str
+    task_description: Optional[str] = None
+    
+    @classmethod
+    def from_orm(cls, submission):
+        task = submission.task
+        project = task.project if task else None
+        
+        return cls(
+            id=submission.id,
+            task_id=submission.task_id,
+            team_id=submission.team_id,
+            text_description=submission.text_description,
+            result_url=submission.result_url,
+            submitted_at=submission.submitted_at,
+            reviewed_at=submission.reviewed_at,
+            status=submission.status,
+            moderator_id=submission.moderator_id,
+            time=None,
+            project_id=project.id if project else None,
+            project_title=project.title if project else None,
+            project_category=project.star_category if project else None,
+            task_title=task.title if task else None,
+            task_description=task.description if task else None,
+        )
+
 
 
 ProjectRead.model_rebuild()
