@@ -406,7 +406,7 @@ async def send_new_password_email(recipient_email: str, new_password: str, login
                                 </div>
 
                                 <div class="button-wrap" role="presentation">
-                                    <a href="https://rosdk.ru/login" class="btn" target="_blank" rel="noopener noreferrer" color="white">Перейти к входу</a>
+                                    <a href="https://rosdk.ru/login" class="btn" target="_blank" rel="noopener noreferrer" style="color: #ffffff;">Перейти к входу</a>
                                 </div>
 
                                 <hr style="border: none; border-top: 1px solid #eef2f7; margin: 20px 0" />
