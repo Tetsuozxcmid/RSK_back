@@ -224,22 +224,31 @@ class UserCRUD:
         new_password: str
     ):
         
-        
         result = await db.execute(
             select(User).where(
                 or_(
                     User.email == email_or_login.lower(),
                     User.login == email_or_login
                 )
-            )
+            ).order_by(User.verified.desc())  
         )
-        user = result.scalar_one_or_none()
+        users = result.scalars().all()
         
-        if not user:
+        if not users:
             raise HTTPException(
                 status_code=404, 
                 detail=f"User with email/login '{email_or_login}' not found"
             )
+        
+        
+        user = next((u for u in users if u.verified), users[0])
+        
+        
+        verified_users = [u for u in users if u.verified]
+        if len(verified_users) > 1:
+            print(f"WARNING: Multiple verified users found for {email_or_login}: {[u.id for u in verified_users]}")
+            
+            user = verified_users[0]
         
         if not user.verified:
             raise HTTPException(
