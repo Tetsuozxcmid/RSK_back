@@ -1,5 +1,5 @@
 import json
-from RSK_back.auth_service.app.services.password_generator import generate_random_password
+from services.password_generator import generate_random_password
 import aio_pika
 from fastapi import (
     APIRouter,
