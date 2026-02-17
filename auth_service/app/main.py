@@ -6,6 +6,7 @@ import time
 import asyncio
 from sqlalchemy import select, func
 
+from config import settings
 from routes.users_router.router import router as user_router
 from services.rabbitmq import init_rabbitmq
 from services.role_consumer import consume_role_updated_events  
@@ -73,7 +74,7 @@ async def lifespan(app: FastAPI):
     
     print("Starting RabbitMQ role consumer...")
     role_consumer_task = asyncio.create_task(
-        consume_role_updated_events()
+        consume_role_updated_events(settings.RABBITMQ_URL)
     )
 
     
