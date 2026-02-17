@@ -7,7 +7,7 @@ class UserRoleUpdate(BaseModel):
     role: UserEnum
     
     class Config:
-        use_enum_values = True
+        pass
 
 class OrganizationSimple(BaseModel):
     id: int
