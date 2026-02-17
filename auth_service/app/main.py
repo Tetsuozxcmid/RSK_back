@@ -8,6 +8,7 @@ from sqlalchemy import select, func
 
 from routes.users_router.router import router as user_router
 from services.rabbitmq import init_rabbitmq
+from services.role_consumer import consume_role_updated_events  
 from db.session import async_session_maker
 from db.models.user import User
 
@@ -29,6 +30,11 @@ ACTIVE_USERS = Gauge("active_users_total", "Total verified users", ["service"])
 TOTAL_USERS = Gauge("total_users", "Total registered users", ["service"])
 
 
+metrics_task = None
+role_consumer_task = None
+rabbitmq_connection = None
+
+
 async def update_metrics_periodically():
     while True:
         try:
@@ -45,22 +51,35 @@ async def update_metrics_periodically():
                 TOTAL_USERS.labels(service=SERVICE_NAME).set(total_count)
 
                 print(
-                    f"✓ Metrics updated: verified={verified_count}, total={total_count}"
+                    f"Metrics updated: verified={verified_count}, total={total_count}"
                 )
 
         except Exception as e:
-            print(f"✗ Error updating metrics: {e}")
+            print(f"Error updating metrics: {e}")
 
         await asyncio.sleep(300)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global metrics_task, role_consumer_task, rabbitmq_connection
+    
     print("Starting auth service...")
-    await init_rabbitmq()
+    
+   
+    rabbitmq_connection = await init_rabbitmq()
+    app.state.rabbitmq_connection = rabbitmq_connection
+    
+    
+    print("Starting RabbitMQ role consumer...")
+    role_consumer_task = asyncio.create_task(
+        consume_role_updated_events()
+    )
 
+    
     metrics_task = asyncio.create_task(update_metrics_periodically())
 
+   
     try:
         async with async_session_maker() as session:
             stmt = select(func.count()).where(User.verified == True)
@@ -79,11 +98,28 @@ async def lifespan(app: FastAPI):
     yield
 
     print("Shutting down auth service...")
-    metrics_task.cancel()
-    try:
-        await metrics_task
-    except asyncio.CancelledError:
-        pass
+    
+    
+    if role_consumer_task:
+        role_consumer_task.cancel()
+        try:
+            await role_consumer_task
+        except asyncio.CancelledError:
+            pass
+    
+    
+    if metrics_task:
+        metrics_task.cancel()
+        try:
+            await metrics_task
+        except asyncio.CancelledError:
+            pass
+    
+   
+    if rabbitmq_connection and not rabbitmq_connection.is_closed:
+        await rabbitmq_connection.close()
+        print("RabbitMQ connection closed")
+    
     print("Service shutdown complete")
 
 
@@ -135,9 +171,17 @@ def metrics():
 
 @app.get("/health")
 async def health():
+    
+    consumer_status = "running" if role_consumer_task and not role_consumer_task.done() else "stopped"
+    rabbitmq_status = "connected" if rabbitmq_connection and not rabbitmq_connection.is_closed else "disconnected"
+    
     return {
         "status": "healthy",
         "service": "auth",
+        "consumers": {
+            "role_consumer": consumer_status,
+            "rabbitmq": rabbitmq_status
+        },
         "metrics": {
             "verified_users": "active_users_total",
             "total_users": "total_users",
@@ -149,7 +193,7 @@ async def health():
 app.include_router(user_router)
 
 
-#metrics
+
 @app.get("/update-metrics-now")
 async def update_metrics_now():
     try:

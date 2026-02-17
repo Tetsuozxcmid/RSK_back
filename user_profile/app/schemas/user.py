@@ -2,6 +2,13 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from db.models.user_enum import UserEnum
 
+
+class UserRoleUpdate(BaseModel):
+    role: UserEnum
+    
+    class Config:
+        use_enum_values = True
+
 class OrganizationSimple(BaseModel):
     id: int
     name: str

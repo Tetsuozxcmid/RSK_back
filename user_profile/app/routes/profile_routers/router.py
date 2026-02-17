@@ -9,12 +9,15 @@ from schemas.user import (
     ProfileUpdate,
     ProfileJoinedTeamUpdate,
     ProfileJoinedOrg,
+    UserRoleUpdate,
 )
 from schemas.user_batch import UserBatchRequest
 from db.models.user import User
 from db.session import get_db
 from cruds.profile_crud import ProfileCRUD
 from services.grabber import get_current_user
+from services.rabbitmq import get_rabbitmq_connection, publish_role_update
+from aio_pika.abc import AbstractRobustConnection
 
 
 router = APIRouter(prefix="/profile_interaction")
@@ -55,6 +58,39 @@ async def update_user_profile_joined_org(
         organization_name=update_data.Organization,
         organization_id=update_data.Organization_id,
     )
+
+@profile_management_router.patch("/my-role")
+async def update_my_role(
+    role_data: UserRoleUpdate,
+    db: AsyncSession = Depends(get_db),
+    rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection),
+    user_id: int = Depends(get_current_user),
+):
+    
+    user, old_role = await ProfileCRUD.update_my_role(
+        db=db,
+        user_id=user_id,
+        new_role=role_data.role
+    )
+    
+    
+    try:
+        await publish_role_update(
+            rabbitmq,
+            user_id=user_id,
+            new_role=role_data.role.value,  
+            old_role=old_role.value if old_role else None
+        )
+    except Exception as e:
+        print(f"Failed to publish role update: {e}")
+        
+    
+    return {
+        "message": "Role updated successfully",
+        "user_id": user_id,
+        "old_role": old_role.value if old_role else None,
+        "new_role": role_data.role.value
+    }
 
 
 @profile_management_router.patch("/update_my_profile/")
