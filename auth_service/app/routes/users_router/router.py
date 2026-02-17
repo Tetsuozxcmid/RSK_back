@@ -1,4 +1,5 @@
 import json
+from RSK_back.auth_service.app.services.password_generator import generate_random_password
 import aio_pika
 from fastapi import (
     APIRouter,
@@ -10,14 +11,14 @@ from fastapi import (
 )
 from sqlalchemy import select
 from schemas.user_schemas.user_register import UserRegister
-from schemas.user_schemas.user_password import ChangePasswordSchema
+from schemas.user_schemas.user_password import ChangePasswordSchema, PasswordResetRequest
 from schemas.user_schemas.user_auth import UserAuth
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models.user import User
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
 from services.jwt import create_access_token
-from services.emailsender import send_confirmation_email
+from services.emailsender import send_confirmation_email, send_new_password_email
 import asyncio
 from fastapi.responses import HTMLResponse, JSONResponse
 from pathlib import Path
@@ -305,20 +306,53 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     return {"message": "User deleted successfully"}
 
 
-@user_management_router.patch("/change_password/")
-async def change_password(
-    user_id: int, passwords: ChangePasswordSchema, db: AsyncSession = Depends(get_db)
+@email_router.post("/reset-password/")
+async def reset_password(
+    reset_data: PasswordResetRequest,
+    db: AsyncSession = Depends(get_db),
+    background_tasks: BackgroundTasks = None,
 ):
+    
     try:
-        await UserCRUD.change_user_password(
+        
+        new_password = generate_random_password(12)
+        
+        
+        user = await UserCRUD.reset_password_by_email_or_login(
             db=db,
-            user_id=user_id,
-            old_password=passwords.current_password.get_secret_value(),
-            new_password=passwords.new_password.get_secret_value(),
+            email_or_login=reset_data.email_or_login,
+            new_password=new_password
         )
-        return {"message": "Password changed success"}
+        
+        
+        if background_tasks:
+            background_tasks.add_task(
+                send_new_password_email,
+                recipient_email=user.email,
+                new_password=new_password,
+                login=user.login
+            )
+        else:
+            asyncio.create_task(
+                send_new_password_email(
+                    recipient_email=user.email,
+                    new_password=new_password,
+                    login=user.login
+                )
+            )
+        
+        return {
+            "message": "New password has been sent to your email",
+            "email": user.email
+        }
+        
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"error is in {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Password reset failed: {str(e)}"
+        )
 
 
 @user_management_router.get("/get_user_by_id/{user_id}")

@@ -1,4 +1,5 @@
 import uuid
+from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -215,3 +216,50 @@ class UserCRUD:
             raise HTTPException(status_code=404, detail="User not found")
 
         return {"name": user.name, "email": user.email, "role": user.role}
+
+    @staticmethod
+    async def reset_password_by_email_or_login(
+        db: AsyncSession, 
+        email_or_login: str,
+        new_password: str
+    ):
+        
+        
+        result = await db.execute(
+            select(User).where(
+                or_(
+                    User.email == email_or_login.lower(),
+                    User.login == email_or_login
+                )
+            )
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"User with email/login '{email_or_login}' not found"
+            )
+        
+        if not user.verified:
+            raise HTTPException(
+                status_code=400, 
+                detail="User is not verified. Please confirm email first."
+            )
+        
+        
+        new_hashed_password = pass_settings.get_password_hash(new_password)
+        
+        
+        user.hashed_password = new_hashed_password
+        
+        try:
+            await db.commit()
+            await db.refresh(user)
+            return user
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Error resetting password: {str(e)}"
+            )
