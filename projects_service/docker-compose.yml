@@ -13,10 +13,10 @@ services:
       - shared_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.rsk_orgs_service.rule=Host(`api.rosdk.ru`) && PathPrefix(`/projects`)"
-      - "traefik.http.routers.rsk_orgs_service.entrypoints=websecure"
-      - "traefik.http.routers.rsk_orgs_service.tls.certresolver=le"
-      - "traefik.http.services.rsk_orgs_service.loadbalancer.server.port=8010"
+      - "traefik.http.routers.rsk_projects_service.rule=Host(`api.rosdk.ru`) && PathPrefix(`/projects`)"
+      - "traefik.http.routers.rsk_projects_service.entrypoints=websecure"
+      - "traefik.http.routers.rsk_projects_service.tls.certresolver=le"
+      - "traefik.http.services.rsk_projects_service.loadbalancer.server.port=8010"
 
   rsk_projects_db:
     image: postgres:17-alpine
