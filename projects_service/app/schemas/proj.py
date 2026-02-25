@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, Field
 from typing import Optional, List
 from datetime import datetime, timedelta
 
@@ -39,7 +39,7 @@ class TaskReviewRequest(BaseModel):
 class ProjectBase(BaseModel):
     title: str
     description: Optional[str] = None
-    organization_id: Optional[int] = None  
+    organization_id: Optional[int] = None
     star_index: int = 0
     star_category: CategoryEnum
     level_number: int = 1
@@ -63,7 +63,7 @@ class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
     prize_points: int = 0
-    materials: Optional[List[dict]] = []
+    materials: List[dict] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -80,7 +80,7 @@ class TaskRead(TaskBase):
 
 class ProjectRead(ProjectBase):
     id: int
-    tasks: List[TaskRead] = []
+    tasks: List[TaskRead] = Field(default_factory=list)
 
 
 class TaskOut(TaskBase):
@@ -101,9 +101,8 @@ class TaskSubmissionRead(BaseModel):
     status: TaskStatus
     moderator_id: Optional[int] = None
 
-    time: Optional[int] = None  
+    time: Optional[int] = None
 
-    
     project_id: int
     project_title: str
     project_category: CategoryEnum
@@ -133,37 +132,11 @@ class TaskSubmitRequest(BaseModel):
 class TaskCreate(TaskBase):
     pass
 
-class ModeratorTaskRead(TaskSubmissionRead):
-    project_id: int
-    project_title: str
-    project_category: CategoryEnum
-    task_title: str
-    task_description: Optional[str] = None
-    
-    @classmethod
-    def from_orm(cls, submission):
-        task = submission.task
-        project = task.project if task else None
-        
-        return cls(
-            id=submission.id,
-            task_id=submission.task_id,
-            team_id=submission.team_id,
-            text_description=submission.text_description,
-            result_url=submission.result_url,
-            submitted_at=submission.submitted_at,
-            reviewed_at=submission.reviewed_at,
-            status=submission.status,
-            moderator_id=submission.moderator_id,
-            time=None,
-            project_id=project.id if project else None,
-            project_title=project.title if project else None,
-            project_category=project.star_category if project else None,
-            task_title=task.title if task else None,
-            task_description=task.description if task else None,
-        )
 
+class ModeratorTaskRead(TaskSubmissionRead):
+    pass
 
 
 ProjectRead.model_rebuild()
 TaskRead.model_rebuild()
+TaskSubmissionRead.model_rebuild()
