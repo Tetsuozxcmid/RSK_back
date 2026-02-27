@@ -1,6 +1,6 @@
 import httpx
 from typing import Optional, Dict, List
-from app.config import settings
+from config import settings
 from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
 
