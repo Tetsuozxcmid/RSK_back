@@ -59,19 +59,17 @@ class AuthServiceClient:
                 return []
 
     async def update_user_learning_status(self, user_id: int, learning: bool) -> bool:
-        
+    
         async with httpx.AsyncClient() as client:
             try:
                 print(f"Updating learning status for user {user_id} to {learning}")
                 
-                response = await client.post(
-                    f"{self.profile_url}/profile_interaction/update_profile/",
-                    json={
-                        "user_id": user_id,
-                        "is_learned": learning
-                    },
+                
+                response = await client.patch(
+                    f"{self.profile_url}/profile_interaction/update_profile/{user_id}",
+                    json={"is_learned": learning},  
                     headers={
-                        "Authorization": f"Bearer {settings.SECRET_KEY}",  
+                        "Authorization": f"Bearer {settings.SECRET_KEY}",
                         "Content-Type": "application/json"
                     },
                     timeout=10.0
@@ -82,6 +80,7 @@ class AuthServiceClient:
                     return True
                 else:
                     print(f"❌ Failed to update user {user_id}: {response.status_code}")
+                    print(f"Response: {response.text}")
                     return False
                     
             except Exception as e:
