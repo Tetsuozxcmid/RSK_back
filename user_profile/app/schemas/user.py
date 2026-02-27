@@ -33,6 +33,7 @@ class ProfileResponse(BaseModel):
     Organization_id: Optional[int] = None
     team: Optional[str] = None
     team_id: Optional[int] = None
+    is_learned: bool
 
     class Config:
         from_attributes = True
