@@ -303,19 +303,13 @@ class ZvezdaCRUD:
         result = []
         
         for sub in submissions:
-           
+            
             if not sub.task or not sub.task.project:
                 continue
                 
             
-            expires_at = sub.submitted_at + timedelta(minutes=10)
-            remaining = int((expires_at - datetime.utcnow()).total_seconds())
-            time_remaining = max(remaining, 0)
-            
-            
             project_category = sub.task.project.star_category
             if isinstance(project_category, str):
-                
                 from schemas.proj import CATEGORY_MAP
                 project_category = CATEGORY_MAP.get(project_category, project_category)
             
@@ -329,7 +323,6 @@ class ZvezdaCRUD:
                 "reviewed_at": sub.reviewed_at,
                 "status": sub.status,
                 "moderator_id": sub.moderator_id,
-                "time": time_remaining,
                 "project_id": sub.task.project.id,
                 "project_title": sub.task.project.title,
                 "project_category": project_category,
