@@ -59,13 +59,15 @@ class AuthServiceClient:
                 return []
 
     async def update_user_learning_status(self, user_id: int, learning: bool) -> bool:
-    
         async with httpx.AsyncClient() as client:
             try:
                 print(f"Updating learning status for user {user_id} to {learning}")
                 
+                
+                base_url = self.profile_url.replace('/users', '')
+                
                 response = await client.post(
-                    f"{self.profile_url}/profile_interaction/update_learning_status/",
+                    f"{base_url}/profile_interaction/update_learning_status/",
                     json={
                         "user_id": user_id,
                         "is_learned": learning
