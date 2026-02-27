@@ -226,16 +226,18 @@ services:
     networks:
       - shared_network
 
-    rsk_learning_app:
+  rsk_learning_app:
     build: ./learning_service
     depends_on:
       rsk_learning_db:
         condition: service_healthy
       redis:  
         condition: service_healthy
-    
+    restart: on-failure
     env_file:
-    - ./learning_service/.env
+      - ./learning_service/.env
+    networks:
+      - shared_network
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.learning.rule=Host(`api.rosdk.ru`) && PathPrefix(`/learning`)"  
@@ -345,5 +347,3 @@ volumes:
 networks:
   shared_network:
     external: true
-
-
