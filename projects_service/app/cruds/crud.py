@@ -340,6 +340,9 @@ class ZvezdaCRUD:
         status: TaskStatus,
         description: Optional[str] = None,
     ):
+        from datetime import datetime, timezone, timedelta
+        
+        now = datetime.now(timezone.utc)  #
 
         result = await db.execute(
             select(TaskSubmission).where(TaskSubmission.id == submission_id)
@@ -355,13 +358,14 @@ class ZvezdaCRUD:
                 403, "This task is assigned to another moderator"
             )
 
-        if submission.submitted_at < (datetime.utcnow() - timedelta(minutes=10)):
+        
+        if submission.submitted_at < (now - timedelta(minutes=10)):
             raise HTTPException(
                 400, "Lock expired. Fetch tasks again."
             )
 
         submission.status = status
-        submission.reviewed_at = datetime.utcnow()
+        submission.reviewed_at = now
 
         if description:
             submission.text_description = (
