@@ -45,7 +45,7 @@ class AuthServiceClient:
                     f"{self.profile_service_url}/profile_interaction/get_users_batch",
                     json=[],  
                     headers={
-                        "Authorization": f"Bearer {settings.INTERNAL_API_KEY}",
+                        "Authorization": f"Bearer {settings.SECRET_KEY}",
                         "Content-Type": "application/json"
                     },
                     timeout=30.0,
@@ -73,7 +73,7 @@ class AuthServiceClient:
                         "is_learned": learning
                     },
                     headers={
-                        "Authorization": f"Bearer {settings.INTERNAL_API_KEY}",
+                        "Authorization": f"Bearer {settings.SECRET_KEY}",
                         "Content-Type": "application/json"
                     },
                     timeout=10.0
@@ -97,7 +97,7 @@ class AuthServiceClient:
                 response = await client.get(
                     f"{self.profile_service_url.rstrip('/')}/profile_interaction/get_profile/",
                     params={"user_id": user_id},
-                    headers={"Authorization": f"Bearer {settings.INTERNAL_API_KEY}"},
+                    headers={"Authorization": f"Bearer {settings.SECRET_KEY}"},
                     timeout=10.0
                 )
                 if response.status_code == 200:
