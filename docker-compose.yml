@@ -233,7 +233,7 @@ services:
         condition: service_healthy
       redis:  
         condition: service_healthy
-    restart: on-failure
+    
     env_file:
     - ./learning_service/.env
     networks:
