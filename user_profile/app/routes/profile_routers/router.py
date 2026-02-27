@@ -48,7 +48,7 @@ async def update_user_profile_joined_team(
         team_id=update_data.team_id,
     )
 
-@router.post("/profile_interaction/update_learning_status/")
+@router.post("/update_learning_status/")
 async def update_learning_status(
     request: UpdateLearningStatusRequest,
     db: AsyncSession = Depends(get_db) 
@@ -66,7 +66,7 @@ async def update_learning_status(
     return {"status": "success", "user_id": request.user_id, "is_learned": request.is_learned}
 
 
-@router.post("/profile_interaction/bulk_update_learning/")
+@router.post("/bulk_update_learning/")
 async def bulk_update_learning(
     request: BulkUpdateLearningRequest,
     db: AsyncSession = Depends(get_db)
