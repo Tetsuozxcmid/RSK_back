@@ -266,8 +266,7 @@ services:
 
   celery_worker:
     build: ./learning_service
-    command: celery -A services.celery_app worker --loglevel=info -Q learning
-    environment:
+    command: celery -A app.services.celery_app worker --loglevel=info -Q learning    environment:
     - PYTHONPATH=/app
     restart: unless-stopped
     depends_on:
@@ -282,8 +281,7 @@ services:
 
   celery_beat:
     build: ./learning_service
-    command: celery -A services.celery_app beat --loglevel=info
-    environment:
+    command: celery -A app.services.celery_app beat --loglevel=info    environment:
     - PYTHONPATH=/app
     restart: unless-stopped
     depends_on:
