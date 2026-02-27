@@ -228,8 +228,8 @@ class ZvezdaCRUD:
     @staticmethod
     async def get_tasks_for_review(
         db: AsyncSession, moderator_id: int
-    ) -> List[TaskSubmission]:
-        
+    ) -> List[dict]:
+       
         now = datetime.utcnow()
         lock_limit = now - timedelta(minutes=10)
 
@@ -253,7 +253,8 @@ class ZvezdaCRUD:
 
         
         if len(current_tasks) >= 5:
-            return current_tasks[:5]
+            
+            return await ZvezdaCRUD._submissions_to_dict(current_tasks[:5])
 
         
         needed = 5 - len(current_tasks)
@@ -279,10 +280,10 @@ class ZvezdaCRUD:
         new_res = await db.execute(query_new)
         new_tasks = new_res.scalars().all()
 
-        
+       
         for sub in new_tasks:
             sub.moderator_id = moderator_id
-            sub.submitted_at = now  
+            sub.submitted_at = now
             db.add(sub)
 
         if new_tasks:
@@ -293,7 +294,50 @@ class ZvezdaCRUD:
                 await db.refresh(sub)
 
         
-        return list(current_tasks) + list(new_tasks)
+        all_tasks = list(current_tasks) + list(new_tasks)
+        return await ZvezdaCRUD._submissions_to_dict(all_tasks)
+
+    @staticmethod
+    async def _submissions_to_dict(submissions: List[TaskSubmission]) -> List[dict]:
+        
+        result = []
+        
+        for sub in submissions:
+           
+            if not sub.task or not sub.task.project:
+                continue
+                
+            
+            expires_at = sub.submitted_at + timedelta(minutes=10)
+            remaining = int((expires_at - datetime.utcnow()).total_seconds())
+            time_remaining = max(remaining, 0)
+            
+            
+            project_category = sub.task.project.star_category
+            if isinstance(project_category, str):
+                
+                from schemas.proj import CATEGORY_MAP
+                project_category = CATEGORY_MAP.get(project_category, project_category)
+            
+            result.append({
+                "id": sub.id,
+                "task_id": sub.task_id,
+                "team_id": sub.team_id,
+                "text_description": sub.text_description,
+                "result_url": sub.result_url,
+                "submitted_at": sub.submitted_at,
+                "reviewed_at": sub.reviewed_at,
+                "status": sub.status,
+                "moderator_id": sub.moderator_id,
+                "time": time_remaining,
+                "project_id": sub.task.project.id,
+                "project_title": sub.task.project.title,
+                "project_category": project_category,
+                "task_title": sub.task.title,
+                "task_description": sub.task.description,
+            })
+        
+        return result
 
     @staticmethod
     async def review_submission(
