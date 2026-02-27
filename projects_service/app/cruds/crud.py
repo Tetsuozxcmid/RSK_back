@@ -229,10 +229,11 @@ class ZvezdaCRUD:
     async def get_tasks_for_review(
         db: AsyncSession, moderator_id: int
     ) -> List[TaskSubmission]:
-
+        
         now = datetime.utcnow()
         lock_limit = now - timedelta(minutes=10)
 
+        
         query_current = (
             select(TaskSubmission)
             .options(
@@ -250,11 +251,14 @@ class ZvezdaCRUD:
         result = await db.execute(query_current)
         current_tasks = result.scalars().all()
 
+        
         if len(current_tasks) >= 5:
             return current_tasks[:5]
 
+        
         needed = 5 - len(current_tasks)
 
+        
         query_new = (
             select(TaskSubmission)
             .options(
@@ -275,14 +279,20 @@ class ZvezdaCRUD:
         new_res = await db.execute(query_new)
         new_tasks = new_res.scalars().all()
 
+        
         for sub in new_tasks:
             sub.moderator_id = moderator_id
-            sub.submitted_at = now
+            sub.submitted_at = now  
             db.add(sub)
 
         if new_tasks:
             await db.commit()
+            
+            
+            for sub in new_tasks:
+                await db.refresh(sub)
 
+        
         return list(current_tasks) + list(new_tasks)
 
     @staticmethod
