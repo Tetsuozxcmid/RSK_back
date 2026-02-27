@@ -64,10 +64,11 @@ class AuthServiceClient:
                 print(f"Updating learning status for user {user_id} to {learning}")
                 
                 
-                base_url = self.profile_url.replace('/users', '')
+                full_url = f"{self.profile_url}/profile_interaction/update_learning_status/"
+                print(f"🌐 Full URL: {full_url}")
                 
                 response = await client.post(
-                    f"{base_url}/profile_interaction/update_learning_status/",
+                    full_url,
                     json={
                         "user_id": user_id,
                         "is_learned": learning
@@ -86,7 +87,7 @@ class AuthServiceClient:
                     print(f"❌ Failed to update user {user_id}: {response.status_code}")
                     print(f"Response: {response.text}")
                     return False
-                    
+                        
             except Exception as e:
                 print(f"❌ Exception updating user {user_id}: {e}")
                 return False
