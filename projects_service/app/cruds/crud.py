@@ -1,16 +1,18 @@
 from datetime import datetime, timedelta
 from typing import List, Optional
-from sqlalchemy.orm import selectinload
+
+from fastapi import HTTPException, Request
+from sqlalchemy import and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import and_, or_
-from fastapi import HTTPException, Request
+from sqlalchemy.orm import selectinload
 
 from db.models.projects import Project, Task, TaskSubmission, TaskStatus
 from services.teams_client import TeamsClient
 
 
 class ZvezdaCRUD:
+
     
 
     @staticmethod
@@ -23,25 +25,51 @@ class ZvezdaCRUD:
             star_category=project_data.star_category.value,
             level_number=project_data.level_number,
         )
+
         db.add(project)
         await db.commit()
         await db.refresh(project)
 
-        
         result = await db.execute(
             select(Project)
             .options(selectinload(Project.tasks))
             .where(Project.id == project.id)
         )
+
         return result.scalar_one()
+
+    @staticmethod
+    async def list_projects(db: AsyncSession, organization_id: Optional[int] = None):
+        query = select(Project).options(selectinload(Project.tasks))
+
+        if organization_id:
+            query = query.where(Project.organization_id == organization_id)
+
+        result = await db.execute(query)
+        return result.scalars().all()
+
+    @staticmethod
+    async def get_project(db: AsyncSession, project_id: int):
+        result = await db.execute(
+            select(Project)
+            .options(selectinload(Project.tasks))
+            .where(Project.id == project_id)
+        )
+
+        project = result.scalar_one_or_none()
+
+        if not project:
+            raise HTTPException(404, "Project not found")
+
+        return project
 
     @staticmethod
     async def update_project(db: AsyncSession, project_id: int, project_data):
         project = await db.get(Project, project_id)
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
 
-        
+        if not project:
+            raise HTTPException(404, "Project not found")
+
         for key, value in project_data.dict(exclude_unset=True).items():
             if key == "star_category":
                 setattr(project, key, value.value)
@@ -50,15 +78,20 @@ class ZvezdaCRUD:
 
         await db.commit()
         await db.refresh(project)
+
         return project
 
     @staticmethod
     async def delete_project(db: AsyncSession, project_id: int):
         project = await db.get(Project, project_id)
+
         if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
+            raise HTTPException(404, "Project not found")
+
         await db.delete(project)
         await db.commit()
+
+    
 
     @staticmethod
     async def create_task(db: AsyncSession, task_data, project_id: int):
@@ -67,34 +100,128 @@ class ZvezdaCRUD:
             title=task_data.title,
             description=task_data.description,
             prize_points=task_data.prize_points or 0,
-            materials=getattr(task_data, "materials", []) or [],
+            materials=task_data.materials or [],
             status=TaskStatus.NOT_STARTED,
         )
+
         db.add(task)
         await db.commit()
         await db.refresh(task)
+
         return task
 
     @staticmethod
     async def update_task(db: AsyncSession, task_id: int, task_data):
         task = await db.get(Task, task_id)
+
         if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise HTTPException(404, "Task not found")
 
         for key, value in task_data.dict(exclude_unset=True).items():
             setattr(task, key, value)
 
         await db.commit()
         await db.refresh(task)
+
         return task
 
     @staticmethod
     async def delete_task(db: AsyncSession, task_id: int):
         task = await db.get(Task, task_id)
+
         if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise HTTPException(404, "Task not found")
+
         await db.delete(task)
         await db.commit()
+
+    @staticmethod
+    async def list_tasks(db: AsyncSession, project_id: Optional[int] = None):
+        query = select(Task)
+
+        if project_id:
+            query = query.where(Task.project_id == project_id)
+
+        result = await db.execute(query)
+        return result.scalars().all()
+
+    @staticmethod
+    async def get_task(db: AsyncSession, task_id: int):
+        result = await db.execute(select(Task).where(Task.id == task_id))
+        task = result.scalar_one_or_none()
+
+        if not task:
+            raise HTTPException(404, "Task not found")
+
+        return task
+
+    
+
+    @staticmethod
+    async def start_task(
+        db: AsyncSession, task_id: int, user_id: int, request: Request
+    ):
+        is_leader, team_id = await TeamsClient.is_user_team_leader(request)
+
+        if not is_leader:
+            raise HTTPException(403, "Only team leaders can start tasks")
+
+        task = await ZvezdaCRUD.get_task(db, task_id)
+
+        result = await db.execute(
+            select(TaskSubmission).where(
+                TaskSubmission.task_id == task_id,
+                TaskSubmission.team_id == team_id,
+            )
+        )
+
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            raise HTTPException(400, "Your team already started this task")
+
+        submission = TaskSubmission(
+            task_id=task_id,
+            team_id=team_id,
+            status=TaskStatus.IN_PROGRESS,
+        )
+
+        db.add(submission)
+        await db.commit()
+        await db.refresh(submission)
+
+        return submission
+
+    @staticmethod
+    async def submit_task(
+        db: AsyncSession,
+        task_id: int,
+        team_id: int,
+        text_description: Optional[str],
+        result_url: Optional[str],
+    ):
+        result = await db.execute(
+            select(TaskSubmission).where(
+                TaskSubmission.task_id == task_id,
+                TaskSubmission.team_id == team_id,
+            )
+        )
+
+        submission = result.scalar_one_or_none()
+
+        if not submission:
+            raise HTTPException(403, "Task was not started by this team")
+
+        submission.text_description = text_description
+        submission.result_url = result_url
+        submission.status = TaskStatus.SUBMITTED
+        submission.submitted_at = datetime.utcnow()
+
+        db.add(submission)
+        await db.commit()
+        await db.refresh(submission)
+
+        return submission
 
     
 
@@ -102,11 +229,10 @@ class ZvezdaCRUD:
     async def get_tasks_for_review(
         db: AsyncSession, moderator_id: int
     ) -> List[TaskSubmission]:
-        
+
         now = datetime.utcnow()
         lock_limit = now - timedelta(minutes=10)
 
-        
         query_current = (
             select(TaskSubmission)
             .options(
@@ -120,14 +246,15 @@ class ZvezdaCRUD:
                 )
             )
         )
+
         result = await db.execute(query_current)
         current_tasks = result.scalars().all()
 
         if len(current_tasks) >= 5:
             return current_tasks[:5]
 
-        
         needed = 5 - len(current_tasks)
+
         query_new = (
             select(TaskSubmission)
             .options(
@@ -148,27 +275,15 @@ class ZvezdaCRUD:
         new_res = await db.execute(query_new)
         new_tasks = new_res.scalars().all()
 
-        
         for sub in new_tasks:
             sub.moderator_id = moderator_id
-            sub.submitted_at = (
-                now  
-            )
+            sub.submitted_at = now
             db.add(sub)
 
         if new_tasks:
             await db.commit()
 
-        
-        all_tasks = list(current_tasks) + list(new_tasks)
-        
-        
-        for sub in all_tasks:
-            await db.refresh(sub, attribute_names=["task"])
-            if sub.task:
-                await db.refresh(sub.task, attribute_names=["project"])
-        
-        return all_tasks
+        return list(current_tasks) + list(new_tasks)
 
     @staticmethod
     async def review_submission(
@@ -178,138 +293,36 @@ class ZvezdaCRUD:
         status: TaskStatus,
         description: Optional[str] = None,
     ):
-        
+
         result = await db.execute(
             select(TaskSubmission).where(TaskSubmission.id == submission_id)
         )
+
         submission = result.scalar_one_or_none()
 
         if not submission:
             raise HTTPException(404, "Submission not found")
 
-        
         if submission.moderator_id != moderator_id:
             raise HTTPException(
-                403, "This task is assigned to another moderator or not locked by you"
+                403, "This task is assigned to another moderator"
             )
 
-        
         if submission.submitted_at < (datetime.utcnow() - timedelta(minutes=10)):
             raise HTTPException(
-                400, "Lock period (10 min) expired. Please fetch tasks again."
+                400, "Lock expired. Fetch tasks again."
             )
 
-        task = await db.get(Task, submission.task_id)
-
-        if status == TaskStatus.ACCEPTED:
-            submission.status = TaskStatus.ACCEPTED
-            task.status = TaskStatus.ACCEPTED
-            
-        else:
-            submission.status = TaskStatus.REJECTED
-            task.status = TaskStatus.IN_PROGRESS  
-
+        submission.status = status
         submission.reviewed_at = datetime.utcnow()
+
         if description:
             submission.text_description = (
                 f"{submission.text_description or ''}\n\nMOD_NOTE: {description}"
             )
 
         db.add(submission)
-        db.add(task)
         await db.commit()
         await db.refresh(submission)
+
         return submission
-
-    
-
-    @staticmethod
-    async def get_project(db: AsyncSession, project_id: int):
-        result = await db.execute(
-            select(Project)
-            .options(selectinload(Project.tasks))
-            .where(Project.id == project_id)
-        )
-        project = result.scalar_one_or_none()
-        if not project:
-            raise HTTPException(404, "Project not found")
-        return project
-
-    @staticmethod
-    async def list_projects(db: AsyncSession, organization_id: str = None):
-        query = select(Project).options(selectinload(Project.tasks))
-        if organization_id:
-            query = query.where(Project.organization_id == organization_id)
-        result = await db.execute(query)
-        return result.scalars().all()
-
-    @staticmethod
-    async def get_task(db: AsyncSession, task_id: int):
-        result = await db.execute(select(Task).where(Task.id == task_id))
-        task = result.scalar_one_or_none()
-        if not task:
-            raise HTTPException(404, "Task not found")
-        return task
-
-    @staticmethod
-    async def start_task(
-        db: AsyncSession, task_id: int, user_id: int, request: Request
-    ):
-        is_leader, team_id = await TeamsClient.is_user_team_leader(request)
-        if not is_leader:
-            raise HTTPException(403, "Only team leaders can take tasks")
-
-        task = await ZvezdaCRUD.get_task(db, task_id)
-        if task.team_id is not None:
-            raise HTTPException(400, "Task already taken")
-
-        task.team_id = team_id
-        task.leader_id = user_id
-        task.status = TaskStatus.IN_PROGRESS
-        db.add(task)
-        await db.commit()
-        await db.refresh(task)
-        return task
-
-    @staticmethod
-    async def submit_task(
-        db: AsyncSession,
-        task_id: int,
-        team_id: int,
-        text_description: str = None,
-        result_url: str = None,
-    ):
-        task = await ZvezdaCRUD.get_task(db, task_id)
-
-        if task.team_id != team_id:
-            raise HTTPException(403, "This team is not assigned to the task")
-
-        submission = TaskSubmission(
-            task_id=task_id,
-            team_id=team_id,
-            text_description=text_description,
-            result_url=result_url,
-            status=TaskStatus.SUBMITTED,
-        )
-
-        task.status = TaskStatus.SUBMITTED
-        db.add(submission)
-        db.add(task)
-        await db.commit()
-        await db.refresh(submission)
-        return submission
-
-    @staticmethod
-    async def list_tasks(db: AsyncSession, project_id: int = None):
-        query = select(Task)
-        if project_id:
-            query = query.where(Task.project_id == project_id)
-        result = await db.execute(query)
-        return result.scalars().all()
-
-    @staticmethod
-    async def get_task_submissions(db: AsyncSession, task_id: int):
-        result = await db.execute(
-            select(TaskSubmission).where(TaskSubmission.task_id == task_id)
-        )
-        return result.scalars().all()
