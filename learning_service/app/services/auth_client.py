@@ -10,7 +10,7 @@ ALGORITHM = settings.ALGORITHM
 class AuthServiceClient:
     def __init__(self):
         self.base_url = settings.AUTH_SERVICE_URL
-        self.profile_service_url = settings.PROFILE_SERVICE_URL  # URL твоего profile-сервиса
+        self.profile_service_url = settings.PROFILE_SERVICE_URL  
 
     async def get_user_by_id(self, user_id: int) -> Optional[Dict]:
         async with httpx.AsyncClient() as client:
