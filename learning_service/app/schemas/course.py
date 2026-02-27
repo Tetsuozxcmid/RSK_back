@@ -21,6 +21,8 @@ class UserProfileResponse(BaseModel):
     user_id: int
     learning: bool
 
+
+
 class CourseResponse(BaseModel):
     id: int
     lesson_name: str

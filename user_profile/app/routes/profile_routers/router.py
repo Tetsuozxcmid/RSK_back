@@ -4,11 +4,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from schemas.user import (
+    BulkUpdateLearningRequest,
     ProfileCreateSchema,
     ProfileResponse,
     ProfileUpdate,
     ProfileJoinedTeamUpdate,
     ProfileJoinedOrg,
+    UpdateLearningStatusRequest,
     UserRoleUpdate,
 )
 from schemas.user_batch import UserBatchRequest
@@ -46,6 +48,42 @@ async def update_user_profile_joined_team(
         team_id=update_data.team_id,
     )
 
+@router.post("/profile_interaction/update_learning_status/")
+async def update_learning_status(
+    request: UpdateLearningStatusRequest,
+    db: AsyncSession = Depends(get_db) 
+):
+    
+    user = await db.execute(select(User).where(User.id == request.user_id))
+    user = user.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.is_learned = request.is_learned
+    await db.commit()
+    
+    return {"status": "success", "user_id": request.user_id, "is_learned": request.is_learned}
+
+
+@router.post("/profile_interaction/bulk_update_learning/")
+async def bulk_update_learning(
+    request: BulkUpdateLearningRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    
+    updated = 0
+    for user_data in request.users:
+        result = await db.execute(
+            update(User)
+            .where(User.id == user_data["user_id"])
+            .values(is_learned=user_data["is_learned"])
+        )
+        if result.rowcount > 0:
+            updated += 1
+    
+    await db.commit()
+    return {"status": "success", "updated": updated}
 
 @profile_management_router.post("/update_user_profile_joined_org/")
 async def update_user_profile_joined_org(

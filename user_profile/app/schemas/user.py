@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import List, Optional
 from db.models.user_enum import UserEnum
 
 
@@ -38,7 +38,13 @@ class ProfileResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class UpdateLearningStatusRequest(BaseModel):
+    user_id: int
+    is_learned: bool
 
+class BulkUpdateLearningRequest(BaseModel):
+    users: List[dict] 
+    
 class ProfileCreateSchema(BaseModel):
     NameIRL: Optional[str] = None
     email: Optional[str] = None

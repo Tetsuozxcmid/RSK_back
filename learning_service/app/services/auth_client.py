@@ -64,10 +64,12 @@ class AuthServiceClient:
             try:
                 print(f"Updating learning status for user {user_id} to {learning}")
                 
-                
-                response = await client.patch(
-                    f"{self.profile_url}/profile_interaction/update_profile/{user_id}",
-                    json={"is_learned": learning},  
+                response = await client.post(
+                    f"{self.profile_url}/profile_interaction/update_learning_status/",
+                    json={
+                        "user_id": user_id,
+                        "is_learned": learning
+                    },
                     headers={
                         "Authorization": f"Bearer {settings.SECRET_KEY}",
                         "Content-Type": "application/json"
