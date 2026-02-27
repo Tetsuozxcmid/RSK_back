@@ -1,6 +1,6 @@
 import httpx
 from typing import Optional, Dict, List
-from config import settings
+from app.config import settings
 from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
 
@@ -10,7 +10,7 @@ ALGORITHM = settings.ALGORITHM
 class AuthServiceClient:
     def __init__(self):
         self.base_url = settings.AUTH_SERVICE_URL
-        self.profile_service_url = settings.PROFILE_SERVICE_URL  
+        self.profile_service_url = settings.PROFILE_SERVICE_URL
 
     async def get_user_by_id(self, user_id: int) -> Optional[Dict]:
         async with httpx.AsyncClient() as client:
@@ -20,12 +20,8 @@ class AuthServiceClient:
                     f"{self.base_url}/users_interaction/get_user_by_id/{user_id}",
                     timeout=30.0,
                 )
-                print(f"Response status: {response.status_code}")
-
                 if response.status_code == 200:
-                    user_data = response.json()
-                    print(f"User data received: {user_data}")
-                    return user_data
+                    return response.json()
                 else:
                     print(f"Failed to fetch user: {response.status_code}")
                     return None
@@ -36,21 +32,22 @@ class AuthServiceClient:
     async def get_user_email(self, user_id: int) -> Optional[str]:
         user_data = await self.get_user_by_id(user_id)
         if user_data:
-            email = user_data.get("email")
-            print(f"Extracted email: {email}")
-            return email
+            return user_data.get("email")
         return None
     
     async def get_all_users(self) -> List[Dict]:
-        """
-        Получает список всех пользователей из profile-сервиса
-        """
+       
         async with httpx.AsyncClient() as client:
             try:
                 print(f"Fetching all users from {self.profile_service_url}")
-                response = await client.get(
-                    f"{self.profile_service_url}/api/users/",  # подставь свой эндпоинт
-                    headers={"Authorization": f"Bearer {settings.INTERNAL_API_KEY}"},
+                
+                response = await client.post(
+                    f"{self.profile_service_url}/profile_interaction/get_users_batch",
+                    json=[],  
+                    headers={
+                        "Authorization": f"Bearer {settings.SECRET_KEY}",
+                        "Content-Type": "application/json"
+                    },
                     timeout=30.0,
                 )
                 
@@ -66,16 +63,31 @@ class AuthServiceClient:
                 return []
 
     async def update_user_learning_status(self, user_id: int, learning: bool) -> bool:
-        """
-        Обновляет поле is_learned в profile-сервисе
-        """
+        
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.patch(
-                    f"{self.profile_service_url}/api/users/{user_id}",  # подставь свой эндпоинт
-                    json={"is_learned": learning},
+             
+                get_response = await client.get(
+                    f"{self.profile_service_url}/profile_interaction/get_profile/?user_id={user_id}",
+                    headers={"Authorization": f"Bearer {settings.SECRET_KEY}"},
+                    timeout=10.0
+                )
+                
+                if get_response.status_code != 200:
+                    print(f"Failed to get user {user_id}: {get_response.status_code}")
+                    return False
+                
+                user_data = get_response.json()
+                
+                
+                response = await client.post(
+                    f"{self.profile_service_url}/profile_interaction/update_profile/",
+                    json={
+                        "user_id": user_id,
+                        "is_learned": learning
+                    },
                     headers={
-                        "Authorization": f"Bearer {settings.INTERNAL_API_KEY}",
+                        "Authorization": f"Bearer {settings.SECRET_KEY}",
                         "Content-Type": "application/json"
                     },
                     timeout=10.0
@@ -93,14 +105,11 @@ class AuthServiceClient:
                 return False
 
     async def get_user_learning_status(self, user_id: int) -> Optional[bool]:
-        """
-        Получает текущий статус is_learned пользователя
-        """
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
-                    f"{self.profile_service_url}/api/users/{user_id}",
-                    headers={"Authorization": f"Bearer {settings.INTERNAL_API_KEY}"},
+                    f"{self.profile_service_url}/profile_interaction/get_profile/?user_id={user_id}",
+                    headers={"Authorization": f"Bearer {settings.SECRET_KEY}"},
                     timeout=10.0
                 )
                 
