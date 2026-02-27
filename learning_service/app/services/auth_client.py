@@ -1,5 +1,5 @@
 import httpx
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from config import settings
 from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
@@ -10,6 +10,7 @@ ALGORITHM = settings.ALGORITHM
 class AuthServiceClient:
     def __init__(self):
         self.base_url = settings.AUTH_SERVICE_URL
+        self.profile_service_url = settings.PROFILE_SERVICE_URL  # URL твоего profile-сервиса
 
     async def get_user_by_id(self, user_id: int) -> Optional[Dict]:
         async with httpx.AsyncClient() as client:
@@ -20,13 +21,10 @@ class AuthServiceClient:
                     timeout=30.0,
                 )
                 print(f"Response status: {response.status_code}")
-                print(f"Response headers: {response.headers}")
-                print(f"Response text: {response.text}")
 
                 if response.status_code == 200:
                     user_data = response.json()
                     print(f"User data received: {user_data}")
-                    print(f"Email in response: {user_data.get('email')}")
                     return user_data
                 else:
                     print(f"Failed to fetch user: {response.status_code}")
@@ -42,6 +40,80 @@ class AuthServiceClient:
             print(f"Extracted email: {email}")
             return email
         return None
+    
+    async def get_all_users(self) -> List[Dict]:
+        """
+        Получает список всех пользователей из profile-сервиса
+        """
+        async with httpx.AsyncClient() as client:
+            try:
+                print(f"Fetching all users from {self.profile_service_url}")
+                response = await client.get(
+                    f"{self.profile_service_url}/api/users/",  # подставь свой эндпоинт
+                    headers={"Authorization": f"Bearer {settings.INTERNAL_API_KEY}"},
+                    timeout=30.0,
+                )
+                
+                if response.status_code == 200:
+                    users = response.json()
+                    print(f"Received {len(users)} users")
+                    return users
+                else:
+                    print(f"Failed to fetch users: {response.status_code}")
+                    return []
+            except Exception as e:
+                print(f"Error fetching users from profile service: {e}")
+                return []
+
+    async def update_user_learning_status(self, user_id: int, learning: bool) -> bool:
+        """
+        Обновляет поле is_learned в profile-сервисе
+        """
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.patch(
+                    f"{self.profile_service_url}/api/users/{user_id}",  # подставь свой эндпоинт
+                    json={"is_learned": learning},
+                    headers={
+                        "Authorization": f"Bearer {settings.INTERNAL_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    timeout=10.0
+                )
+                
+                if response.status_code == 200:
+                    print(f"Updated learning status for user {user_id} to {learning}")
+                    return True
+                else:
+                    print(f"Failed to update learning status: {response.status_code}")
+                    return False
+                    
+            except Exception as e:
+                print(f"Failed to update learning status for user {user_id}: {e}")
+                return False
+
+    async def get_user_learning_status(self, user_id: int) -> Optional[bool]:
+        """
+        Получает текущий статус is_learned пользователя
+        """
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{self.profile_service_url}/api/users/{user_id}",
+                    headers={"Authorization": f"Bearer {settings.INTERNAL_API_KEY}"},
+                    timeout=10.0
+                )
+                
+                if response.status_code == 200:
+                    user_data = response.json()
+                    return user_data.get("is_learned", False)
+                else:
+                    print(f"Failed to get user learning status: {response.status_code}")
+                    return None
+                    
+            except Exception as e:
+                print(f"Error getting user learning status: {e}")
+                return None
 
 
 async def get_current_user_role(request: Request) -> str:

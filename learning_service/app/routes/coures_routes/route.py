@@ -19,6 +19,7 @@ async def get_courses(
     return await course_crud.get_courses_with_progress(db, user_id)
 
 
+
 @router.get("/{course_id}", response_model=CourseResponse)
 async def get_course(
     course_id: int,

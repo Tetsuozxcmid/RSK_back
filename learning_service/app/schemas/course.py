@@ -17,6 +17,9 @@ class CourseUpdate(BaseModel):
     file_extension: Optional[str] = None
     download_url: Optional[str] = None
 
+class UserProfileResponse(BaseModel):
+    user_id: int
+    learning: bool
 
 class CourseResponse(BaseModel):
     id: int

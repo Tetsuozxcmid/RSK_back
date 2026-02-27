@@ -226,7 +226,7 @@ services:
     networks:
       - shared_network
 
-  rsk_learning_app:
+    rsk_learning_app:
     build: ./learning_service
     depends_on:
       rsk_learning_db:
@@ -247,10 +247,6 @@ services:
       - "traefik.http.middlewares.learning-strip.stripprefix.prefixes=/learning"
       - "traefik.http.routers.learning.middlewares=learning-strip"
       
-    
-    
-
-
   rsk_learning_db:
     image: postgres:17-alpine
     volumes:
@@ -265,6 +261,34 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - shared_network
+
+  celery_worker:
+    build: ./learning_service
+    command: celery -A services.celery_app worker --loglevel=info -Q learning
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - rsk_learning_db
+    env_file:
+      - ./learning_service/.env
+    volumes:
+      - ./learning_service:/app
+    networks:
+      - shared_network
+
+  celery_beat:
+    build: ./learning_service
+    command: celery -A services.celery_app beat --loglevel=info
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - celery_worker
+    env_file:
+      - ./learning_service/.env
+    volumes:
+      - ./learning_service:/app
     networks:
       - shared_network
 
