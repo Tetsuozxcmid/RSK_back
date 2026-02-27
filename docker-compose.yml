@@ -236,8 +236,6 @@ services:
     
     env_file:
     - ./learning_service/.env
-    networks:
-      - shared_network
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.learning.rule=Host(`api.rosdk.ru`) && PathPrefix(`/learning`)"  
