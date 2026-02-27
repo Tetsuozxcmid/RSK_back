@@ -3,7 +3,7 @@ from celery import shared_task
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-from app.db.session import AsyncSessionLocal
+from app.db.session import async_session_maker
 from app.crud.course_crud.learning_status_crud import learning_status_crud
 from app.services.auth_client import auth_client
 
@@ -27,7 +27,7 @@ async def update_single_user(user_id: int, db: AsyncSession) -> bool:
 
 
 async def bulk_update_all_users():
-    db = AsyncSessionLocal()
+    db = async_session_maker()
     try:
         users = await auth_client.get_all_users()
         
