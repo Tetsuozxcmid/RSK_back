@@ -7,7 +7,7 @@ celery_app = Celery(
     "learning_service",
     broker=settings.REDIS_URL,  
     backend=settings.REDIS_URL,
-    include=["services.learning_tasks"]  
+    include=["app.services.learning_tasks"]  
 )
 
 
@@ -25,7 +25,7 @@ celery_app.conf.update(
 
 celery_app.conf.beat_schedule = {
     "update-learning-status-every-day": {
-        "task": "services.learning_tasks.update_all_users_learning_status",  
+        "task": "app.services.learning_tasks.update_all_users_learning_status",  
         "schedule": crontab(hour=3, minute=0),  
         "options": {"queue": "learning"}
     },
