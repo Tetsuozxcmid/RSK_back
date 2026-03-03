@@ -20,6 +20,8 @@ class Settings(BaseSettings):
 
     URL_FOR_TOKEN: str
 
+    AUTH_SERVICE_URL: str
+
     VK_APP_ID: int
     VK_APP_SECRET: str
     VK_REDIRECT_URI: str
