@@ -8,6 +8,7 @@ class UserRole(str, Enum):
     STUDENT = "student"
     TEACHER = "teacher"
     MODER = "moder"
+    ADMIN = "admin"
 
 
 class UserRegister(BaseModel):
