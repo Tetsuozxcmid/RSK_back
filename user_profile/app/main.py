@@ -42,7 +42,7 @@ rabbitmq_connection = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global rabbitmq_connection, consumer_task, role_consumer_task
-    
+
     logger.info("=== STARTUP: Creating database tables ===")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -61,13 +61,11 @@ async def lifespan(app: FastAPI):
         raise
 
     logger.info("=== STARTUP: Starting RabbitMQ consumers ===")
-    
-    
+
     consumer_task = asyncio.create_task(
         consume_user_created_events(settings.RABBITMQ_URL)
     )
-    
-    
+
     role_consumer_task = asyncio.create_task(
         consume_role_updated_events(settings.RABBITMQ_URL)
     )
@@ -86,7 +84,7 @@ async def lifespan(app: FastAPI):
     role_consumer_task.add_done_callback(
         lambda t: handle_task_result(t, "Role updated consumer")
     )
-    
+
     logger.info("=== STARTUP: RabbitMQ consumers started ===")
 
     yield
@@ -96,16 +94,16 @@ async def lifespan(app: FastAPI):
         consumer_task.cancel()
     if role_consumer_task:
         role_consumer_task.cancel()
-    
+
     try:
         await asyncio.gather(consumer_task, role_consumer_task, return_exceptions=True)
     except Exception as e:
         logger.error(f"Error during consumer shutdown: {e}")
-    
+
     logger.info("=== SHUTDOWN: Closing RabbitMQ connection ===")
     if rabbitmq_connection:
         await rabbitmq_connection.close()
-    
+
     logger.info("=== SHUTDOWN: Complete ===")
 
 
@@ -159,9 +157,11 @@ def metrics():
 async def health_check():
     return {
         "status": "healthy",
-        "rabbitmq_connected": rabbitmq_connection is not None and not rabbitmq_connection.is_closed,
+        "rabbitmq_connected": rabbitmq_connection is not None
+        and not rabbitmq_connection.is_closed,
         "consumers": {
             "user_created": consumer_task is not None and not consumer_task.done(),
-            "role_updated": role_consumer_task is not None and not role_consumer_task.done(),
-        }
+            "role_updated": role_consumer_task is not None
+            and not role_consumer_task.done(),
+        },
     }

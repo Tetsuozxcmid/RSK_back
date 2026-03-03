@@ -49,14 +49,12 @@ class ProfileCRUD:
 
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found")
-        
-        
+
         organization_info = None
         if profile.Organization_id and profile.Organization_id > 0:
             org_data = await OrgsClient.get_organization_by_id(profile.Organization_id)
-            
+
             if org_data:
-                
                 organization_info = OrganizationSimple(
                     id=org_data.get("id"),
                     name=org_data.get("short_name") or org_data.get("full_name"),
@@ -65,10 +63,8 @@ class ProfileCRUD:
                     inn=org_data.get("inn"),
                     region=org_data.get("region"),
                     type=org_data.get("type"),
-                    
                 )
-        
-        
+
         profile_data = {
             "NameIRL": profile.NameIRL,
             "email": profile.email,
@@ -79,12 +75,12 @@ class ProfileCRUD:
             "Region": profile.Region,
             "Type": profile.Type,
             "Organization_id": profile.Organization_id,
-            "Organization": organization_info,  
+            "Organization": organization_info,
             "team": profile.team,
             "team_id": profile.team_id,
-            "is_learned": profile.is_learned
+            "is_learned": profile.is_learned,
         }
-        
+
         return ProfileResponse(**profile_data)
 
     @staticmethod
@@ -105,7 +101,7 @@ class ProfileCRUD:
             "Patronymic",
             "Description",
             "Region",
-            "Organization_id",  
+            "Organization_id",
             "email",
             "Type",
         ]:
@@ -119,29 +115,27 @@ class ProfileCRUD:
         except Exception as e:
             await db.rollback()
             raise HTTPException(status_code=400, detail=f"something got wrong {e}")
-        
+
     @staticmethod
-    async def update_my_role(
-        db: AsyncSession, 
-        user_id: int, 
-        new_role: UserEnum
-    ):
+    async def update_my_role(db: AsyncSession, user_id: int, new_role: UserEnum):
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
-        
+
         if not user:
             raise HTTPException(status_code=404, detail="Profile not found")
-        
+
         old_role = user.Type
         user.Type = new_role
-        
+
         try:
             await db.commit()
             await db.refresh(user)
             return user, old_role
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=400, detail=f"Error updating role: {str(e)}")
+            raise HTTPException(
+                status_code=400, detail=f"Error updating role: {str(e)}"
+            )
 
     @staticmethod
     async def get_all_users_profiles(db: AsyncSession):

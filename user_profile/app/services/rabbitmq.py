@@ -16,42 +16,39 @@ ROLE_MAPPING = {
 
 
 async def publish_role_update(
-    rabbitmq_connection, 
-    user_id: int, 
-    new_role: str, 
-    old_role: str = None
+    rabbitmq_connection, user_id: int, new_role: str, old_role: str = None
 ):
-   
     try:
         channel = await rabbitmq_connection.channel()
         exchange = await channel.declare_exchange(
             "user_events", type="direct", durable=True
         )
-        
+
         message_data = {
             "user_id": user_id,
             "new_role": new_role,
             "old_role": old_role,
             "event_type": "user.role_updated",
-            "timestamp": str(datetime.utcnow())
+            "timestamp": str(datetime.utcnow()),
         }
-        
+
         message = aio_pika.Message(
             body=json.dumps(message_data).encode(),
             headers={"event_type": "user.role_updated"},
             delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
         )
-        
+
         await exchange.publish(message, routing_key="user.role_updated")
-        print(f"[PUBLISHER] Role update published for user {user_id}: {old_role} -> {new_role}")
-        
+        print(
+            f"[PUBLISHER] Role update published for user {user_id}: {old_role} -> {new_role}"
+        )
+
     except Exception as e:
         print(f"[PUBLISHER] Failed to publish role update: {e}")
-        raise  
+        raise
 
 
 async def consume_user_created_events(rabbitmq_url: str):
-   
     connection = await aio_pika.connect_robust(rabbitmq_url)
     channel = await connection.channel()
 
@@ -115,12 +112,10 @@ async def consume_user_created_events(rabbitmq_url: str):
 
 
 async def get_rabbitmq_connection(request: Request) -> AbstractRobustConnection:
-    
     return request.app.state.rabbitmq_connection
 
 
 async def consume_role_updated_events(rabbitmq_url: str):
-    
     connection = await aio_pika.connect_robust(rabbitmq_url)
     channel = await connection.channel()
 
@@ -143,7 +138,9 @@ async def consume_role_updated_events(rabbitmq_url: str):
                 new_role = data.get("new_role")
                 old_role = data.get("old_role")
 
-                print(f"[CONSUMER] Received role update for user {user_id}: {old_role} -> {new_role}")
+                print(
+                    f"[CONSUMER] Received role update for user {user_id}: {old_role} -> {new_role}"
+                )
 
                 role_str = str(new_role).lower()
                 if role_str not in ROLE_MAPPING:
@@ -162,7 +159,9 @@ async def consume_role_updated_events(rabbitmq_url: str):
                     if user:
                         user.Type = new_role_enum
                         await session.commit()
-                        print(f"[CONSUMER] Role updated for user_id={user_id} to {new_role}")
+                        print(
+                            f"[CONSUMER] Role updated for user_id={user_id} to {new_role}"
+                        )
                     else:
                         print(f"[CONSUMER] User {user_id} not found")
 

@@ -84,7 +84,7 @@ app.include_router(
     prefix="/api/moderator",
     tags=["moderator-assignments"],
 )
-app.include_router(profile_router, prefix="/api", tags=["profile"]) 
+app.include_router(profile_router, prefix="/api", tags=["profile"])
 
 
 @app.get("/metrics", include_in_schema=False)

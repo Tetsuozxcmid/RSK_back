@@ -11,7 +11,10 @@ from fastapi import (
 )
 from sqlalchemy import select
 from schemas.user_schemas.user_register import UserRegister
-from schemas.user_schemas.user_password import ChangePasswordSchema, PasswordResetRequest
+from schemas.user_schemas.user_password import (
+    ChangePasswordSchema,
+    PasswordResetRequest,
+)
 from schemas.user_schemas.user_auth import UserAuth
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models.user import User
@@ -23,7 +26,7 @@ import asyncio
 from fastapi.responses import HTMLResponse, JSONResponse
 from pathlib import Path
 from services.rabbitmq import get_rabbitmq_connection
-from services.auth_client import get_moderator,get_admin
+from services.auth_client import get_moderator, get_admin
 from aio_pika.abc import AbstractRobustConnection
 from services.yandex_oauth import yandex_router
 from services.vk_oauth import vk_router
@@ -37,9 +40,7 @@ email_router = APIRouter(tags=["Email Management"])
 user_management_router = APIRouter(tags=["User Management"])
 
 
-
 def _get_metric_active_users():
-   
     try:
         from main import ACTIVE_USERS
 
@@ -50,7 +51,6 @@ def _get_metric_active_users():
 
 
 def _get_service_name():
-   
     try:
         from main import SERVICE_NAME
 
@@ -60,7 +60,6 @@ def _get_service_name():
 
 
 def update_active_users_metric(active_count: int):
-    
     metric = _get_metric_active_users()
     service_name = _get_service_name()
 
@@ -74,9 +73,6 @@ def update_active_users_metric(active_count: int):
             print(f"✗ Error updating metric: {e}")
     else:
         print(f"⚠ Could not update metric: metric={metric}, service={service_name}")
-
-
-
 
 
 @auth_router.post("/register/")
@@ -155,13 +151,13 @@ async def auth_user(
         {"sub": str(user["id"]), "role": user["role"]}
     )
     response.set_cookie(
-    key="users_access_token",
-    value=access_token,
-    path="/",
-    domain=".rosdk.ru",      
-    secure=True,             
-    httponly=True,
-    samesite="none",
+        key="users_access_token",
+        value=access_token,
+        path="/",
+        domain=".rosdk.ru",
+        secure=True,
+        httponly=True,
+        samesite="none",
     )
 
     return "Access successed"
@@ -172,17 +168,17 @@ async def auth_user(
     status_code=status.HTTP_200_OK,
     response_model=dict,
     summary="Logout user",
-    description="Удаляет auth cookies и завершает сессию"
+    description="Удаляет auth cookies и завершает сессию",
 )
 async def logout_user(response: Response):
     response.delete_cookie(
-    key="users_access_token",
-    path="/",
-    domain=".rosdk.ru",
-    secure=True,
-    httponly=True,
-    samesite="none",
-)
+        key="users_access_token",
+        path="/",
+        domain=".rosdk.ru",
+        secure=True,
+        httponly=True,
+        samesite="none",
+    )
 
     response.delete_cookie(
         key="userData",
@@ -269,7 +265,7 @@ async def resend_confirmation(
 
 
 @user_management_router.get("/get_users/", description="Для админа будет токен")
-async def get_all_users(db: AsyncSession = Depends(get_db),_=Depends(get_admin)):
+async def get_all_users(db: AsyncSession = Depends(get_db), _=Depends(get_admin)):
     try:
         users = await UserCRUD.get_all_users(db)
 
@@ -281,7 +277,6 @@ async def get_all_users(db: AsyncSession = Depends(get_db),_=Depends(get_admin))
             print(f"  Первый пользователь: {users[0]}")
             print(f"  Поле 'verified': {users[0].get('verified')}")
 
-       
         active_count = 0
         for user in users:
             if user.get("verified", False):
@@ -290,7 +285,6 @@ async def get_all_users(db: AsyncSession = Depends(get_db),_=Depends(get_admin))
         print(f"  Активных пользователей: {active_count}")
         print(f"{'=' * 60}\n")
 
-        
         update_active_users_metric(active_count)
 
         return users
@@ -300,7 +294,9 @@ async def get_all_users(db: AsyncSession = Depends(get_db),_=Depends(get_admin))
 
 
 @user_management_router.delete("/delete_user/")
-async def delete_user(user_id: int, db: AsyncSession = Depends(get_db),_=Depends(get_admin)):
+async def delete_user(
+    user_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_admin)
+):
     success = await UserCRUD.delete_user(db, user_id)
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
@@ -313,47 +309,38 @@ async def reset_password(
     db: AsyncSession = Depends(get_db),
     background_tasks: BackgroundTasks = None,
 ):
-    
     try:
-        
         new_password = generate_random_password(12)
-        
-        
+
         user = await UserCRUD.reset_password_by_email_or_login(
-            db=db,
-            email_or_login=reset_data.email_or_login,
-            new_password=new_password
+            db=db, email_or_login=reset_data.email_or_login, new_password=new_password
         )
-        
-        
+
         if background_tasks:
             background_tasks.add_task(
                 send_new_password_email,
                 recipient_email=user.email,
                 new_password=new_password,
-                login=user.login
+                login=user.login,
             )
         else:
             asyncio.create_task(
                 send_new_password_email(
                     recipient_email=user.email,
                     new_password=new_password,
-                    login=user.login
+                    login=user.login,
                 )
             )
-        
+
         return {
             "message": "New password has been sent to your email",
-            "email": user.email
+            "email": user.email,
         }
-        
+
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Password reset failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Password reset failed: {str(e)}")
 
 
 @user_management_router.get("/get_user_by_id/{user_id}")
@@ -368,12 +355,9 @@ async def get_user_by_id(user_id: int, db: AsyncSession = Depends(get_db)):
 # ========================================
 @router.get("/test-metric")
 async def test_metric():
-    
     try:
-        
         update_active_users_metric(777)
 
-        
         metric = _get_metric_active_users()
         service_name = _get_service_name()
 
@@ -390,7 +374,6 @@ async def test_metric():
 
 @router.get("/health")
 async def health_check():
-    
     return {
         "status": "healthy",
         "service": "auth",
@@ -406,11 +389,8 @@ async def health_check():
 # ========================================================================
 
 
-
 router.include_router(auth_router)
 router.include_router(email_router)
 router.include_router(user_management_router)
 router.include_router(yandex_router)
 router.include_router(vk_router)
-
-

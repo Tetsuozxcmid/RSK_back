@@ -9,7 +9,7 @@ from sqlalchemy import select, func
 from config import settings
 from routes.users_router.router import router as user_router
 from services.rabbitmq import init_rabbitmq
-from services.role_consumer import consume_role_updated_events  
+from services.role_consumer import consume_role_updated_events
 from db.session import async_session_maker
 from db.models.user import User
 
@@ -64,23 +64,19 @@ async def update_metrics_periodically():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global metrics_task, role_consumer_task, rabbitmq_connection
-    
+
     print("Starting auth service...")
-    
-   
+
     rabbitmq_connection = await init_rabbitmq()
     app.state.rabbitmq_connection = rabbitmq_connection
-    
-    
+
     print("Starting RabbitMQ role consumer...")
     role_consumer_task = asyncio.create_task(
         consume_role_updated_events(settings.RABBITMQ_URL)
     )
 
-    
     metrics_task = asyncio.create_task(update_metrics_periodically())
 
-   
     try:
         async with async_session_maker() as session:
             stmt = select(func.count()).where(User.verified == True)
@@ -99,28 +95,25 @@ async def lifespan(app: FastAPI):
     yield
 
     print("Shutting down auth service...")
-    
-    
+
     if role_consumer_task:
         role_consumer_task.cancel()
         try:
             await role_consumer_task
         except asyncio.CancelledError:
             pass
-    
-    
+
     if metrics_task:
         metrics_task.cancel()
         try:
             await metrics_task
         except asyncio.CancelledError:
             pass
-    
-   
+
     if rabbitmq_connection and not rabbitmq_connection.is_closed:
         await rabbitmq_connection.close()
         print("RabbitMQ connection closed")
-    
+
     print("Service shutdown complete")
 
 
@@ -172,17 +165,19 @@ def metrics():
 
 @app.get("/health")
 async def health():
-    
-    consumer_status = "running" if role_consumer_task and not role_consumer_task.done() else "stopped"
-    rabbitmq_status = "connected" if rabbitmq_connection and not rabbitmq_connection.is_closed else "disconnected"
-    
+    consumer_status = (
+        "running" if role_consumer_task and not role_consumer_task.done() else "stopped"
+    )
+    rabbitmq_status = (
+        "connected"
+        if rabbitmq_connection and not rabbitmq_connection.is_closed
+        else "disconnected"
+    )
+
     return {
         "status": "healthy",
         "service": "auth",
-        "consumers": {
-            "role_consumer": consumer_status,
-            "rabbitmq": rabbitmq_status
-        },
+        "consumers": {"role_consumer": consumer_status, "rabbitmq": rabbitmq_status},
         "metrics": {
             "verified_users": "active_users_total",
             "total_users": "total_users",
@@ -192,7 +187,6 @@ async def health():
 
 
 app.include_router(user_router)
-
 
 
 @app.get("/update-metrics-now")

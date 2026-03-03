@@ -214,9 +214,11 @@ async def send_confirmation_email(recipient_email: str, token: str, login: str):
         logger.error(
             f"Failed to send confirmation email to {recipient_email}: {str(e)}"
         )
-        
-async def send_new_password_email(recipient_email: str, new_password: str, login: str = None):
-    
+
+
+async def send_new_password_email(
+    recipient_email: str, new_password: str, login: str = None
+):
     try:
         message = MIMEMultipart()
         message["From"] = settings.SENDER_EMAIL
@@ -440,5 +442,7 @@ async def send_new_password_email(recipient_email: str, new_password: str, login
         logger.info(f"New password email sent to {recipient_email}")
 
     except Exception as e:
-        logger.error(f"Failed to send new password email to {recipient_email}: {str(e)}")
+        logger.error(
+            f"Failed to send new password email to {recipient_email}: {str(e)}"
+        )
         raise

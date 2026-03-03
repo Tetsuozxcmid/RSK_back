@@ -119,10 +119,9 @@ class TeamCRUD:
                 logging.info(f"Team '{team_data.name}' already exists")
                 raise HTTPException(status_code=400, detail="Team already exists")
 
-            
             org_id = team_data.organization_id
             org_data = await OrgsClient.get_organization_by_id(org_id)
-            
+
             if not org_data:
                 logging.info(
                     f"Organization with id {org_id} does not exist. Sending request to admin bot."
@@ -130,16 +129,15 @@ class TeamCRUD:
                 await BotClient.send_team_request_to_bot(
                     leader_id=leader_id,
                     team_name=team_data.name,
-                    org_name=f"Organization ID: {org_id}",  
+                    org_name=f"Organization ID: {org_id}",
                 )
                 raise HTTPException(
                     status_code=400,
                     detail="Organization doesn't exist. Admin notification sent, check later",
                 )
-            
-            
+
             org_name = org_data.get("short_name") or org_data.get("full_name")
-            
+
             if not org_name:
                 org_name = f"Организация {org_id}"
                 logging.warning(f"No organization name found for id {org_id}")
@@ -149,8 +147,8 @@ class TeamCRUD:
                 direction=team_data.direction,
                 region=team_data.region,
                 leader_id=leader_id,
-                organization_id=org_id,  
-                organization_name=org_name,  
+                organization_id=org_id,
+                organization_name=org_name,
                 points=team_data.points,
                 description=team_data.description,
                 tasks_completed=team_data.tasks_completed,
@@ -176,7 +174,7 @@ class TeamCRUD:
 
             await UserProfileClient.update_user_org(
                 user_id=leader_id,
-                organization_name=org_name,  
+                organization_name=org_name,
                 organization_id=org_id,
             )
 
@@ -423,19 +421,16 @@ class TeamCRUD:
         if not teams:
             return []
 
-        
         org_ids = [team.organization_id for team in teams if team.organization_id]
-        org_ids = list(set(org_ids))  
-        
-        
+        org_ids = list(set(org_ids))
+
         orgs_data = {}
         if org_ids:
             for org_id in org_ids:
                 org_data = await OrgsClient.get_organization_by_id(org_id)
                 if org_data:
                     orgs_data[org_id] = org_data
-        
-        
+
         enriched_teams = []
         for team in teams:
             team_dict = {
@@ -452,8 +447,7 @@ class TeamCRUD:
                 "number_of_members": team.number_of_members,
                 "created_at": team.created_at if hasattr(team, "created_at") else None,
             }
-            
-            
+
             if team.organization_id and team.organization_id in orgs_data:
                 org_data = orgs_data[team.organization_id]
                 team_dict["organization_info"] = {
@@ -464,9 +458,9 @@ class TeamCRUD:
                     "region": org_data.get("region"),
                     "type": org_data.get("type"),
                 }
-            
+
             enriched_teams.append(team_dict)
-        
+
         return enriched_teams
 
     @staticmethod
@@ -477,16 +471,17 @@ class TeamCRUD:
         if not team:
             return None
 
-        
         if team.organization_id:
             org_data = await OrgsClient.get_organization_by_id(team.organization_id)
             if org_data:
-                current_org_name = org_data.get("short_name") or org_data.get("full_name")
-                
+                current_org_name = org_data.get("short_name") or org_data.get(
+                    "full_name"
+                )
+
                 if current_org_name and current_org_name != team.organization_name:
                     team.organization_name = current_org_name
                     await db.commit()
-        
+
         return team
 
     @staticmethod
@@ -497,18 +492,15 @@ class TeamCRUD:
         if not team:
             raise HTTPException(status_code=404, detail="Team not found")
 
-        
         if "organization_id" in update_data and update_data["organization_id"]:
             org_id = update_data["organization_id"]
             org_data = await OrgsClient.get_organization_by_id(org_id)
-            
+
             if not org_data:
                 raise HTTPException(
-                    status_code=404,
-                    detail=f"Organization with id {org_id} not found"
+                    status_code=404, detail=f"Organization with id {org_id} not found"
                 )
-            
-            
+
             org_name = org_data.get("short_name") or org_data.get("full_name")
             if org_name:
                 team.organization_name = org_name
@@ -516,7 +508,7 @@ class TeamCRUD:
                 team.organization_name = f"Организация {org_id}"
 
         for key, value in update_data.items():
-            if key != "organization_name":  
+            if key != "organization_name":
                 setattr(team, key, value)
 
         try:
@@ -533,14 +525,12 @@ class TeamCRUD:
     async def get_teams_by_organization(db: AsyncSession, org_id: int):
         result = await db.execute(select(Team).where(Team.organization_id == org_id))
         teams = result.scalars().all()
-        
+
         if not teams:
             return []
-        
-       
+
         org_data = await OrgsClient.get_organization_by_id(org_id)
-        
-        
+
         enriched_teams = []
         for team in teams:
             team_dict = {
@@ -556,16 +546,16 @@ class TeamCRUD:
                 "tasks_completed": team.tasks_completed,
                 "number_of_members": team.number_of_members,
             }
-            
+
             if org_data:
                 team_dict["organization_info"] = {
                     "id": org_id,
                     "name": org_data.get("short_name") or org_data.get("full_name"),
                     "full_name": org_data.get("full_name"),
                 }
-            
+
             enriched_teams.append(team_dict)
-        
+
         return enriched_teams
 
     @staticmethod

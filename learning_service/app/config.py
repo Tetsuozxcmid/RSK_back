@@ -18,8 +18,7 @@ class Settings(BaseSettings):
     SENDER_EMAIL: str
 
     AUTH_SERVICE_URL: str
-    PROFILE_SERVICE_URL:str
-    
+    PROFILE_SERVICE_URL: str
 
     REDIS_URL: str = "redis://redis:6379"
 

@@ -13,7 +13,6 @@ class AuthServiceClient:
         self.profile_url = settings.PROFILE_SERVICE_URL
 
     async def get_user_by_id(self, user_id: int) -> Optional[Dict]:
-       
         async with httpx.AsyncClient() as client:
             try:
                 print(f"Fetching user {user_id} from {self.auth_url}")
@@ -31,14 +30,12 @@ class AuthServiceClient:
                 return None
 
     async def get_user_email(self, user_id: int) -> Optional[str]:
-       
         user_data = await self.get_user_by_id(user_id)
         if user_data:
             return user_data.get("email")
         return None
-    
+
     async def get_all_users(self) -> List[Dict]:
-        
         async with httpx.AsyncClient() as client:
             try:
                 print(f"Fetching all users from {self.auth_url}")
@@ -46,13 +43,15 @@ class AuthServiceClient:
                     f"{self.auth_url}/users_interaction/get_users/",
                     timeout=30.0,
                 )
-                
+
                 if response.status_code == 200:
                     users = response.json()
                     print(f"Received {len(users)} users from auth_service")
                     return users
                 else:
-                    print(f"Failed to fetch users from auth_service: {response.status_code}")
+                    print(
+                        f"Failed to fetch users from auth_service: {response.status_code}"
+                    )
                     return []
             except Exception as e:
                 print(f"Error fetching users from auth service: {e}")
@@ -62,24 +61,22 @@ class AuthServiceClient:
         async with httpx.AsyncClient() as client:
             try:
                 print(f"Updating learning status for user {user_id} to {learning}")
-                
-                
-                full_url = f"{self.profile_url}/profile_interaction/update_learning_status/"
+
+                full_url = (
+                    f"{self.profile_url}/profile_interaction/update_learning_status/"
+                )
                 print(f"🌐 Full URL: {full_url}")
-                
+
                 response = await client.post(
                     full_url,
-                    json={
-                        "user_id": user_id,
-                        "is_learned": learning
-                    },
+                    json={"user_id": user_id, "is_learned": learning},
                     headers={
                         "Authorization": f"Bearer {settings.SECRET_KEY}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
-                    timeout=10.0
+                    timeout=10.0,
                 )
-                
+
                 if response.status_code == 200:
                     print(f"✅ Successfully updated user {user_id} to {learning}")
                     return True
@@ -87,24 +84,21 @@ class AuthServiceClient:
                     print(f"❌ Failed to update user {user_id}: {response.status_code}")
                     print(f"Response: {response.text}")
                     return False
-                        
+
             except Exception as e:
                 print(f"❌ Exception updating user {user_id}: {e}")
                 return False
 
     async def get_user_learning_status(self, user_id: int) -> Optional[bool]:
-        
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
                     f"{self.profile_url}/profile_interaction/get_profile/",
                     params={"user_id": user_id},
-                    headers={
-                        "Authorization": f"Bearer {settings.SECRET_KEY}"  
-                    },
-                    timeout=10.0
+                    headers={"Authorization": f"Bearer {settings.SECRET_KEY}"},
+                    timeout=10.0,
                 )
-                
+
                 if response.status_code == 200:
                     user_data = response.json()
                     if isinstance(user_data, list) and len(user_data) > 0:
@@ -115,7 +109,7 @@ class AuthServiceClient:
                 else:
                     print(f"Failed to get user learning status: {response.status_code}")
                     return None
-                    
+
             except Exception as e:
                 print(f"Error getting user learning status: {e}")
                 return None

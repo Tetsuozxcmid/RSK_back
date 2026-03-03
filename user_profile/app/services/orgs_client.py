@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 class OrgsClient:
-    ORGS_URL =  settings.ORGS_URL
-    
+    ORGS_URL = settings.ORGS_URL
+
     @staticmethod
     async def get_organization_by_id(org_id: int) -> Optional[Dict[str, Any]]:
         if not org_id or org_id <= 0:
@@ -18,7 +18,7 @@ class OrgsClient:
                 resp = await client.get(
                     f"{OrgsClient.ORGS_URL}/organizations/org/{org_id}"
                 )
-                
+
                 if resp.status_code == 200:
                     logger.info(f" Organization {org_id} fetched successfully")
                     return resp.json()
@@ -26,7 +26,9 @@ class OrgsClient:
                     logger.warning(f" Organization {org_id} not found")
                     return None
                 else:
-                    logger.error(f" Error fetching organization {org_id}: {resp.status_code} - {resp.text}")
+                    logger.error(
+                        f" Error fetching organization {org_id}: {resp.status_code} - {resp.text}"
+                    )
                     return None
         except httpx.ConnectError as e:
             logger.error(f" Cannot connect to organizations service: {e}")
@@ -34,7 +36,3 @@ class OrgsClient:
         except Exception as e:
             logger.error(f" Exception fetching organization {org_id}: {e}")
             return None
-    
-    
-    
-    

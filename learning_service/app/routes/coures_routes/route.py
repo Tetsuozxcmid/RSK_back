@@ -6,7 +6,7 @@ from crud.user_progress_crud.crud import user_progress_crud
 from schemas.course import CourseResponse, CourseCreate, CourseUpdate
 from schemas.user_progress import UserProgressUpdate, UserProgressResponse
 from services.grabber import get_current_user
-from services.auth_client import get_moderator,get_admin
+from services.auth_client import get_moderator, get_admin
 from typing import List
 
 router = APIRouter(tags=["courses"])
@@ -17,7 +17,6 @@ async def get_courses(
     db: AsyncSession = Depends(get_db), user_id: int = Depends(get_current_user)
 ):
     return await course_crud.get_courses_with_progress(db, user_id)
-
 
 
 @router.get("/{course_id}", response_model=CourseResponse)

@@ -12,9 +12,6 @@ from services.teams_client import TeamsClient
 
 
 class ZvezdaCRUD:
-
-    
-
     @staticmethod
     async def create_project(db: AsyncSession, project_data):
         project = Project(
@@ -91,8 +88,6 @@ class ZvezdaCRUD:
         await db.delete(project)
         await db.commit()
 
-    
-
     @staticmethod
     async def create_task(db: AsyncSession, task_data, project_id: int):
         task = Task(
@@ -154,8 +149,6 @@ class ZvezdaCRUD:
             raise HTTPException(404, "Task not found")
 
         return task
-
-    
 
     @staticmethod
     async def start_task(
@@ -223,22 +216,14 @@ class ZvezdaCRUD:
 
         return submission
 
-    
-
     @staticmethod
-    async def get_tasks_for_review(
-        db: AsyncSession, moderator_id: int
-    ) -> List[dict]:
-       
+    async def get_tasks_for_review(db: AsyncSession, moderator_id: int) -> List[dict]:
         now = datetime.utcnow()
         lock_limit = now - timedelta(minutes=10)
 
-        
         query_current = (
             select(TaskSubmission)
-            .options(
-                selectinload(TaskSubmission.task).selectinload(Task.project)
-            )
+            .options(selectinload(TaskSubmission.task).selectinload(Task.project))
             .where(
                 and_(
                     TaskSubmission.moderator_id == moderator_id,
@@ -251,20 +236,14 @@ class ZvezdaCRUD:
         result = await db.execute(query_current)
         current_tasks = result.scalars().all()
 
-        
         if len(current_tasks) >= 5:
-            
             return await ZvezdaCRUD._submissions_to_dict(current_tasks[:5])
 
-        
         needed = 5 - len(current_tasks)
 
-        
         query_new = (
             select(TaskSubmission)
-            .options(
-                selectinload(TaskSubmission.task).selectinload(Task.project)
-            )
+            .options(selectinload(TaskSubmission.task).selectinload(Task.project))
             .where(
                 and_(
                     TaskSubmission.status == TaskStatus.SUBMITTED,
@@ -280,7 +259,6 @@ class ZvezdaCRUD:
         new_res = await db.execute(query_new)
         new_tasks = new_res.scalars().all()
 
-       
         for sub in new_tasks:
             sub.moderator_id = moderator_id
             sub.submitted_at = now
@@ -288,48 +266,46 @@ class ZvezdaCRUD:
 
         if new_tasks:
             await db.commit()
-            
-            
+
             for sub in new_tasks:
                 await db.refresh(sub)
 
-        
         all_tasks = list(current_tasks) + list(new_tasks)
         return await ZvezdaCRUD._submissions_to_dict(all_tasks)
 
     @staticmethod
     async def _submissions_to_dict(submissions: List[TaskSubmission]) -> List[dict]:
-        
         result = []
-        
+
         for sub in submissions:
-            
             if not sub.task or not sub.task.project:
                 continue
-                
-            
+
             project_category = sub.task.project.star_category
             if isinstance(project_category, str):
                 from schemas.proj import CATEGORY_MAP
+
                 project_category = CATEGORY_MAP.get(project_category, project_category)
-            
-            result.append({
-                "id": sub.id,
-                "task_id": sub.task_id,
-                "team_id": sub.team_id,
-                "text_description": sub.text_description,
-                "result_url": sub.result_url,
-                "submitted_at": sub.submitted_at,
-                "reviewed_at": sub.reviewed_at,
-                "status": sub.status,
-                "moderator_id": sub.moderator_id,
-                "project_id": sub.task.project.id,
-                "project_title": sub.task.project.title,
-                "project_category": project_category,
-                "task_title": sub.task.title,
-                "task_description": sub.task.description,
-            })
-        
+
+            result.append(
+                {
+                    "id": sub.id,
+                    "task_id": sub.task_id,
+                    "team_id": sub.team_id,
+                    "text_description": sub.text_description,
+                    "result_url": sub.result_url,
+                    "submitted_at": sub.submitted_at,
+                    "reviewed_at": sub.reviewed_at,
+                    "status": sub.status,
+                    "moderator_id": sub.moderator_id,
+                    "project_id": sub.task.project.id,
+                    "project_title": sub.task.project.title,
+                    "project_category": project_category,
+                    "task_title": sub.task.title,
+                    "task_description": sub.task.description,
+                }
+            )
+
         return result
 
     @staticmethod
@@ -341,7 +317,7 @@ class ZvezdaCRUD:
         description: Optional[str] = None,
     ):
         from datetime import datetime, timezone, timedelta
-        
+
         now = datetime.now(timezone.utc)  #
 
         result = await db.execute(
@@ -354,15 +330,10 @@ class ZvezdaCRUD:
             raise HTTPException(404, "Submission not found")
 
         if submission.moderator_id != moderator_id:
-            raise HTTPException(
-                403, "This task is assigned to another moderator"
-            )
+            raise HTTPException(403, "This task is assigned to another moderator")
 
-        
         if submission.submitted_at < (now - timedelta(minutes=10)):
-            raise HTTPException(
-                400, "Lock expired. Fetch tasks again."
-            )
+            raise HTTPException(400, "Lock expired. Fetch tasks again.")
 
         submission.status = status
         submission.reviewed_at = now

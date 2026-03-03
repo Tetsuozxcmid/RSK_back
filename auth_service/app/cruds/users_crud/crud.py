@@ -219,49 +219,43 @@ class UserCRUD:
 
     @staticmethod
     async def reset_password_by_email_or_login(
-        db: AsyncSession, 
-        email_or_login: str,
-        new_password: str
+        db: AsyncSession, email_or_login: str, new_password: str
     ):
-        
         result = await db.execute(
-            select(User).where(
-                or_(
-                    User.email == email_or_login.lower(),
-                    User.login == email_or_login
-                )
-            ).order_by(User.verified.desc())  
+            select(User)
+            .where(
+                or_(User.email == email_or_login.lower(), User.login == email_or_login)
+            )
+            .order_by(User.verified.desc())
         )
         users = result.scalars().all()
-        
+
         if not users:
             raise HTTPException(
-                status_code=404, 
-                detail=f"User with email/login '{email_or_login}' not found"
+                status_code=404,
+                detail=f"User with email/login '{email_or_login}' not found",
             )
-        
-        
+
         user = next((u for u in users if u.verified), users[0])
-        
-        
+
         verified_users = [u for u in users if u.verified]
         if len(verified_users) > 1:
-            print(f"WARNING: Multiple verified users found for {email_or_login}: {[u.id for u in verified_users]}")
-            
+            print(
+                f"WARNING: Multiple verified users found for {email_or_login}: {[u.id for u in verified_users]}"
+            )
+
             user = verified_users[0]
-        
+
         if not user.verified:
             raise HTTPException(
-                status_code=400, 
-                detail="User is not verified. Please confirm email first."
+                status_code=400,
+                detail="User is not verified. Please confirm email first.",
             )
-        
-        
+
         new_hashed_password = pass_settings.get_password_hash(new_password)
-        
-        
+
         user.hashed_password = new_hashed_password
-        
+
         try:
             await db.commit()
             await db.refresh(user)
@@ -269,6 +263,5 @@ class UserCRUD:
         except Exception as e:
             await db.rollback()
             raise HTTPException(
-                status_code=500, 
-                detail=f"Error resetting password: {str(e)}"
+                status_code=500, detail=f"Error resetting password: {str(e)}"
             )

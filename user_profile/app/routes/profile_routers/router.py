@@ -48,30 +48,31 @@ async def update_user_profile_joined_team(
         team_id=update_data.team_id,
     )
 
+
 @router.post("/update_learning_status/")
 async def update_learning_status(
-    request: UpdateLearningStatusRequest,
-    db: AsyncSession = Depends(get_db) 
+    request: UpdateLearningStatusRequest, db: AsyncSession = Depends(get_db)
 ):
-    
     user = await db.execute(select(User).where(User.id == request.user_id))
     user = user.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     user.is_learned = request.is_learned
     await db.commit()
-    
-    return {"status": "success", "user_id": request.user_id, "is_learned": request.is_learned}
+
+    return {
+        "status": "success",
+        "user_id": request.user_id,
+        "is_learned": request.is_learned,
+    }
 
 
 @router.post("/bulk_update_learning/")
 async def bulk_update_learning(
-    request: BulkUpdateLearningRequest,
-    db: AsyncSession = Depends(get_db)
+    request: BulkUpdateLearningRequest, db: AsyncSession = Depends(get_db)
 ):
-    
     updated = 0
     for user_data in request.users:
         result = await db.execute(
@@ -81,9 +82,10 @@ async def bulk_update_learning(
         )
         if result.rowcount > 0:
             updated += 1
-    
+
     await db.commit()
     return {"status": "success", "updated": updated}
+
 
 @profile_management_router.post("/update_user_profile_joined_org/")
 async def update_user_profile_joined_org(
@@ -97,6 +99,7 @@ async def update_user_profile_joined_org(
         organization_id=update_data.Organization_id,
     )
 
+
 @profile_management_router.patch("/my-role")
 async def update_my_role(
     role_data: UserRoleUpdate,
@@ -104,30 +107,25 @@ async def update_my_role(
     rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection),
     user_id: int = Depends(get_current_user),
 ):
-    
     user, old_role = await ProfileCRUD.update_my_role(
-        db=db,
-        user_id=user_id,
-        new_role=role_data.role
+        db=db, user_id=user_id, new_role=role_data.role
     )
-    
-    
+
     try:
         await publish_role_update(
             rabbitmq,
             user_id=user_id,
-            new_role=role_data.role.value,  
-            old_role=old_role.value if old_role else None
+            new_role=role_data.role.value,
+            old_role=old_role.value if old_role else None,
         )
     except Exception as e:
         print(f"Failed to publish role update: {e}")
-        
-    
+
     return {
         "message": "Role updated successfully",
         "user_id": user_id,
         "old_role": old_role.value if old_role else None,
-        "new_role": role_data.role.value
+        "new_role": role_data.role.value,
     }
 
 
@@ -138,9 +136,6 @@ async def update_my_profile(
     user_id: int = Depends(get_current_user),
 ):
     return await ProfileCRUD.update_my_profile(db, update_data, user_id)
-
-
-
 
 
 @profile_batch_router.post("/get_users_batch")

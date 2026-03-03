@@ -180,7 +180,6 @@ async def get_team_by_id(team_id: int, db: AsyncSession = Depends(get_db)):
                     "role": await TeamCRUD.get_user_role(team.leader_id),
                 }
 
-        
         organization_info = None
         if team.organization_id:
             org_data = await OrgsClient.get_organization_by_id(team.organization_id)
@@ -204,7 +203,7 @@ async def get_team_by_id(team_id: int, db: AsyncSession = Depends(get_db)):
                 "leader_info": leader_info,
                 "organization_id": team.organization_id,
                 "organization_name": team.organization_name,
-                "organization_info": organization_info,  
+                "organization_info": organization_info,
                 "points": team.points,
                 "description": team.description,
                 "tasks_completed": team.tasks_completed,

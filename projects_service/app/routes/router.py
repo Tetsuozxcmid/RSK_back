@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db
 from cruds.crud import ZvezdaCRUD
 from services.service import get_current_user
-from services.auth_client import get_moderator,get_admin
+from services.auth_client import get_moderator, get_admin
 from services.teams_client import TeamsClient
 
 from schemas.proj import (
@@ -19,8 +19,6 @@ from schemas.proj import (
 )
 
 router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
-
-
 
 
 @router.post("/projects", response_model=ProjectRead)
@@ -68,8 +66,6 @@ async def delete_project(
     return {"status": "deleted"}
 
 
-
-
 @router.post("/projects/{project_id}/tasks", response_model=TaskOut)
 async def create_task(
     project_id: int,
@@ -108,8 +104,6 @@ async def list_tasks(
     return await ZvezdaCRUD.list_tasks(db, project_id)
 
 
-
-
 @router.post("/tasks/{task_id}/start")
 async def start_task(
     task_id: int,
@@ -139,8 +133,6 @@ async def submit_task(
         data.text_description,
         data.result_url,
     )
-
-
 
 
 @router.get("/moderator/tasks", response_model=List[ModeratorTaskRead])

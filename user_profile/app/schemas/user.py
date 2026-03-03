@@ -5,9 +5,10 @@ from db.models.user_enum import UserEnum
 
 class UserRoleUpdate(BaseModel):
     role: UserEnum
-    
+
     class Config:
         pass
+
 
 class OrganizationSimple(BaseModel):
     id: int
@@ -17,9 +18,10 @@ class OrganizationSimple(BaseModel):
     inn: Optional[int] = None
     region: Optional[str] = None
     type: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
+
 class ProfileResponse(BaseModel):
     NameIRL: Optional[str] = None
     email: Optional[str] = None
@@ -38,13 +40,16 @@ class ProfileResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class UpdateLearningStatusRequest(BaseModel):
     user_id: int
     is_learned: bool
 
+
 class BulkUpdateLearningRequest(BaseModel):
-    users: List[dict] 
-    
+    users: List[dict]
+
+
 class ProfileCreateSchema(BaseModel):
     NameIRL: Optional[str] = None
     email: Optional[str] = None

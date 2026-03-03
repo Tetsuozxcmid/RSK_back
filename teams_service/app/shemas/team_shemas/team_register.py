@@ -7,7 +7,7 @@ class TeamRegister(BaseModel):
     name: str = Field(..., title="Название команды")
     direction: DirectionEnum = Field(..., title="Направление команды")
     region: str = Field(..., title="Регион")
-    organization_id: int = Field(..., title="ID организации")  
+    organization_id: int = Field(..., title="ID организации")
     points: int = Field(0, title="Очки")
     description: Optional[str] = Field(None, title="Описание команды")
     tasks_completed: int = Field(0, title="Количество выполненных задач")

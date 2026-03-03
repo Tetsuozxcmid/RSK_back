@@ -9,16 +9,10 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 
-
 @router.get("/", response_model=UserProfileResponse)
 async def get_user_profile(
-    db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db), user_id: int = Depends(get_current_user)
 ):
-    
     learning = await learning_status_crud.check_user_completed_all_courses(db, user_id)
-    
-    return UserProfileResponse(
-        user_id=user_id,
-        learning=learning
-    )
+
+    return UserProfileResponse(user_id=user_id, learning=learning)
