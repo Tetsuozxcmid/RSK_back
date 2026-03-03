@@ -23,6 +23,7 @@ import asyncio
 from fastapi.responses import HTMLResponse, JSONResponse
 from pathlib import Path
 from services.rabbitmq import get_rabbitmq_connection
+from services.auth_client import get_moderator,get_admin
 from aio_pika.abc import AbstractRobustConnection
 from services.yandex_oauth import yandex_router
 from services.vk_oauth import vk_router
@@ -268,7 +269,7 @@ async def resend_confirmation(
 
 
 @user_management_router.get("/get_users/", description="Для админа будет токен")
-async def get_all_users(db: AsyncSession = Depends(get_db)):
+async def get_all_users(db: AsyncSession = Depends(get_db),_=Depends(get_admin)):
     try:
         users = await UserCRUD.get_all_users(db)
 
@@ -299,7 +300,7 @@ async def get_all_users(db: AsyncSession = Depends(get_db)):
 
 
 @user_management_router.delete("/delete_user/")
-async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_user(user_id: int, db: AsyncSession = Depends(get_db),_=Depends(get_admin)):
     success = await UserCRUD.delete_user(db, user_id)
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
@@ -364,15 +365,15 @@ async def get_user_by_id(user_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"user with id {user_id} not found")
 
 
-# ==================== ТЕСТОВЫЕ ЭНДПОИНТЫ ДЛЯ ПРОВЕРКИ ====================
+# ========================================
 @router.get("/test-metric")
 async def test_metric():
-    """Тестовый эндпоинт для проверки работы метрик"""
+    
     try:
-        # Устанавливаем тестовое значение
+        
         update_active_users_metric(777)
 
-        # Проверяем текущее значение
+        
         metric = _get_metric_active_users()
         service_name = _get_service_name()
 
@@ -389,7 +390,7 @@ async def test_metric():
 
 @router.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    
     return {
         "status": "healthy",
         "service": "auth",
@@ -405,7 +406,7 @@ async def health_check():
 # ========================================================================
 
 
-# Подключаем все роутеры
+
 router.include_router(auth_router)
 router.include_router(email_router)
 router.include_router(user_management_router)

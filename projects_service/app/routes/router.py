@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.session import get_db
 from cruds.crud import ZvezdaCRUD
 from services.service import get_current_user
-from services.auth_client import get_moderator
+from services.auth_client import get_moderator,get_admin
 from services.teams_client import TeamsClient
 
 from schemas.proj import (
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/zvezda", tags=["Zvezda"])
 async def create_project(
     data: ProjectCreate,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_moderator),
+    _=Depends(get_admin),
 ):
     return await ZvezdaCRUD.create_project(db, data)
 
@@ -53,7 +53,7 @@ async def update_project(
     project_id: int,
     data: ProjectCreate,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_moderator),
+    _=Depends(get_admin),
 ):
     return await ZvezdaCRUD.update_project(db, project_id, data)
 
@@ -62,7 +62,7 @@ async def update_project(
 async def delete_project(
     project_id: int,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_moderator),
+    _=Depends(get_admin),
 ):
     await ZvezdaCRUD.delete_project(db, project_id)
     return {"status": "deleted"}
@@ -75,7 +75,7 @@ async def create_task(
     project_id: int,
     data: TaskCreate,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_moderator),
+    _=Depends(get_admin),
 ):
     return await ZvezdaCRUD.create_task(db, data, project_id)
 
@@ -94,7 +94,7 @@ async def update_task(
 async def delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_moderator),
+    _=Depends(get_admin),
 ):
     await ZvezdaCRUD.delete_task(db, task_id)
     return {"status": "deleted"}

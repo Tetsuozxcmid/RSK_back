@@ -6,7 +6,7 @@ from crud.user_progress_crud.crud import user_progress_crud
 from schemas.course import CourseResponse, CourseCreate, CourseUpdate
 from schemas.user_progress import UserProgressUpdate, UserProgressResponse
 from services.grabber import get_current_user
-from services.auth_client import get_moderator
+from services.auth_client import get_moderator,get_admin
 from typing import List
 
 router = APIRouter(tags=["courses"])
@@ -36,7 +36,7 @@ async def get_course(
 async def create_course(
     course_data: CourseCreate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_moderator),
+    _: str = Depends(get_admin),
 ):
     return await course_crud.create_course(db, course_data.dict())
 
@@ -46,7 +46,7 @@ async def update_course(
     course_id: int,
     course_update: CourseUpdate,
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_moderator),
+    _: str = Depends(get_admin),
 ):
     course = await course_crud.update_course(
         db, course_id, course_update.dict(exclude_unset=True)
@@ -61,7 +61,7 @@ async def delete_course(
     course_id: int,
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user),
-    _: str = Depends(get_moderator),
+    _: str = Depends(get_admin),
 ):
     success = await course_crud.delete_course(db, course_id)
     if not success:

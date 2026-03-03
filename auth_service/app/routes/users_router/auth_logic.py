@@ -32,7 +32,7 @@ class PasswordSettings:
             )
             return False
 
-        # Попробуем определить формат хэша
+        
         try:
             from passlib.hash import bcrypt
 
@@ -46,7 +46,7 @@ class PasswordSettings:
             return result
         except Exception as e:
             print(f"ERROR in verify_password: {type(e).__name__}: {e}")
-            # Попробуем проверить, является ли это валидным bcrypt хэшем
+            
             if hashed_password:
                 print(f"DEBUG: First 30 chars of hash: {hashed_password[:30]}")
                 print(

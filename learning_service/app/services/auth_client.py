@@ -159,4 +159,5 @@ def require_role(required_role: str):
 
 
 get_moderator = require_role("moder")
+get_admin = require_role("admin")
 auth_client = AuthServiceClient()
