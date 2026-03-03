@@ -13,6 +13,7 @@ ROLE_MAPPING = {
     "student": UserRole.STUDENT,
     "teacher": UserRole.TEACHER,
     "moder": UserRole.MODER,
+    "admin":UserRole.ADMIN
 }
 
 async def consume_role_updated_events(rabbitmq_url: str):
