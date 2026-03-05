@@ -16,6 +16,7 @@ ROLE_MAPPING = {
     "student": UserEnum.Student,
     "teacher": UserEnum.Teacher,
     "moder": UserEnum.Moder,
+    "admin": UserEnum.Admin,
 }
 
 
