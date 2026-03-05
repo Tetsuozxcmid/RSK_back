@@ -6,6 +6,10 @@ from jose import JWTError, jwt
 
 ALGORITHM = settings.ALGORITHM
 
+ROLE_HIERARCHY = {
+    "moder": 1,   # базовый уровень модерации
+    "admin": 2,   # admin имеет все права moder + свои
+}
 
 class AuthServiceClient:
     def __init__(self):
@@ -142,7 +146,21 @@ async def get_current_user_role(request: Request) -> str:
 
 def require_role(required_role: str):
     def role_checker(user_role: str = Depends(get_current_user_role)):
-        if user_role != required_role:
+        if required_role == "moder":
+            if user_role not in ["moder", "admin"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions. Required: moder or admin",
+                )
+        
+        elif required_role == "admin":
+            if user_role != "admin":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions. Required: admin",
+                )
+        
+        elif user_role != required_role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Insufficient permissions. Required role: {required_role}",
