@@ -23,10 +23,10 @@ from cruds.users_crud.crud import UserCRUD
 from services.jwt import create_access_token
 from services.emailsender import send_confirmation_email, send_new_password_email
 import asyncio
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from pathlib import Path
 from services.rabbitmq import get_rabbitmq_connection
-from services.auth_client import get_moderator, get_admin
+from services.auth_client import get_moderator, get_admin  
 from aio_pika.abc import AbstractRobustConnection
 from services.yandex_oauth import yandex_router
 from services.vk_oauth import vk_router
@@ -43,7 +43,6 @@ user_management_router = APIRouter(tags=["User Management"])
 def _get_metric_active_users():
     try:
         from main import ACTIVE_USERS
-
         return ACTIVE_USERS
     except ImportError as e:
         print(f"Warning: Could not import ACTIVE_USERS: {e}")
@@ -53,7 +52,6 @@ def _get_metric_active_users():
 def _get_service_name():
     try:
         from main import SERVICE_NAME
-
         return SERVICE_NAME
     except ImportError:
         return "auth_service"
@@ -204,7 +202,6 @@ async def confirm_email(
         exchange = await channel.declare_exchange(
             "user_events", type="direct", durable=True
         )
-        role_value = user.role.value if hasattr(user.role, "value") else str(user.role)
 
         user_data_message = {
             "user_id": user.id,
@@ -265,7 +262,10 @@ async def resend_confirmation(
 
 
 @user_management_router.get("/get_users/", description="Для админа будет токен")
-async def get_all_users(db: AsyncSession = Depends(get_db), _=Depends(get_admin)):
+async def get_all_users(
+    db: AsyncSession = Depends(get_db), 
+    _=Depends(get_admin)  
+):
     try:
         users = await UserCRUD.get_all_users(db)
 
@@ -295,7 +295,9 @@ async def get_all_users(db: AsyncSession = Depends(get_db), _=Depends(get_admin)
 
 @user_management_router.delete("/delete_user/")
 async def delete_user(
-    user_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_admin)
+    user_id: int, 
+    db: AsyncSession = Depends(get_db), 
+    _=Depends(get_admin)
 ):
     success = await UserCRUD.delete_user(db, user_id)
     if not success:
@@ -344,7 +346,10 @@ async def reset_password(
 
 
 @user_management_router.get("/get_user_by_id/{user_id}")
-async def get_user_by_id(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user_by_id(
+    user_id: int, 
+    db: AsyncSession = Depends(get_db)
+):
     try:
         user = await UserCRUD.get_user_by_id(db=db, user_id=user_id)
         return user

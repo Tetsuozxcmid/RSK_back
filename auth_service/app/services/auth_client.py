@@ -1,8 +1,13 @@
 import httpx
 from typing import Optional, Dict
+
+from sqlalchemy import select
+from db.models.user import User
+from db.session import get_db
 from config import settings
 from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 
 ALGORITHM = settings.ALGORITHM
 
@@ -44,33 +49,51 @@ class AuthServiceClient:
         return None
 
 
-async def get_current_user_role(request: Request) -> str:
+async def get_current_user_role(
+    request: Request, 
+    db: AsyncSession = Depends(get_db)
+) -> str:
     token = request.cookies.get("users_access_token")
     if not token:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token missing in cookies"
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Token missing in cookies"
         )
 
     try:
+        
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        user_role = payload.get("role")
-
-        if not user_role:
+        user_id = int(payload.get("sub"))
+        
+        
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        
+        if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Role not found in token",
+                detail="User not found"
             )
-
-        return user_role
+        
+        
+        return user.role.value if hasattr(user.role, 'value') else str(user.role)
 
     except JWTError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Invalid token"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication error: {str(e)}"
         )
 
 
 def require_role(required_role: str):
-    def role_checker(user_role: str = Depends(get_current_user_role)):
+    async def role_checker(
+        user_role: str = Depends(get_current_user_role)
+    ):
         if user_role != required_role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
