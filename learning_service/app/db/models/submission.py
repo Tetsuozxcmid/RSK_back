@@ -11,7 +11,9 @@ class Submission(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     course_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("courses.id"), nullable=False
+        Integer, 
+        ForeignKey("courses.id", ondelete="CASCADE"),  
+        nullable=False
     )
     file_url: Mapped[str] = mapped_column(String(500), nullable=False)
     status: Mapped[SubmissionStatus] = mapped_column(
