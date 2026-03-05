@@ -145,9 +145,22 @@ async def auth_user(
             detail="Incorrect login/email or password",
         )
 
+    
+    result = await db.execute(select(User).where(User.id == user["id"]))
+    db_user = result.scalar_one_or_none()
+    
+    if db_user:
+        
+        current_role = db_user.role.value if hasattr(db_user.role, 'value') else str(db_user.role)
+    else:
+        
+        current_role = user["role"]
+    
+    
     access_token = await create_access_token(
-        {"sub": str(user["id"]), "role": user["role"]}
+        {"sub": str(user["id"]), "role": current_role}
     )
+    
     response.set_cookie(
         key="users_access_token",
         value=access_token,
@@ -158,7 +171,10 @@ async def auth_user(
         samesite="none",
     )
 
-    return "Access successed"
+    return {
+        "message": "Access succeeded",
+        "role": current_role  
+    }
 
 
 @auth_router.post(

@@ -8,6 +8,7 @@ from config import settings
 from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
+from services.jwt import decode_token, get_current_user_role as get_jwt_role
 
 ALGORITHM = settings.ALGORITHM
 
@@ -49,9 +50,9 @@ class AuthServiceClient:
         return None
 
 
+# Эта функция теперь просто получает роль из токена (без запроса в БД)
 async def get_current_user_role(
-    request: Request, 
-    db: AsyncSession = Depends(get_db)
+    request: Request
 ) -> str:
     token = request.cookies.get("users_access_token")
     if not token:
@@ -61,22 +62,17 @@ async def get_current_user_role(
         )
 
     try:
-        
+        # Декодируем токен и получаем роль
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = int(payload.get("sub"))
+        user_role = payload.get("role")
         
-        
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        
-        if not user:
+        if not user_role:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found"
+                detail="Role not found in token"
             )
         
-        
-        return user.role.value if hasattr(user.role, 'value') else str(user.role)
+        return user_role
 
     except JWTError:
         raise HTTPException(
