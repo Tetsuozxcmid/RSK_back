@@ -7,6 +7,10 @@ from db.models.user_enum import UserEnum
 from db.session import async_session_maker
 from aio_pika.abc import AbstractRobustConnection
 from fastapi import Request
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 ROLE_MAPPING = {
     "student": UserEnum.Student,
@@ -19,6 +23,8 @@ async def publish_role_update(
     rabbitmq_connection, user_id: int, new_role: str, old_role: str = None
 ):
     try:
+        logger.info(f"[PUBLISHER] Attempting to publish role update for user {user_id}: {old_role} -> {new_role}")
+        
         channel = await rabbitmq_connection.channel()
         exchange = await channel.declare_exchange(
             "user_events", type="direct", durable=True
@@ -39,12 +45,10 @@ async def publish_role_update(
         )
 
         await exchange.publish(message, routing_key="user.role_updated")
-        print(
-            f"[PUBLISHER] Role update published for user {user_id}: {old_role} -> {new_role}"
-        )
+        logger.info(f"[PUBLISHER] ✅ Role update published for user {user_id}: {old_role} -> {new_role}")
 
     except Exception as e:
-        print(f"[PUBLISHER] Failed to publish role update: {e}")
+        logger.error(f"[PUBLISHER] ❌ Failed to publish role update: {e}", exc_info=True)
         raise
 
 
