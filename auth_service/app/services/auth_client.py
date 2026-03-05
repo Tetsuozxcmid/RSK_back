@@ -87,10 +87,22 @@ async def get_current_user_role(
 
 
 def require_role(required_role: str):
-    async def role_checker(
-        user_role: str = Depends(get_current_user_role)
-    ):
-        if user_role != required_role:
+    def role_checker(user_role: str = Depends(get_current_user_role)):
+        if required_role == "moder":
+            if user_role not in ["moder", "admin"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions. Required: moder or admin",
+                )
+        
+        elif required_role == "admin":
+            if user_role != "admin":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions. Required: admin",
+                )
+        
+        elif user_role != required_role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Insufficient permissions. Required role: {required_role}",
