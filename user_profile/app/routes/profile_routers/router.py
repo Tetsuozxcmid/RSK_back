@@ -13,6 +13,8 @@ from schemas.user import (
     UpdateLearningStatusRequest,
     UserRoleAdmin,
     UserRoleUpdate,
+    UserRoleUpdateForUser,  
+    UserRoleAdmin, 
 )
 from schemas.user_batch import UserBatchRequest
 from db.models.user import User
@@ -104,7 +106,7 @@ async def update_user_profile_joined_org(
 
 @profile_management_router.patch("/my-role")
 async def update_my_role(
-    role_data: UserRoleUpdate,
+    role_data: UserRoleUpdateForUser,
     db: AsyncSession = Depends(get_db),
     rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection),
     user_id: int = Depends(get_current_user),

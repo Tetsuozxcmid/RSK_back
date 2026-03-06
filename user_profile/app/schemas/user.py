@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
-from db.models.user_enum import UserEnum
+from db.models.user_enum import UserEnum,UserEnumForAdmin,UserEnumForUser
 
 
 class UserRoleUpdate(BaseModel):
@@ -16,6 +16,12 @@ class UserRoleAdmin(BaseModel):
     class Config:
         pass
 
+class UserRoleUpdateForUser(BaseModel):
+    role: UserEnumForUser  
+
+class UserRoleAdmin(BaseModel):
+    role: UserEnumForAdmin  
+    user_id: int
 
 class OrganizationSimple(BaseModel):
     id: int
