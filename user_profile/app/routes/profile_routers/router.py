@@ -138,7 +138,7 @@ async def update_role(
     db: AsyncSession = Depends(get_db),
     rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection),
     user_id: int = Depends(get_current_user),
-    _: str = Depends(get_admin)  
+     
 ):
     user, old_role = await ProfileCRUD.update_user_role(  
         db=db, user_id=user_id, new_role=role_data.role
