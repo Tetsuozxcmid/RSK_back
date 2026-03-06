@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     ALGORITHM: str
 
     ORGS_URL: str
+    AUTH_SERVICE_URL: str
 
     @property
     def DATABASE_URL(self):

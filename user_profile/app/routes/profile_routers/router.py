@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter, HTTPException, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from schemas.user import (
@@ -11,6 +11,7 @@ from schemas.user import (
     ProfileJoinedTeamUpdate,
     ProfileJoinedOrg,
     UpdateLearningStatusRequest,
+    UserRoleAdmin,
     UserRoleUpdate,
 )
 from schemas.user_batch import UserBatchRequest
@@ -20,6 +21,7 @@ from cruds.profile_crud import ProfileCRUD
 from services.grabber import get_current_user
 from services.rabbitmq import get_rabbitmq_connection, publish_role_update
 from aio_pika.abc import AbstractRobustConnection
+from services.auth_client import get_admin
 
 
 router = APIRouter(prefix="/profile_interaction")
@@ -108,6 +110,35 @@ async def update_my_role(
     user_id: int = Depends(get_current_user),
 ):
     user, old_role = await ProfileCRUD.update_my_role(
+        db=db, user_id=user_id, new_role=role_data.role
+    )
+
+    try:
+        await publish_role_update(
+            rabbitmq,
+            user_id=user_id,
+            new_role=role_data.role.value,
+            old_role=old_role.value if old_role else None,
+        )
+    except Exception as e:
+        print(f"Failed to publish role update: {e}")
+
+    return {
+        "message": "Role updated successfully",
+        "user_id": user_id,
+        "old_role": old_role.value if old_role else None,
+        "new_role": role_data.role.value,
+    }
+
+@profile_management_router.patch("/admin-role")
+async def update_role(
+    role_data: UserRoleAdmin,
+    db: AsyncSession = Depends(get_db),
+    rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection),
+    user_id: int = Depends(get_current_user),
+    _: str = Depends(get_admin)  
+):
+    user, old_role = await ProfileCRUD.update_user_role(  
         db=db, user_id=user_id, new_role=role_data.role
     )
 

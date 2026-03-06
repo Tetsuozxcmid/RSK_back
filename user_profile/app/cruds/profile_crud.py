@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 
-from db.models.user_enum import UserEnum
+from db.models.user_enum import UserEnum,UserEnumForAdmin,UserEnumForUser
 from db.models.user import User
 from fastapi import HTTPException
 from schemas.user import OrganizationSimple, ProfileResponse, ProfileUpdate
@@ -117,7 +117,7 @@ class ProfileCRUD:
             raise HTTPException(status_code=400, detail=f"something got wrong {e}")
 
     @staticmethod
-    async def update_my_role(db: AsyncSession, user_id: int, new_role: UserEnum):
+    async def update_my_role(db: AsyncSession, user_id: int, new_role: UserEnumForUser):
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
 
@@ -134,8 +134,29 @@ class ProfileCRUD:
         except Exception as e:
             await db.rollback()
             raise HTTPException(
-                status_code=400, detail=f"Error updating role: {str(e)}"
+                status_code=400, detail=f"Error updating role: {str(e)},must be student or teacher"
             )
+        
+    @staticmethod
+    async def update_user_role(db: AsyncSession, user_id: int, new_role: UserEnumForAdmin):
+        
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+        
+        
+        old_role = user.Type 
+        user.Type = new_role
+        
+        try:
+            await db.commit()
+            await db.refresh(user)
+            return {"user": user, "old_role": old_role, "new_role": new_role}
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=400, detail=f"Error updating role: {str(e)}, must be admin or moder")
 
     @staticmethod
     async def get_all_users_profiles(db: AsyncSession):

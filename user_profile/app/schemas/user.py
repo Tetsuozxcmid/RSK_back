@@ -9,6 +9,13 @@ class UserRoleUpdate(BaseModel):
     class Config:
         pass
 
+class UserRoleAdmin(BaseModel):
+    role: UserEnum
+    user_id: int
+
+    class Config:
+        pass
+
 
 class OrganizationSimple(BaseModel):
     id: int
