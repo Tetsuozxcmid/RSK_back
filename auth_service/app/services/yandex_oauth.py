@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
-from db.models.user import UserRole
+from db.models.user import User, UserRole
 from services.jwt import create_access_token
 from services.rabbitmq import get_rabbitmq_connection
 from config import settings
@@ -85,9 +85,9 @@ async def yandex_callback(
             )
 
         result = await db.execute(
-            select(UserCRUD.model).where(
-                UserCRUD.model.provider_id == str(user_data["id"]),
-                UserCRUD.model.auth_provider == "yandex",
+            select(User).where(
+                User.provider_id == str(user_data["id"]),
+                User.auth_provider == "yandex",
             )
         )
         existing_user = result.scalar_one_or_none()
