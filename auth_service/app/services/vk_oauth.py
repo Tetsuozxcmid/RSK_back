@@ -78,7 +78,7 @@ async def vk_callback(
 
         print(f"[VK DEBUG] Полученный email: {user_email}")
 
-        user = await user_crud.create_oauth_user(
+        user = await UserCRUD.create_oauth_user(
             db=db,
             name=user_name,
             provider="vk",
@@ -95,10 +95,10 @@ async def vk_callback(
                     "user_events", type="direct", durable=True
                 )
 
-                # ИСПРАВЛЕНА ПЕРЕДАЧА EMAIL
+                
                 user_event = {
                     "user_id": user.id,
-                    "email": user.email or user_email or "",  # ← берем email из БД
+                    "email": user.email or user_email or "",  
                     "username": user.login or f"vk_user_{user_id}",
                     "name": user.name or user_name,
                     "verified": True,
@@ -121,14 +121,14 @@ async def vk_callback(
             {"sub": str(user.id), "role": user.role.value}
         )
 
-        response = RedirectResponse(settings.FRONTEND_URL)  # type: ignore
+        response = RedirectResponse(settings.FRONTEND_URL)  
         response.set_cookie(
             key=COOKIE_NAME,
             value=jwt_token,
             httponly=True,
             secure=True,
             samesite="none",
-            domain=".rosdk.ru",  # ← если фронт и бэк на поддоменах
+            domain=".rosdk.ru",  
             path="/",
             max_age=3600 * 24 * 7,
         )
