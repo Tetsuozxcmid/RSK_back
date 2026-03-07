@@ -78,15 +78,15 @@ async def vk_callback(
 
         print(f"[VK DEBUG] Полученный email: {user_email}")
 
-        user = await UserCRUD.create_oauth_user(
-            db=db,
-            name=user_name,
-            provider="vk",
-            provider_id=str(user_id),
-            email=user_email,
-            role=UserRole.STUDENT,
+        user, created = await UserCRUD.create_oauth_user(  # распаковываем кортеж
+        db=db,
+        name=user_name,
+        provider="vk",
+        provider_id=str(user_id),
+        email=user_email,
+        role=UserRole.STUDENT,
         )
-        created = True
+        
 
         if created:
             try:
