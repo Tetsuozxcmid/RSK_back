@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException, Request
@@ -218,60 +218,76 @@ class ZvezdaCRUD:
 
     @staticmethod
     async def get_tasks_for_review(db: AsyncSession, moderator_id: int) -> List[dict]:
-        now = datetime.utcnow()
-        lock_limit = now - timedelta(minutes=10)
-
-        query_current = (
-            select(TaskSubmission)
-            .options(selectinload(TaskSubmission.task).selectinload(Task.project))
-            .where(
-                and_(
-                    TaskSubmission.moderator_id == moderator_id,
-                    TaskSubmission.reviewed_at == None,
-                    TaskSubmission.submitted_at >= lock_limit,
+            now = datetime.now(timezone.utc)
+            lock_limit = now - timedelta(minutes=10)
+            
+            print(f"[DEBUG] Moderator {moderator_id} fetching tasks at {now}")
+            
+            
+            query_current = (
+                select(TaskSubmission)
+                .options(selectinload(TaskSubmission.task).selectinload(Task.project))
+                .where(
+                    and_(
+                        TaskSubmission.moderator_id == moderator_id,
+                        TaskSubmission.reviewed_at == None,  
+                        TaskSubmission.submitted_at >= lock_limit,  
+                    )
                 )
             )
-        )
 
-        result = await db.execute(query_current)
-        current_tasks = result.scalars().all()
+            result = await db.execute(query_current)
+            current_tasks = result.scalars().all()
+            
+            print(f"[DEBUG] Found {len(current_tasks)} current locked tasks")
 
-        if len(current_tasks) >= 5:
-            return await ZvezdaCRUD._submissions_to_dict(current_tasks[:5])
+            
+            if len(current_tasks) >= 5:
+                return await ZvezdaCRUD._submissions_to_dict(current_tasks[:5])
 
-        needed = 5 - len(current_tasks)
+            
+            needed = 5 - len(current_tasks)
+            
+            print(f"[DEBUG] Need {needed} more tasks")
 
-        query_new = (
-            select(TaskSubmission)
-            .options(selectinload(TaskSubmission.task).selectinload(Task.project))
-            .where(
-                and_(
-                    TaskSubmission.status == TaskStatus.SUBMITTED,
-                    or_(
-                        TaskSubmission.moderator_id == None,
-                        TaskSubmission.submitted_at < lock_limit,
-                    ),
+            
+            query_new = (
+                select(TaskSubmission)
+                .options(selectinload(TaskSubmission.task).selectinload(Task.project))
+                .where(
+                    and_(
+                        TaskSubmission.status == TaskStatus.SUBMITTED,
+                        or_(
+                            TaskSubmission.moderator_id == None,  
+                            TaskSubmission.submitted_at < lock_limit,  
+                        ),
+                    )
                 )
+                .limit(needed)
             )
-            .limit(needed)
-        )
 
-        new_res = await db.execute(query_new)
-        new_tasks = new_res.scalars().all()
+            new_res = await db.execute(query_new)
+            new_tasks = new_res.scalars().all()
+            
+            print(f"[DEBUG] Found {len(new_tasks)} new available tasks")
 
-        for sub in new_tasks:
-            sub.moderator_id = moderator_id
-            sub.submitted_at = now
-            db.add(sub)
-
-        if new_tasks:
-            await db.commit()
-
+            
             for sub in new_tasks:
-                await db.refresh(sub)
+                sub.moderator_id = moderator_id
+                sub.submitted_at = now  
+                db.add(sub)
 
-        all_tasks = list(current_tasks) + list(new_tasks)
-        return await ZvezdaCRUD._submissions_to_dict(all_tasks)
+            if new_tasks:
+                await db.commit()
+                print(f"[DEBUG] Locked {len(new_tasks)} tasks for moderator {moderator_id}")
+                
+                
+                for sub in new_tasks:
+                    await db.refresh(sub)
+
+            
+            all_tasks = list(current_tasks) + list(new_tasks)
+            return await ZvezdaCRUD._submissions_to_dict(all_tasks)
 
     @staticmethod
     async def _submissions_to_dict(submissions: List[TaskSubmission]) -> List[dict]:
@@ -316,9 +332,8 @@ class ZvezdaCRUD:
         status: TaskStatus,
         description: Optional[str] = None,
     ):
-        from datetime import datetime, timezone, timedelta
-
-        now = datetime.now(timezone.utc)  #
+        now = datetime.now(timezone.utc)
+        lock_limit = now - timedelta(minutes=10)
 
         result = await db.execute(
             select(TaskSubmission).where(TaskSubmission.id == submission_id)
@@ -329,10 +344,12 @@ class ZvezdaCRUD:
         if not submission:
             raise HTTPException(404, "Submission not found")
 
+        
         if submission.moderator_id != moderator_id:
             raise HTTPException(403, "This task is assigned to another moderator")
 
-        if submission.submitted_at < (now - timedelta(minutes=10)):
+        
+        if submission.submitted_at < lock_limit:
             raise HTTPException(400, "Lock expired. Fetch tasks again.")
 
         submission.status = status

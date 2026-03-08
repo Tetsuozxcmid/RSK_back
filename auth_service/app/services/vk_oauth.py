@@ -22,9 +22,9 @@ COOKIE_NAME = "users_access_token"
 @vk_router.get("/callback")
 async def vk_callback(
     request: Request,
-    device_id: str | int = None,  # type: ignore
-    code: str = None,  # type: ignore
-    error: str = None,  # type: ignore
+    device_id: str | int = None,  
+    code: str = None, 
+    error: str = None,  
     db: AsyncSession = Depends(get_db),
     rabbitmq: aio_pika.abc.AbstractRobustConnection = Depends(get_rabbitmq_connection),
 ):
@@ -78,7 +78,7 @@ async def vk_callback(
 
         print(f"[VK DEBUG] Полученный email: {user_email}")
 
-        user, created = await UserCRUD.create_oauth_user(  # распаковываем кортеж
+        user, created = await UserCRUD.create_oauth_user(  
         db=db,
         name=user_name,
         provider="vk",
