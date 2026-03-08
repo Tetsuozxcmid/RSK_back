@@ -82,11 +82,16 @@ async def update_team_data(
     team_id: int, update_data: TeamUpdate, db: AsyncSession = Depends(get_db)
 ):
     try:
+        print(f"🔍 Updating team {team_id} with data: {update_data.model_dump()}")
         team = await TeamCRUD.update_team(
             db=db, team_id=team_id, update_data=update_data.model_dump()
         )
+        print(f"✅ Team updated successfully")
         return team
     except Exception as e:
+        print(f"❌ Error updating team: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"{str(e)}")
 
 
