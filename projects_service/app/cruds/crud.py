@@ -134,12 +134,22 @@ class ZvezdaCRUD:
     @staticmethod
     async def list_tasks(db: AsyncSession, project_id: Optional[int] = None):
         query = select(Task)
-
         if project_id:
             query = query.where(Task.project_id == project_id)
-
+        
+        
+        query = query.order_by(Task.id)
+        
         result = await db.execute(query)
-        return result.scalars().all()
+        tasks = result.scalars().all()
+        
+        
+        print(f"\n=== DEBUG list_tasks ===")
+        for task in tasks:
+            print(f"Task {task.id}: status = {task.status}")
+        print("=" * 30)
+        
+        return tasks
 
     @staticmethod
     async def get_task(db: AsyncSession, task_id: int):
@@ -342,7 +352,7 @@ class ZvezdaCRUD:
                     "reviewed_at": sub.reviewed_at,
                     "status": sub.status,
                     "moderator_id": sub.moderator_id,
-                    "time": time_left,  # 👈 ДОБАВЛЕНО: оставшееся время в секундах
+                    "time": time_left,  
                     "project_id": sub.task.project.id,
                     "project_title": sub.task.project.title,
                     "project_category": project_category,
@@ -363,25 +373,39 @@ class ZvezdaCRUD:
     ):
         now = datetime.now(timezone.utc)
         lock_limit = now - timedelta(minutes=10)
+        
+        print(f"\n=== DEBUG REVIEW START ===")
+        print(f"Submission ID: {submission_id}")
+        print(f"Moderator ID: {moderator_id}")
+        print(f"New status: {status}")
+        print(f"Current time: {now}")
 
+       
         result = await db.execute(
             select(TaskSubmission)
-            .options(selectinload(TaskSubmission.task))  
+            .options(selectinload(TaskSubmission.task))
             .where(TaskSubmission.id == submission_id)
         )
 
         submission = result.scalar_one_or_none()
 
         if not submission:
+            print(f"❌ Submission {submission_id} not found")
             raise HTTPException(404, "Submission not found")
 
+        print(f"✅ Found submission: id={submission.id}, task_id={submission.task_id}")
+        print(f"   Current submission.status = {submission.status}")
+        print(f"   Current task.status = {submission.task.status if submission.task else 'NO TASK'}")
+
         if submission.moderator_id != moderator_id:
+            print(f"❌ Moderator mismatch")
             raise HTTPException(403, "This task is assigned to another moderator")
 
         if submission.submitted_at < lock_limit:
+            print(f"❌ Lock expired")
             raise HTTPException(400, "Lock expired. Fetch tasks again.")
 
-        
+        # Обновляем submission
         submission.status = status
         submission.reviewed_at = now
 
@@ -391,16 +415,38 @@ class ZvezdaCRUD:
             )
 
         
-        if status == TaskStatus.ACCEPTED:
-            task = submission.task
-            if task:
-                
+        task = submission.task
+        if task:
+            old_task_status = task.status
+            if status == TaskStatus.ACCEPTED:
                 task.status = TaskStatus.ACCEPTED
-                db.add(task)
-                print(f"[DEBUG] Task {task.id} status updated to ACCEPTED")
+                print(f"🔄 Task {task.id}: {old_task_status} -> {TaskStatus.ACCEPTED}")
+            elif status == TaskStatus.REJECTED:
+                task.status = TaskStatus.REJECTED
+                print(f"🔄 Task {task.id}: {old_task_status} -> {TaskStatus.REJECTED}")
+            
+           
+            db.add(task)
+            print(f"✅ Task {task.id} added to session")
+        else:
+            print(f"❌ No task found for submission {submission_id}")
 
+        
         db.add(submission)
+        
+        await db.flush()
+        print(f"✅ Flush completed")
+        
+        
         await db.commit()
+        print(f"✅ Commit completed")
+
+        
         await db.refresh(submission)
+        if submission.task:
+            await db.refresh(submission.task)
+            print(f"✅ After refresh: task.status = {submission.task.status}")
+        
+        print(f"=== DEBUG REVIEW END ===\n")
 
         return submission
