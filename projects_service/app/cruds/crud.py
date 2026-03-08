@@ -352,7 +352,9 @@ class ZvezdaCRUD:
         lock_limit = now - timedelta(minutes=10)
 
         result = await db.execute(
-            select(TaskSubmission).where(TaskSubmission.id == submission_id)
+            select(TaskSubmission)
+            .options(selectinload(TaskSubmission.task))  
+            .where(TaskSubmission.id == submission_id)
         )
 
         submission = result.scalar_one_or_none()
@@ -360,14 +362,13 @@ class ZvezdaCRUD:
         if not submission:
             raise HTTPException(404, "Submission not found")
 
-        
         if submission.moderator_id != moderator_id:
             raise HTTPException(403, "This task is assigned to another moderator")
 
-        
         if submission.submitted_at < lock_limit:
             raise HTTPException(400, "Lock expired. Fetch tasks again.")
 
+        
         submission.status = status
         submission.reviewed_at = now
 
@@ -375,6 +376,15 @@ class ZvezdaCRUD:
             submission.text_description = (
                 f"{submission.text_description or ''}\n\nMOD_NOTE: {description}"
             )
+
+        
+        if status == TaskStatus.ACCEPTED:
+            task = submission.task
+            if task:
+                
+                task.status = TaskStatus.ACCEPTED
+                db.add(task)
+                print(f"[DEBUG] Task {task.id} status updated to ACCEPTED")
 
         db.add(submission)
         await db.commit()
