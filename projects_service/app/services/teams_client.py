@@ -13,7 +13,7 @@ class TeamsClient:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"{settings.TEAMS_SERVICE_URL}/teams/my_teams/",
+                    f"{settings.TEAMS_SERVICE_URL}/my_teams/",
                     cookies={"users_access_token": token},
                     timeout=5.0,
                 )
@@ -45,7 +45,7 @@ class TeamsClient:
             async with httpx.AsyncClient() as client:
                 # Получаем текущие очки команды
                 team_response = await client.get(
-                    f"{settings.TEAMS_SERVICE_URL}/teams/get_team_by_id/{team_id}",
+                    f"{settings.TEAMS_SERVICE_URL}/get_team_by_id/{team_id}",
                     timeout=5.0,
                 )
                 
@@ -58,9 +58,9 @@ class TeamsClient:
                 current_points = team_info.get("points", 0) or 0
                 current_tasks_completed = team_info.get("tasks_completed", 0) or 0
                 
-                # Обновляем очки (добавляем)
+                # 👇 ИСПРАВЛЕНО: update_team_data вместо update_team
                 update_response = await client.patch(
-                    f"{settings.TEAMS_SERVICE_URL}/teams/update_team/{team_id}",
+                    f"{settings.TEAMS_SERVICE_URL}/teams/update_team_data/{team_id}",
                     json={
                         "points": current_points + points,
                         "tasks_completed": current_tasks_completed + 1
@@ -74,7 +74,7 @@ class TeamsClient:
                 else:
                     print(f"❌ Failed to add points: {update_response.status_code}")
                     return False
-                    
+                        
         except httpx.RequestError as e:
             print(f"❌ Network error while adding points: {str(e)}")
             return False
