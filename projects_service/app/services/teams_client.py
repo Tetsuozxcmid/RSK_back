@@ -13,7 +13,7 @@ class TeamsClient:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"{settings.TEAMS_SERVICE_URL}/my_teams/",
+                    f"{settings.TEAMS_SERVICE_URL}/teams/my_teams/",
                     cookies={"users_access_token": token},
                     timeout=5.0,
                 )
@@ -43,9 +43,9 @@ class TeamsClient:
         """
         try:
             async with httpx.AsyncClient() as client:
-                # Получаем текущие очки команды
+                # 👇 ИСПРАВЛЕНО: добавляем /teams/teams/
                 team_response = await client.get(
-                    f"{settings.TEAMS_SERVICE_URL}/get_team_by_id/{team_id}",
+                    f"{settings.TEAMS_SERVICE_URL}/teams/get_team_by_id/{team_id}",
                     timeout=5.0,
                 )
                 
@@ -58,7 +58,7 @@ class TeamsClient:
                 current_points = team_info.get("points", 0) or 0
                 current_tasks_completed = team_info.get("tasks_completed", 0) or 0
                 
-                # 👇 ИСПРАВЛЕНО: update_team_data вместо update_team
+                # 👇 ИСПРАВЛЕНО: используем правильный путь update_team_data
                 update_response = await client.patch(
                     f"{settings.TEAMS_SERVICE_URL}/teams/update_team_data/{team_id}",
                     json={
