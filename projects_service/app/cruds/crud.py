@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException, Request
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -378,31 +378,20 @@ class ZvezdaCRUD:
         print(f"Submission ID: {submission_id}")
         print(f"Moderator ID: {moderator_id}")
         print(f"New status: {status}")
-        print(f"Current time: {now}")
 
-        # Загружаем submission с task
+        # Получаем submission
         result = await db.execute(
-            select(TaskSubmission)
-            .options(selectinload(TaskSubmission.task))
-            .where(TaskSubmission.id == submission_id)
+            select(TaskSubmission).where(TaskSubmission.id == submission_id)
         )
-
         submission = result.scalar_one_or_none()
 
         if not submission:
-            print(f"❌ Submission {submission_id} not found")
             raise HTTPException(404, "Submission not found")
 
-        print(f"✅ Found submission: id={submission.id}, task_id={submission.task_id}")
-        print(f"   Current submission.status = {submission.status}")
-        print(f"   Current task.status = {submission.task.status if submission.task else 'NO TASK'}")
-
         if submission.moderator_id != moderator_id:
-            print(f"❌ Moderator mismatch")
             raise HTTPException(403, "This task is assigned to another moderator")
 
         if submission.submitted_at < lock_limit:
-            print(f"❌ Lock expired")
             raise HTTPException(400, "Lock expired. Fetch tasks again.")
 
         # Обновляем submission
@@ -414,47 +403,28 @@ class ZvezdaCRUD:
                 f"{submission.text_description or ''}\n\nMOD_NOTE: {description}"
             )
 
-        # 👇 ИСПРАВЛЕНИЕ: получаем task отдельным запросом
+        # 👇 ПРЯМОЕ SQL-ОБНОВЛЕНИЕ ЗАДАЧИ
         if status == TaskStatus.ACCEPTED:
-            # Получаем task напрямую из БД
-            task_result = await db.execute(
-                select(Task).where(Task.id == submission.task_id)
+            # Обновляем задачу напрямую через SQL
+            stmt = (
+                update(Task)
+                .where(Task.id == submission.task_id)
+                .values(status=TaskStatus.ACCEPTED)
             )
-            task = task_result.scalar_one_or_none()
+            await db.execute(stmt)
+            print(f"✅ DIRECT SQL UPDATE: task {submission.task_id} set to ACCEPTED")
             
-            if task:
-                print(f"🔄 Task {task.id} current status in DB: {task.status}")
-                task.status = TaskStatus.ACCEPTED
-                db.add(task)
-                print(f"✅ Task {task.id} updated to ACCEPTED and added to session")
-            else:
-                print(f"❌ Task {submission.task_id} not found in DB")
-        elif status == TaskStatus.REJECTED:
-            task_result = await db.execute(
-                select(Task).where(Task.id == submission.task_id)
-            )
-            task = task_result.scalar_one_or_none()
-            if task:
-                print(f"🔄 Task {task.id} current status in DB: {task.status}")
-                task.status = TaskStatus.REJECTED
-                db.add(task)
+            # Проверяем, что обновилось
+            check = await db.execute(select(Task).where(Task.id == submission.task_id))
+            task_after = check.scalar_one()
+            print(f"✅ AFTER SQL: task {task_after.id} status = {task_after.status}")
 
-        # Добавляем submission в сессию
         db.add(submission)
-        
-        # Принудительный flush
-        await db.flush()
-        print(f"✅ Flush completed")
-        
-        # Коммитим
         await db.commit()
-        print(f"✅ Commit completed")
-
-        # Проверяем напрямую в БД после коммита
-        check_result = await db.execute(
-            select(Task).where(Task.id == submission.task_id)
-        )
-        task_after = check_result.scalar_one_or_none()
-        print(f"✅ DIRECT DB CHECK: task {submission.task_id} status = {task_after.status}")
+        
+        # Финальная проверка
+        final_check = await db.execute(select(Task).where(Task.id == submission.task_id))
+        final_task = final_check.scalar_one()
+        print(f"✅ FINAL CHECK: task {final_task.id} status = {final_task.status}")
 
         return submission
