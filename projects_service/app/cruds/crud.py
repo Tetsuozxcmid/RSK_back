@@ -181,6 +181,11 @@ class ZvezdaCRUD:
         )
 
         db.add(submission)
+        
+        
+        task.status = TaskStatus.IN_PROGRESS
+        db.add(task)
+        
         await db.commit()
         await db.refresh(submission)
 
@@ -195,7 +200,9 @@ class ZvezdaCRUD:
         result_url: Optional[str],
     ):
         result = await db.execute(
-            select(TaskSubmission).where(
+            select(TaskSubmission)
+            .options(selectinload(TaskSubmission.task))  
+            .where(
                 TaskSubmission.task_id == task_id,
                 TaskSubmission.team_id == team_id,
             )
@@ -209,7 +216,13 @@ class ZvezdaCRUD:
         submission.text_description = text_description
         submission.result_url = result_url
         submission.status = TaskStatus.SUBMITTED
-        submission.submitted_at = datetime.utcnow()
+        submission.submitted_at = datetime.now(timezone.utc)
+
+        
+        task = submission.task
+        if task:
+            task.status = TaskStatus.SUBMITTED
+            db.add(task)
 
         db.add(submission)
         await db.commit()

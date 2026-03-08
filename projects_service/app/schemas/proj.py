@@ -1,8 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, field_validator, Field
 from typing import Optional, List
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, timezone
 
 class TaskStatus(str, Enum):
     NOT_STARTED = "NOT_STARTED"
@@ -117,7 +116,15 @@ class TaskSubmissionRead(BaseModel):
             return None
 
         expires_at = submitted_at + timedelta(minutes=10)
-        remaining = int((expires_at - datetime.utcnow()).total_seconds())
+        
+        
+        now = datetime.now(timezone.utc)  
+        
+        
+        if submitted_at.tzinfo is None:
+            submitted_at = submitted_at.replace(tzinfo=timezone.utc)
+        
+        remaining = int((expires_at - now).total_seconds())
         return max(remaining, 0)
 
     class Config:
