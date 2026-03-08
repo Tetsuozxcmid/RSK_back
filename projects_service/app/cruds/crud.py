@@ -405,52 +405,18 @@ class ZvezdaCRUD:
 
         # 👇 ИСПРАВЛЕНИЕ: используем строковое значение enum
         if status == TaskStatus.ACCEPTED:
-            print(f"\n🔍 DEBUGGING TASK {submission.task_id} UPDATE")
-            
-            # 1. Проверяем ДО
-            before = await db.execute(
-                text("SELECT status::text FROM tasks WHERE id = :id"),
-                {"id": submission.task_id}
+    # ТОЧНО ТАКОЙ ЖЕ SQL, КАК В РУЧНОМ ОБНОВЛЕНИИ
+            await db.execute(
+                text(f"UPDATE tasks SET status = 'ACCEPTED' WHERE id = {submission.task_id}")
             )
-            before_val = before.scalar()
-            print(f"📊 BEFORE: task {submission.task_id} status = {before_val}")
+            print(f"✅ Ручное обновление: task {submission.task_id} -> ACCEPTED")
             
-            # 2. Пробуем первый вариант
-            try:
-                await db.execute(
-                    text("UPDATE tasks SET status = :status::taskstatus WHERE id = :task_id"),
-                    {"status": "ACCEPTED", "task_id": submission.task_id}
-                )
-                print("✅ Вариант 1 (::taskstatus) выполнен")
-            except Exception as e:
-                print(f"❌ Вариант 1 ошибка: {e}")
-            
-            # 3. Проверяем ПОСЛЕ первого варианта
-            after1 = await db.execute(
-                text("SELECT status::text FROM tasks WHERE id = :id"),
-                {"id": submission.task_id}
+            # Проверяем
+            check = await db.execute(
+                text(f"SELECT status FROM tasks WHERE id = {submission.task_id}")
             )
-            after1_val = after1.scalar()
-            print(f"📊 AFTER variant 1: {after1_val}")
-            
-            # 4. Если не сработало - пробуем второй вариант
-            if after1_val != "ACCEPTED":
-                print("⚠️ Вариант 1 не сработал, пробуем прямой SQL...")
-                try:
-                    await db.execute(
-                        text(f"UPDATE tasks SET status = 'ACCEPTED' WHERE id = {submission.task_id}")
-                    )
-                    print("✅ Вариант 2 (прямой SQL) выполнен")
-                except Exception as e:
-                    print(f"❌ Вариант 2 ошибка: {e}")
-            
-            # 5. Финальная проверка
-            final = await db.execute(
-                text("SELECT status::text FROM tasks WHERE id = :id"),
-                {"id": submission.task_id}
-            )
-            final_val = final.scalar()
-            print(f"📊 FINAL: task {submission.task_id} status = {final_val}")
+            result = check.scalar()
+            print(f"📊 После обновления: {result}")
             
         elif status == TaskStatus.REJECTED:
             await db.execute(
