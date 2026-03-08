@@ -405,18 +405,21 @@ class ZvezdaCRUD:
 
         # 👇 ИСПРАВЛЕНИЕ: используем строковое значение enum
         if status == TaskStatus.ACCEPTED:
-    # ТОЧНО ТАКОЙ ЖЕ SQL, КАК В РУЧНОМ ОБНОВЛЕНИИ
+    # Прямой SQL
             await db.execute(
                 text(f"UPDATE tasks SET status = 'ACCEPTED' WHERE id = {submission.task_id}")
             )
-            print(f"✅ Ручное обновление: task {submission.task_id} -> ACCEPTED")
+            print(f"✅ SQL UPDATE: task {submission.task_id}")
+            
+            # 👇 ВАЖНО! Коммитим изменения
+            await db.commit()
             
             # Проверяем
             check = await db.execute(
                 text(f"SELECT status FROM tasks WHERE id = {submission.task_id}")
             )
             result = check.scalar()
-            print(f"📊 После обновления: {result}")
+            print(f"📊 AFTER: {result}")
             
         elif status == TaskStatus.REJECTED:
             await db.execute(
