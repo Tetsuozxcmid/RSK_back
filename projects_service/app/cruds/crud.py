@@ -379,9 +379,11 @@ class ZvezdaCRUD:
         print(f"Submission ID: {submission_id}")
         print(f"New status: {status}")
 
-        # Получаем submission
+        # Получаем submission с загрузкой связанной задачи
         result = await db.execute(
-            select(TaskSubmission).where(TaskSubmission.id == submission_id)
+            select(TaskSubmission)
+            .options(selectinload(TaskSubmission.task))
+            .where(TaskSubmission.id == submission_id)
         )
         submission = result.scalar_one_or_none()
 
@@ -406,7 +408,7 @@ class ZvezdaCRUD:
 
         # 👇 ОБНОВЛЯЕМ ЗАДАЧУ ЧЕРЕЗ ORM
         if status == TaskStatus.ACCEPTED:
-    # Отдельный запрос для task
+            # Отдельный запрос для task
             task_result = await db.execute(
                 select(Task).where(Task.id == submission.task_id)
             )
@@ -417,6 +419,24 @@ class ZvezdaCRUD:
                 task.status = TaskStatus.ACCEPTED
                 db.add(task)
                 print(f"✅ Task {task.id} updated to ACCEPTED")
+                
+                # 👇 НАЧИСЛЯЕМ ОЧКИ КОМАНДЕ
+                team_id = submission.team_id
+                points_to_add = task.prize_points
+                
+                print(f"💰 Adding {points_to_add} points to team {team_id}")
+                
+                # Вызываем метод для начисления очков
+                success = await TeamsClient.add_points_to_team(
+                    team_id=team_id,
+                    points=points_to_add
+                )
+                
+                if success:
+                    print(f"✅ Points added successfully to team {team_id}")
+                else:
+                    print(f"❌ Failed to add points to team {team_id}")
+                    # Здесь можно добавить логику повторной попытки или запись в лог
             else:
                 print(f"❌ Task {submission.task_id} not found")
 

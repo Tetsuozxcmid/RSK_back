@@ -34,3 +34,54 @@ class TeamsClient:
             raise HTTPException(
                 status_code=503, detail=f"Teams service error: {str(e)}"
             )
+        
+        @staticmethod
+        async def add_points_to_team(team_id: int, points: int) -> bool:
+            
+            try:
+                async with httpx.AsyncClient() as client:
+                    
+                    update_data = {
+                        "points": points  
+                    }
+                    
+                    
+                    
+                    
+                    team_response = await client.get(
+                        f"{settings.TEAMS_SERVICE_URL}/teams/get_team_by_id/{team_id}",
+                        timeout=5.0,
+                    )
+                    
+                    if team_response.status_code != 200:
+                        print(f"❌ Failed to get team {team_id}: {team_response.status_code}")
+                        return False
+                    
+                    team_data = team_response.json()
+                    team_info = team_data.get("team_info", {})
+                    current_points = team_info.get("points", 0) or 0
+                    current_tasks_completed = team_info.get("tasks_completed", 0) or 0
+                    
+                    
+                    update_response = await client.patch(
+                        f"{settings.TEAMS_SERVICE_URL}/teams/update_team_data/{team_id}",
+                        json={
+                            "points": current_points + points,
+                            "tasks_completed": current_tasks_completed + 1
+                        },
+                        timeout=5.0,
+                    )
+                    
+                    if update_response.status_code == 200:
+                        print(f"✅ Successfully added {points} points to team {team_id}")
+                        return True
+                    else:
+                        print(f"❌ Failed to add points: {update_response.status_code}")
+                        return False
+                        
+            except httpx.RequestError as e:
+                print(f"❌ Network error while adding points: {str(e)}")
+                return False
+            except Exception as e:
+                print(f"❌ Unexpected error while adding points: {str(e)}")
+                return False
