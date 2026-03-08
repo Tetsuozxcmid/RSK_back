@@ -137,17 +137,18 @@ async def update_role(
     role_data: UserRoleAdmin,
     db: AsyncSession = Depends(get_db),
     rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection),
-    user_id: int = Depends(get_current_user),
     _: str = Depends(get_admin)  
 ):
+    
     user, old_role = await ProfileCRUD.update_user_role(  
-        db=db, user_id=user_id, new_role=role_data.role
+        db=db, user_id=role_data.user_id,  
+        new_role=role_data.role
     )
 
     try:
         await publish_role_update(
             rabbitmq,
-            user_id=user_id,
+            user_id=role_data.user_id,  
             new_role=role_data.role.value,
             old_role=old_role.value if old_role else None,
         )
@@ -156,7 +157,7 @@ async def update_role(
 
     return {
         "message": "Role updated successfully",
-        "user_id": user_id,
+        "user_id": role_data.user_id,  
         "old_role": old_role.value if old_role else None,
         "new_role": role_data.role.value,
     }
