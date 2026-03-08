@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException, Request
-from sqlalchemy import and_, or_, update
+from sqlalchemy import and_, or_, update, text
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -376,7 +377,6 @@ class ZvezdaCRUD:
         
         print(f"\n=== DEBUG REVIEW START ===")
         print(f"Submission ID: {submission_id}")
-        print(f"Moderator ID: {moderator_id}")
         print(f"New status: {status}")
 
         # Получаем submission
@@ -403,28 +403,37 @@ class ZvezdaCRUD:
                 f"{submission.text_description or ''}\n\nMOD_NOTE: {description}"
             )
 
-        # 👇 ПРЯМОЕ SQL-ОБНОВЛЕНИЕ ЗАДАЧИ
+        # 👇 ИСПРАВЛЕНИЕ: используем строковое значение enum
         if status == TaskStatus.ACCEPTED:
-            # Обновляем задачу напрямую через SQL
-            stmt = (
-                update(Task)
-                .where(Task.id == submission.task_id)
-                .values(status=TaskStatus.ACCEPTED)
+            # Прямой SQL запрос со строковым значением
+            await db.execute(
+                text("UPDATE tasks SET status = :status WHERE id = :task_id"),
+                {
+                    "status": "ACCEPTED",  # 👈 Строка, а не enum
+                    "task_id": submission.task_id
+                }
             )
-            await db.execute(stmt)
-            print(f"✅ DIRECT SQL UPDATE: task {submission.task_id} set to ACCEPTED")
+            print(f"✅ SQL UPDATE: task {submission.task_id} set to ACCEPTED")
             
-            # Проверяем, что обновилось
-            check = await db.execute(select(Task).where(Task.id == submission.task_id))
-            task_after = check.scalar_one()
-            print(f"✅ AFTER SQL: task {task_after.id} status = {task_after.status}")
+        elif status == TaskStatus.REJECTED:
+            await db.execute(
+                text("UPDATE tasks SET status = :status WHERE id = :task_id"),
+                {
+                    "status": "REJECTED",  # 👈 Строка
+                    "task_id": submission.task_id
+                }
+            )
+            print(f"✅ SQL UPDATE: task {submission.task_id} set to REJECTED")
 
         db.add(submission)
         await db.commit()
         
-        # Финальная проверка
-        final_check = await db.execute(select(Task).where(Task.id == submission.task_id))
-        final_task = final_check.scalar_one()
-        print(f"✅ FINAL CHECK: task {final_task.id} status = {final_task.status}")
+        # Проверяем результат
+        check = await db.execute(
+            text("SELECT id, status FROM tasks WHERE id = :id"),
+            {"id": submission.task_id}
+        )
+        result = check.first()
+        print(f"✅ FINAL CHECK: task {result[0]} status = {result[1]}")
 
         return submission
