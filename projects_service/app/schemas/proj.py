@@ -87,6 +87,14 @@ class TaskOut(TaskBase):
     project_id: int
     status: TaskStatus
 
+    @field_validator('status', mode='before')
+    @classmethod
+    def validate_status(cls, v):
+        
+        if hasattr(v, 'value'):
+            return v.value
+        return v
+
 
 class TaskSubmissionRead(BaseModel):
     id: int
