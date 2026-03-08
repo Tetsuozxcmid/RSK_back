@@ -60,7 +60,7 @@ class TeamsClient:
                 
                 # Обновляем очки (добавляем)
                 update_response = await client.patch(
-                    f"{settings.TEAMS_SERVICE_URL}/teams/update_team_data/{team_id}",
+                    f"{settings.TEAMS_SERVICE_URL}/teams/update_team/{team_id}",
                     json={
                         "points": current_points + points,
                         "tasks_completed": current_tasks_completed + 1
