@@ -406,6 +406,7 @@ class ZvezdaCRUD:
 
         # 👇 ОБНОВЛЯЕМ ЗАДАЧУ ЧЕРЕЗ ORM
         if status == TaskStatus.ACCEPTED:
+    # Отдельный запрос для task
             task_result = await db.execute(
                 select(Task).where(Task.id == submission.task_id)
             )
@@ -415,7 +416,7 @@ class ZvezdaCRUD:
                 print(f"🔄 Task {task.id} current status: {task.status}")
                 task.status = TaskStatus.ACCEPTED
                 db.add(task)
-                print(f"✅ Task {task.id} updated to ACCEPTED via ORM")
+                print(f"✅ Task {task.id} updated to ACCEPTED")
             else:
                 print(f"❌ Task {submission.task_id} not found")
 
