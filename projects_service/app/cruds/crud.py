@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+
 from typing import List, Optional
 
 from fastapi import HTTPException, Request
@@ -292,6 +293,8 @@ class ZvezdaCRUD:
     @staticmethod
     async def _submissions_to_dict(submissions: List[TaskSubmission]) -> List[dict]:
         result = []
+        now = datetime.now(timezone.utc)  
+        LOCK_DURATION_MINUTES = 10  
 
         for sub in submissions:
             if not sub.task or not sub.task.project:
@@ -300,8 +303,20 @@ class ZvezdaCRUD:
             project_category = sub.task.project.star_category
             if isinstance(project_category, str):
                 from schemas.proj import CATEGORY_MAP
-
                 project_category = CATEGORY_MAP.get(project_category, project_category)
+
+            
+            time_left = None
+            if sub.moderator_id and sub.submitted_at:
+                
+                lock_expires_at = sub.submitted_at + timedelta(minutes=LOCK_DURATION_MINUTES)
+                
+                if now < lock_expires_at:
+                   
+                    time_left = int((lock_expires_at - now).total_seconds())
+                else:
+                    
+                    time_left = 0
 
             result.append(
                 {
@@ -314,6 +329,7 @@ class ZvezdaCRUD:
                     "reviewed_at": sub.reviewed_at,
                     "status": sub.status,
                     "moderator_id": sub.moderator_id,
+                    "time": time_left,  # 👈 ДОБАВЛЕНО: оставшееся время в секундах
                     "project_id": sub.task.project.id,
                     "project_title": sub.task.project.title,
                     "project_category": project_category,
