@@ -380,7 +380,7 @@ class ZvezdaCRUD:
         print(f"New status: {status}")
         print(f"Current time: {now}")
 
-       
+        # Загружаем submission с task
         result = await db.execute(
             select(TaskSubmission)
             .options(selectinload(TaskSubmission.task))
@@ -414,39 +414,47 @@ class ZvezdaCRUD:
                 f"{submission.text_description or ''}\n\nMOD_NOTE: {description}"
             )
 
-        
-        task = submission.task
-        if task:
-            old_task_status = task.status
-            if status == TaskStatus.ACCEPTED:
-                task.status = TaskStatus.ACCEPTED
-                print(f"🔄 Task {task.id}: {old_task_status} -> {TaskStatus.ACCEPTED}")
-            elif status == TaskStatus.REJECTED:
-                task.status = TaskStatus.REJECTED
-                print(f"🔄 Task {task.id}: {old_task_status} -> {TaskStatus.REJECTED}")
+        # 👇 ИСПРАВЛЕНИЕ: получаем task отдельным запросом
+        if status == TaskStatus.ACCEPTED:
+            # Получаем task напрямую из БД
+            task_result = await db.execute(
+                select(Task).where(Task.id == submission.task_id)
+            )
+            task = task_result.scalar_one_or_none()
             
-           
-            db.add(task)
-            print(f"✅ Task {task.id} added to session")
-        else:
-            print(f"❌ No task found for submission {submission_id}")
+            if task:
+                print(f"🔄 Task {task.id} current status in DB: {task.status}")
+                task.status = TaskStatus.ACCEPTED
+                db.add(task)
+                print(f"✅ Task {task.id} updated to ACCEPTED and added to session")
+            else:
+                print(f"❌ Task {submission.task_id} not found in DB")
+        elif status == TaskStatus.REJECTED:
+            task_result = await db.execute(
+                select(Task).where(Task.id == submission.task_id)
+            )
+            task = task_result.scalar_one_or_none()
+            if task:
+                print(f"🔄 Task {task.id} current status in DB: {task.status}")
+                task.status = TaskStatus.REJECTED
+                db.add(task)
 
-        
+        # Добавляем submission в сессию
         db.add(submission)
         
+        # Принудительный flush
         await db.flush()
         print(f"✅ Flush completed")
         
-        
+        # Коммитим
         await db.commit()
         print(f"✅ Commit completed")
 
-        
-        await db.refresh(submission)
-        if submission.task:
-            await db.refresh(submission.task)
-            print(f"✅ After refresh: task.status = {submission.task.status}")
-        
-        print(f"=== DEBUG REVIEW END ===\n")
+        # Проверяем напрямую в БД после коммита
+        check_result = await db.execute(
+            select(Task).where(Task.id == submission.task_id)
+        )
+        task_after = check_result.scalar_one_or_none()
+        print(f"✅ DIRECT DB CHECK: task {submission.task_id} status = {task_after.status}")
 
         return submission
