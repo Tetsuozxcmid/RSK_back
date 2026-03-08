@@ -377,7 +377,7 @@ class ZvezdaCRUD:
         
         print(f"\n=== DEBUG REVIEW START ===")
         print(f"Submission ID: {submission_id}")
-        print(f"New status: {status}")
+        print(f"New status value: {status.value if hasattr(status, 'value') else status}")
 
         # Получаем submission с загрузкой связанной задачи
         result = await db.execute(
@@ -406,8 +406,13 @@ class ZvezdaCRUD:
             )
         db.add(submission)
 
-        # 👇 ОБНОВЛЯЕМ ЗАДАЧУ ЧЕРЕЗ ORM
-        if status == TaskStatus.ACCEPTED:
+        # 👇 ПРЕОБРАЗУЕМ СТАТУС В СТРОКУ ДЛЯ СРАВНЕНИЯ
+        status_str = status.value if hasattr(status, 'value') else str(status)
+        print(f"📊 Status string for comparison: '{status_str}'")
+
+        if status_str == "ACCEPTED":
+            print(f"✅ Status is ACCEPTED, proceeding with task update and points")
+            
             # Отдельный запрос для task
             task_result = await db.execute(
                 select(Task).where(Task.id == submission.task_id)
@@ -416,6 +421,9 @@ class ZvezdaCRUD:
             
             if task:
                 print(f"🔄 Task {task.id} current status: {task.status}")
+                print(f"💰 Task prize points: {task.prize_points}")
+                print(f"👥 Team ID: {submission.team_id}")
+                
                 task.status = TaskStatus.ACCEPTED
                 db.add(task)
                 print(f"✅ Task {task.id} updated to ACCEPTED")
@@ -424,26 +432,34 @@ class ZvezdaCRUD:
                 team_id = submission.team_id
                 points_to_add = task.prize_points
                 
-                print(f"💰 Adding {points_to_add} points to team {team_id}")
-                
-                # Вызываем метод для начисления очков
-                success = await TeamsClient.add_points_to_team(
-                    team_id=team_id,
-                    points=points_to_add
-                )
-                
-                if success:
-                    print(f"✅ Points added successfully to team {team_id}")
+                if team_id and points_to_add:
+                    print(f"💰 Adding {points_to_add} points to team {team_id}")
+                    
+                    # Вызываем метод для начисления очков
+                    try:
+                        success = await TeamsClient.add_points_to_team(
+                            team_id=team_id,
+                            points=points_to_add
+                        )
+                        
+                        if success:
+                            print(f"✅ Points added successfully to team {team_id}")
+                        else:
+                            print(f"❌ Failed to add points to team {team_id}")
+                    except Exception as e:
+                        print(f"❌ Exception while adding points: {str(e)}")
                 else:
-                    print(f"❌ Failed to add points to team {team_id}")
-                    # Здесь можно добавить логику повторной попытки или запись в лог
+                    print(f"❌ Cannot add points: team_id={team_id}, points={points_to_add}")
             else:
                 print(f"❌ Task {submission.task_id} not found")
+        else:
+            print(f"❌ Status is '{status_str}', not ACCEPTED")
 
         # ОДИН КОММИТ ДЛЯ ВСЕГО
         await db.commit()
+        print(f"✅ Changes committed to database")
         
-        # Проверяем
+        # Проверяем статус задачи после коммита
         final_check = await db.execute(
             select(Task).where(Task.id == submission.task_id)
         )
