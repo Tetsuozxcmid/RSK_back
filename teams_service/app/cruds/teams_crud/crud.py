@@ -492,7 +492,8 @@ class TeamCRUD:
         if not team:
             raise HTTPException(status_code=404, detail="Team not found")
 
-        if "organization_id" in update_data and update_data["organization_id"]:
+        # Сначала обрабатываем organization_id, если он передан и не None
+        if "organization_id" in update_data and update_data["organization_id"] is not None:
             org_id = update_data["organization_id"]
             org_data = await OrgsClient.get_organization_by_id(org_id)
 
@@ -507,9 +508,18 @@ class TeamCRUD:
             else:
                 team.organization_name = f"Организация {org_id}"
 
+        # Обновляем только те поля, которые были переданы и не равны None
         for key, value in update_data.items():
-            if key != "organization_name":
+            # Пропускаем organization_name, так как он обрабатывается отдельно
+            if key == "organization_name":
+                continue
+                
+            # Обновляем поле только если значение не None
+            if value is not None:
                 setattr(team, key, value)
+            # Если нужно явно установить NULL (редкий случай), можно добавить отдельную логику
+            # else:
+            #     setattr(team, key, None)
 
         try:
             await db.commit()
