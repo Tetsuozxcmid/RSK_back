@@ -402,44 +402,31 @@ class ZvezdaCRUD:
             submission.text_description = (
                 f"{submission.text_description or ''}\n\nMOD_NOTE: {description}"
             )
-
-        # 👇 ИСПРАВЛЕНИЕ: используем строковое значение enum
-        if status == TaskStatus.ACCEPTED:
-    # Прямой SQL
-            await db.execute(
-                text(f"UPDATE tasks SET status = 'ACCEPTED' WHERE id = {submission.task_id}")
-            )
-            print(f"✅ SQL UPDATE: task {submission.task_id}")
-            
-            # 👇 ВАЖНО! Коммитим изменения
-            await db.commit()
-            
-            # Проверяем
-            check = await db.execute(
-                text(f"SELECT status FROM tasks WHERE id = {submission.task_id}")
-            )
-            result = check.scalar()
-            print(f"📊 AFTER: {result}")
-            
-        elif status == TaskStatus.REJECTED:
-            await db.execute(
-                text("UPDATE tasks SET status = :taskstatus WHERE id = :task_id"),
-                {
-                    "status": "REJECTED",  # 👈 Строка
-                    "task_id": submission.task_id
-                }
-            )
-            print(f"✅ SQL UPDATE: task {submission.task_id} set to REJECTED")
-
         db.add(submission)
+
+        # 👇 ОБНОВЛЯЕМ ЗАДАЧУ ЧЕРЕЗ ORM
+        if status == TaskStatus.ACCEPTED:
+            task_result = await db.execute(
+                select(Task).where(Task.id == submission.task_id)
+            )
+            task = task_result.scalar_one_or_none()
+            
+            if task:
+                print(f"🔄 Task {task.id} current status: {task.status}")
+                task.status = TaskStatus.ACCEPTED
+                db.add(task)
+                print(f"✅ Task {task.id} updated to ACCEPTED via ORM")
+            else:
+                print(f"❌ Task {submission.task_id} not found")
+
+        # ОДИН КОММИТ ДЛЯ ВСЕГО
         await db.commit()
         
-        # Проверяем результат
-        check = await db.execute(
-            text("SELECT id, status FROM tasks WHERE id = :id"),
-            {"id": submission.task_id}
+        # Проверяем
+        final_check = await db.execute(
+            select(Task).where(Task.id == submission.task_id)
         )
-        result = check.first()
-        print(f"✅ FINAL CHECK: task {result[0]} status = {result[1]}")
+        final_task = final_check.scalar_one()
+        print(f"✅ FINAL CHECK: task {final_task.id} status = {final_task.status}")
 
         return submission
