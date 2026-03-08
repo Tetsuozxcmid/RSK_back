@@ -405,11 +405,10 @@ class ZvezdaCRUD:
 
         # 👇 ИСПРАВЛЕНИЕ: используем строковое значение enum
         if status == TaskStatus.ACCEPTED:
-            # Прямой SQL запрос со строковым значением
             await db.execute(
-                text("UPDATE tasks SET status = :status WHERE id = :task_id"),
+                text("UPDATE tasks SET status = :status::taskstatus WHERE id = :task_id"),
                 {
-                    "status": "ACCEPTED",  # 👈 Строка, а не enum
+                    "status": "ACCEPTED",
                     "task_id": submission.task_id
                 }
             )
@@ -417,7 +416,7 @@ class ZvezdaCRUD:
             
         elif status == TaskStatus.REJECTED:
             await db.execute(
-                text("UPDATE tasks SET status = :status WHERE id = :task_id"),
+                text("UPDATE tasks SET status = :taskstatus WHERE id = :task_id"),
                 {
                     "status": "REJECTED",  # 👈 Строка
                     "task_id": submission.task_id
