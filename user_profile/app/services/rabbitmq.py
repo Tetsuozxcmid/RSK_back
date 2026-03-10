@@ -1,3 +1,5 @@
+import asyncio
+
 import aio_pika
 import json
 from datetime import datetime
@@ -91,13 +93,6 @@ async def consume_user_created_events(rabbitmq_url: str):
         await queue.bind(exchange, routing_key="user.created")
         print(f"✅ [CONSUMER] Queue bound successfully")
 
-        # Проверка привязок
-        try:
-            bindings = await queue.bindings()
-            print(f"🔵 [CONSUMER] Current bindings: {bindings}")
-        except:
-            print(f"⚠️ [CONSUMER] Could not get bindings")
-
         print(f"\n✅ [CONSUMER] {'='*50}")
         print(f"✅ [CONSUMER] Waiting for user.created events...")
         print(f"✅ [CONSUMER] {'='*50}\n")
@@ -105,12 +100,18 @@ async def consume_user_created_events(rabbitmq_url: str):
         # Начинаем прослушивание очереди
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
-                async with message.process():
+                # 👇 УБИРАЕМ `async with message.process()` - будем контролировать ack вручную
+                max_retries = 3
+                retry_count = 0
+                processed = False
+                
+                while retry_count < max_retries and not processed:
                     try:
+                        print(f"\n📨 [CONSUMER] {'='*50}")
+                        print(f"📨 [CONSUMER] Processing message (attempt {retry_count + 1}/{max_retries})")
+                        
                         # Получаем данные из сообщения
                         data = json.loads(message.body.decode())
-                        print(f"\n📨 [CONSUMER] {'='*50}")
-                        print(f"📨 [CONSUMER] Received message:")
                         print(f"📨 [CONSUMER] Body: {data}")
                         print(f"📨 [CONSUMER] Headers: {message.headers}")
                         print(f"📨 [CONSUMER] Routing key: {message.routing_key}")
@@ -135,6 +136,7 @@ async def consume_user_created_events(rabbitmq_url: str):
                         if role_str not in ROLE_MAPPING:
                             print(f"❌ [CONSUMER] Unknown role: {role_raw}, user_id={user_id}")
                             await message.ack()
+                            processed = True
                             continue
 
                         user_role = ROLE_MAPPING[role_str]
@@ -167,17 +169,29 @@ async def consume_user_created_events(rabbitmq_url: str):
                                 print(f"✅ [CONSUMER] Profile already exists for user_id={user_id}")
                                 print(f"✅ [CONSUMER] Existing profile: {user}")
 
+                        # Сообщение обработано успешно
                         await message.ack()
                         print(f"✅ [CONSUMER] Message acknowledged")
+                        processed = True
                         print(f"📨 [CONSUMER] {'='*50}\n")
 
                     except Exception as e:
-                        print(f"❌ [CONSUMER] Error processing message: {e}")
+                        retry_count += 1
+                        print(f"❌ [CONSUMER] Error processing message (attempt {retry_count}/{max_retries}): {e}")
                         print(f"❌ [CONSUMER] Error type: {type(e)}")
                         import traceback
                         traceback.print_exc()
-                        await message.nack(requeue=False)
-                        print(f"❌ [CONSUMER] Message nacked (not requeued)")
+                        
+                        if retry_count < max_retries:
+                            # Ждем перед повторной попыткой
+                            wait_time = retry_count * 2  # 2, 4, 6 секунд
+                            print(f"⏳ [CONSUMER] Waiting {wait_time} seconds before retry...")
+                            await asyncio.sleep(wait_time)
+                        else:
+                            # Исчерпали все попытки - не возвращаем в очередь
+                            print(f"💔 [CONSUMER] Max retries ({max_retries}) reached, rejecting message")
+                            await message.nack(requeue=False)
+                            processed = True
 
     except Exception as e:
         print(f"❌ [CONSUMER] Fatal error in consumer: {e}")
