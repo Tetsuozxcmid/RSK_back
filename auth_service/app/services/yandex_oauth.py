@@ -97,7 +97,7 @@ async def yandex_callback(
             print(f"[YANDEX DEBUG] User already exists, id: {user.id}")
         else:
             try:
-                user = await UserCRUD.create_oauth_user(
+                user, created= await UserCRUD.create_oauth_user(
                     db=db,
                     email=email,
                     name=user_data.get("real_name")
