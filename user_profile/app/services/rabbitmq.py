@@ -54,66 +54,137 @@ async def publish_role_update(
 
 
 async def consume_user_created_events(rabbitmq_url: str):
-    connection = await aio_pika.connect_robust(rabbitmq_url)
-    channel = await connection.channel()
+    """
+    Consumer для создания профилей при регистрации новых пользователей
+    """
+    print(f"\n🔵 [CONSUMER] {'='*50}")
+    print(f"🔵 [CONSUMER] Starting user.created consumer")
+    print(f"🔵 [CONSUMER] RabbitMQ URL: {rabbitmq_url}")
+    print(f"🔵 [CONSUMER] {'='*50}\n")
+    
+    try:
+        # Подключение к RabbitMQ
+        print(f"🔵 [CONSUMER] Connecting to RabbitMQ...")
+        connection = await aio_pika.connect_robust(rabbitmq_url)
+        print(f"✅ [CONSUMER] Connected to RabbitMQ")
+        
+        # Создание канала
+        print(f"🔵 [CONSUMER] Creating channel...")
+        channel = await connection.channel()
+        print(f"✅ [CONSUMER] Channel created")
 
-    exchange = await channel.declare_exchange(
-        "user_events", type="direct", durable=True
-    )
+        # Декларация exchange
+        print(f"🔵 [CONSUMER] Declaring exchange 'user_events'...")
+        exchange = await channel.declare_exchange(
+            "user_events", type="direct", durable=True
+        )
+        print(f"✅ [CONSUMER] Exchange 'user_events' declared")
 
-    queue = await channel.declare_queue("user_profile_queue", durable=True)
+        # Декларация очереди
+        print(f"🔵 [CONSUMER] Declaring queue 'user_profile_queue'...")
+        queue = await channel.declare_queue("user_profile_queue", durable=True)
+        print(f"✅ [CONSUMER] Queue 'user_profile_queue' declared")
+        print(f"🔵 [CONSUMER] Queue details: {queue}")
 
-    await queue.bind(exchange, routing_key="user.created")
+        # Привязка очереди к exchange
+        print(f"🔵 [CONSUMER] Binding queue to exchange with routing_key='user.created'...")
+        await queue.bind(exchange, routing_key="user.created")
+        print(f"✅ [CONSUMER] Queue bound successfully")
 
-    print("[CONSUMER] Waiting for user.created events...")
+        # Проверка привязок
+        try:
+            bindings = await queue.bindings()
+            print(f"🔵 [CONSUMER] Current bindings: {bindings}")
+        except:
+            print(f"⚠️ [CONSUMER] Could not get bindings")
 
-    async with queue.iterator() as queue_iter:
-        async for message in queue_iter:
-            try:
-                data = json.loads(message.body.decode())
+        print(f"\n✅ [CONSUMER] {'='*50}")
+        print(f"✅ [CONSUMER] Waiting for user.created events...")
+        print(f"✅ [CONSUMER] {'='*50}\n")
 
-                user_id = data.get("user_id")
-                email = data.get("email", "")
-                username = data.get("username", "")
-                name = data.get("name", "")
-                role_raw = data.get("role", "")
+        # Начинаем прослушивание очереди
+        async with queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                async with message.process():
+                    try:
+                        # Получаем данные из сообщения
+                        data = json.loads(message.body.decode())
+                        print(f"\n📨 [CONSUMER] {'='*50}")
+                        print(f"📨 [CONSUMER] Received message:")
+                        print(f"📨 [CONSUMER] Body: {data}")
+                        print(f"📨 [CONSUMER] Headers: {message.headers}")
+                        print(f"📨 [CONSUMER] Routing key: {message.routing_key}")
 
-                role_str = str(role_raw).lower()
-                if role_str not in ROLE_MAPPING:
-                    print(f"[CONSUMER] Unknown role: {role_raw}, user_id={user_id}")
-                    await message.ack()
-                    continue
+                        user_id = data.get("user_id")
+                        email = data.get("email", "")
+                        username = data.get("username", "")
+                        name = data.get("name", "")
+                        role_raw = data.get("role", "")
 
-                user_role = ROLE_MAPPING[role_str]
+                        print(f"🔵 [CONSUMER] Extracted data:")
+                        print(f"  - user_id: {user_id}")
+                        print(f"  - email: {email}")
+                        print(f"  - username: {username}")
+                        print(f"  - name: {name}")
+                        print(f"  - role_raw: {role_raw}")
 
-                async with async_session_maker() as session:
-                    result = await session.execute(
-                        select(User).where(User.id == user_id)
-                    )
-                    user = result.scalar_one_or_none()
+                        # Преобразуем роль
+                        role_str = str(role_raw).lower()
+                        print(f"🔵 [CONSUMER] Role string: {role_str}")
+                        
+                        if role_str not in ROLE_MAPPING:
+                            print(f"❌ [CONSUMER] Unknown role: {role_raw}, user_id={user_id}")
+                            await message.ack()
+                            continue
 
-                    if not user:
-                        new_profile = User(
-                            id=user_id,
-                            username=username,
-                            NameIRL=name or "",
-                            email=email,
-                            Surname="",
-                            Type=user_role,
-                        )
-                        session.add(new_profile)
-                        await session.commit()
-                        print(f"[CONSUMER] Profile created for user_id={user_id}")
-                    else:
-                        print(
-                            f"[CONSUMER] Profile already exists for user_id={user_id}"
-                        )
+                        user_role = ROLE_MAPPING[role_str]
+                        print(f"✅ [CONSUMER] Mapped role: {user_role}")
 
-                await message.ack()
+                        # Создаем профиль в БД
+                        print(f"🔵 [CONSUMER] Connecting to database...")
+                        async with async_session_maker() as session:
+                            print(f"🔵 [CONSUMER] Checking if user {user_id} exists in profile DB...")
+                            result = await session.execute(
+                                select(User).where(User.id == user_id)
+                            )
+                            user = result.scalar_one_or_none()
 
-            except Exception as e:
-                print(f"[CONSUMER] Error processing message: {e}")
-                await message.nack(requeue=False)
+                            if not user:
+                                print(f"🔵 [CONSUMER] User {user_id} not found, creating profile...")
+                                new_profile = User(
+                                    id=user_id,
+                                    username=username,
+                                    NameIRL=name or "",
+                                    email=email,
+                                    Surname="",
+                                    Type=user_role,
+                                )
+                                session.add(new_profile)
+                                await session.commit()
+                                print(f"✅ [CONSUMER] Profile CREATED for user_id={user_id}")
+                                print(f"✅ [CONSUMER] Profile details: id={new_profile.id}, username={new_profile.username}")
+                            else:
+                                print(f"✅ [CONSUMER] Profile already exists for user_id={user_id}")
+                                print(f"✅ [CONSUMER] Existing profile: {user}")
+
+                        await message.ack()
+                        print(f"✅ [CONSUMER] Message acknowledged")
+                        print(f"📨 [CONSUMER] {'='*50}\n")
+
+                    except Exception as e:
+                        print(f"❌ [CONSUMER] Error processing message: {e}")
+                        print(f"❌ [CONSUMER] Error type: {type(e)}")
+                        import traceback
+                        traceback.print_exc()
+                        await message.nack(requeue=False)
+                        print(f"❌ [CONSUMER] Message nacked (not requeued)")
+
+    except Exception as e:
+        print(f"❌ [CONSUMER] Fatal error in consumer: {e}")
+        print(f"❌ [CONSUMER] Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 async def get_rabbitmq_connection(request: Request) -> AbstractRobustConnection:
