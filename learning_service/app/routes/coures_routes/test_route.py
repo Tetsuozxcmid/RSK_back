@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
@@ -174,4 +176,83 @@ async def sync_update_user(
                 
     except Exception as e:
         logger.error(f"❌ Error in sync update: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/sync-bulk-update")
+async def sync_bulk_update(
+    request: Request,
+    _: str = Depends(get_admin)
+):
+    """
+    Синхронное массовое обновление всех пользователей
+    """
+    try:
+        admin_cookie = request.cookies.get("users_access_token")
+        logger.info("🚀 Starting synchronous bulk update")
+        
+        # Получаем всех пользователей
+        users = await auth_client.get_all_users(admin_cookie=admin_cookie)
+        logger.info(f"📊 Got {len(users)} users")
+        
+        results = {
+            "total": len(users),
+            "checked": 0,
+            "updated": 0,
+            "errors": 0,
+            "details": []
+        }
+        
+        async with async_session_maker() as db:
+            for user in users:
+                user_id = user.get("id")
+                if not user_id:
+                    continue
+                
+                try:
+                    logger.info(f"🔍 Checking user {user_id}")
+                    
+                    # Проверяем, прошел ли все курсы
+                    has_completed = await learning_status_crud.check_user_completed_all_courses(db, user_id)
+                    
+                    if has_completed:
+                        # Получаем текущий статус
+                        current = await auth_client.get_user_learning_status(user_id, admin_cookie)
+                        
+                        if current is False:
+                            # Обновляем
+                            updated = await auth_client.update_user_learning_status(user_id, True)
+                            if updated:
+                                results["updated"] += 1
+                                results["details"].append({
+                                    "user_id": user_id,
+                                    "status": "updated",
+                                    "email": user.get("email")
+                                })
+                                logger.info(f"✅ Updated user {user_id}")
+                            else:
+                                results["errors"] += 1
+                        else:
+                            logger.info(f"⏭️ User {user_id} already learned: {current}")
+                    else:
+                        logger.info(f"⏭️ User {user_id} not completed all courses")
+                    
+                    results["checked"] += 1
+                    
+                    # Небольшая задержка, чтобы не нагружать сервисы
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.error(f"❌ Error processing user {user_id}: {e}")
+                    results["errors"] += 1
+                    results["details"].append({
+                        "user_id": user_id,
+                        "status": "error",
+                        "error": str(e)
+                    })
+        
+        logger.info(f"✅ Bulk update completed: {results}")
+        return results
+        
+    except Exception as e:
+        logger.error(f"❌ Error in sync bulk update: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
