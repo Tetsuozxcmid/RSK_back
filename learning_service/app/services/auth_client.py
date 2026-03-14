@@ -41,28 +41,42 @@ class AuthServiceClient:
             return user_data.get("email")
         return None
 
-    async def get_all_users(self) -> List[Dict]:
+    async def get_all_users(self, admin_cookie: str = None) -> List[Dict]:
         async with httpx.AsyncClient() as client:
             try:
                 print(f"Fetching all users from {self.auth_url}")
+                
+                # Подготавливаем заголовки
+                headers = {
+                    "Content-Type": "application/json",
+                }
+                
+                # Подготавливаем куки
+                cookies = {}
+                if admin_cookie:
+                    cookies["users_access_token"] = admin_cookie
+                
+                print(f"Using cookies: {cookies}")
+                
                 response = await client.get(
                     f"{self.auth_url}/users_interaction/get_users/",
-                    headers={
-                        "Authorization": f"Bearer {settings.SECRET_KEY}",  # ДОБАВИТЬ ЭТО
-                        "Content-Type": "application/json",
-                    },
+                    headers=headers,
+                    cookies=cookies,
                     timeout=30.0,
                 )
 
+                print(f"Response status: {response.status_code}")
+                
                 if response.status_code == 200:
                     users = response.json()
-                    print(f"Received {len(users)} users from auth_service")
+                    print(f"✅ Received {len(users)} users from auth_service")
                     return users
                 else:
-                    print(f"Failed to fetch users from auth_service: {response.status_code}")
+                    print(f"❌ Failed to fetch users: {response.status_code}")
+                    print(f"Response: {response.text}")
                     return []
             except Exception as e:
-                print(f"Error fetching users from auth service: {e}")
+                print(f"❌ Error fetching users from auth service: {e}")
                 return []
 
     async def update_user_learning_status(self, user_id: int, learning: bool) -> bool:

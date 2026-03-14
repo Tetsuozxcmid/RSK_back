@@ -15,23 +15,25 @@ router = APIRouter(prefix="/test-learning", tags=["Test Learning"])
 @router.post("/run-update")
 async def run_manual_update(
     background_tasks: BackgroundTasks,
+    request: Request,  # Добавляем request
     user_id: Optional[int] = None,
-    _: str = Depends(get_admin)  # Только для админов
+    _: str = Depends(get_admin)  # Проверяем что админ
 ):
     """
     Ручной запуск обновления статусов обучения.
-    Если указан user_id - обновляет только одного пользователя.
-    Если не указан - обновляет всех пользователей.
     """
     try:
+        # Получаем токен из куков запроса
+        admin_cookie = request.cookies.get("users_access_token")
+        
         if user_id:
             # Проверяем существование пользователя
             user = await auth_client.get_user_by_id(user_id)
             if not user:
                 raise HTTPException(status_code=404, detail=f"User {user_id} not found")
             
-            # Запускаем в фоне чтобы не блокировать ответ
-            background_tasks.add_task(run_single_user_update, user_id)
+            # Запускаем в фоне
+            background_tasks.add_task(run_single_user_update, user_id, admin_cookie)
             
             return {
                 "status": "started",
@@ -39,8 +41,8 @@ async def run_manual_update(
                 "user_id": user_id
             }
         else:
-            # Запускаем массовое обновление в фоне
-            background_tasks.add_task(run_bulk_update)
+            # Запускаем массовое обновление с куками админа
+            background_tasks.add_task(run_bulk_update, admin_cookie)
             
             return {
                 "status": "started",
@@ -50,6 +52,27 @@ async def run_manual_update(
     except Exception as e:
         logger.error(f"Error starting manual update: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+async def run_bulk_update(admin_cookie: str = None):
+    logger.info("Running manual bulk update with admin cookie")
+    
+    # Временно заменяем метод get_all_users в auth_client
+    original_get_all_users = auth_client.get_all_users
+    
+    try:
+        # Создаем временную версию метода с куками
+        async def get_all_users_with_cookie():
+            return await original_get_all_users(admin_cookie=admin_cookie)
+        
+        # Подменяем метод
+        auth_client.get_all_users = get_all_users_with_cookie
+        
+        # Запускаем обновление
+        result = await bulk_update_all_users()
+        logger.info(f"Manual bulk update completed: {result}")
+    finally:
+        # Возвращаем оригинальный метод
+        auth_client.get_all_users = original_get_all_users
 
 async def run_single_user_update(user_id: int):
     """Фоновая задача для обновления одного пользователя"""
