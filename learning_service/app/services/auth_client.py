@@ -82,12 +82,10 @@ class AuthServiceClient:
     async def update_user_learning_status(self, user_id: int, learning: bool) -> bool:
         async with httpx.AsyncClient() as client:
             try:
-                print(f"Updating learning status for user {user_id} to {learning}")
-
-                full_url = (
-                    f"{self.profile_url}/profile_interaction/update_learning_status/"
-                )
-                print(f"🌐 Full URL: {full_url}")
+                full_url = f"{self.profile_url}/profile_interaction/update_learning_status/"
+                logger.info(f"📤 Updating learning status for user {user_id} to {learning}")
+                logger.info(f"📤 URL: {full_url}")
+                logger.info(f"📤 Request body: {{'user_id': {user_id}, 'is_learned': {learning}}}")
 
                 response = await client.post(
                     full_url,
@@ -99,41 +97,78 @@ class AuthServiceClient:
                     timeout=10.0,
                 )
 
+                logger.info(f"📡 Response status: {response.status_code}")
+                logger.info(f"📦 Response body: {response.text}")
+
                 if response.status_code == 200:
-                    print(f"✅ Successfully updated user {user_id} to {learning}")
+                    logger.info(f"✅ Successfully updated user {user_id} to {learning}")
                     return True
                 else:
-                    print(f"❌ Failed to update user {user_id}: {response.status_code}")
-                    print(f"Response: {response.text}")
+                    logger.error(f"❌ Failed to update user {user_id}: {response.status_code}")
+                    logger.error(f"❌ Response: {response.text}")
                     return False
 
             except Exception as e:
-                print(f"❌ Exception updating user {user_id}: {e}")
+                logger.error(f"❌ Exception updating user {user_id}: {e}", exc_info=True)
                 return False
 
     async def get_user_learning_status(self, user_id: int) -> Optional[bool]:
         async with httpx.AsyncClient() as client:
             try:
+                url = f"{self.profile_url}/profile_interaction/get_profile/"
+                logger.info(f"🔍 Getting learning status for user {user_id} from {url}")
+                logger.info(f"📤 Request params: user_id={user_id}")
+                logger.info(f"📤 Headers: Authorization=Bearer {settings.SECRET_KEY[:10]}...")  # Логируем только начало токена
+                
                 response = await client.get(
-                    f"{self.profile_url}/profile_interaction/get_profile/",
+                    url,
                     params={"user_id": user_id},
                     headers={"Authorization": f"Bearer {settings.SECRET_KEY}"},
                     timeout=10.0,
                 )
+                
+                logger.info(f"📡 Response status: {response.status_code}")
+                logger.info(f"📦 Response headers: {dict(response.headers)}")
+                logger.info(f"📦 Response body: {response.text[:500]}")  # Первые 500 символов
 
                 if response.status_code == 200:
                     user_data = response.json()
-                    if isinstance(user_data, list) and len(user_data) > 0:
-                        return user_data[0].get("is_learned", False)
+                    logger.info(f"📊 Response type: {type(user_data)}")
+                    logger.info(f"📊 Full response data: {user_data}")
+                    
+                    if isinstance(user_data, list):
+                        logger.info(f"📊 Response is list with length {len(user_data)}")
+                        if len(user_data) > 0:
+                            result = user_data[0].get("is_learned", False)
+                            logger.info(f"✅ Found status in list[0]: {result}")
+                            return result
+                        else:
+                            logger.warning("⚠️ Empty list returned")
+                            return False
                     elif isinstance(user_data, dict):
-                        return user_data.get("is_learned", False)
-                    return False
+                        logger.info(f"📊 Response is dict with keys: {list(user_data.keys())}")
+                        result = user_data.get("is_learned", False)
+                        logger.info(f"✅ Found status in dict: {result}")
+                        return result
+                    else:
+                        logger.warning(f"⚠️ Unexpected response type: {type(user_data)}")
+                        return False
+                elif response.status_code == 401:
+                    logger.error("❌ Authentication failed - invalid token or insufficient permissions")
+                    return None
+                elif response.status_code == 404:
+                    logger.error(f"❌ User {user_id} not found in profile service")
+                    return None
                 else:
-                    logger.error(f"Failed to get user learning status: {response.status_code}")
+                    logger.error(f"❌ Failed to get user learning status: {response.status_code}")
+                    logger.error(f"❌ Response: {response.text}")
                     return None
 
+            except httpx.RequestError as e:
+                logger.error(f"❌ Network error getting user learning status: {e}")
+                return None
             except Exception as e:
-                logger.error(f"Error getting user learning status: {e}")
+                logger.error(f"❌ Unexpected error getting user learning status: {e}", exc_info=True)
                 return None
             
     async def bulk_update_learning_status(self, users_data: List[Dict]) -> bool:
