@@ -84,9 +84,7 @@ class AuthServiceClient:
             try:
                 full_url = f"{self.profile_url}/profile_interaction/update_learning_status/"
                 logger.info(f"📤 Updating learning status for user {user_id} to {learning}")
-                logger.info(f"📤 URL: {full_url}")
-                logger.info(f"📤 Request body: {{'user_id': {user_id}, 'is_learned': {learning}}}")
-
+                
                 response = await client.post(
                     full_url,
                     json={"user_id": user_id, "is_learned": learning},
@@ -105,11 +103,10 @@ class AuthServiceClient:
                     return True
                 else:
                     logger.error(f"❌ Failed to update user {user_id}: {response.status_code}")
-                    logger.error(f"❌ Response: {response.text}")
                     return False
 
             except Exception as e:
-                logger.error(f"❌ Exception updating user {user_id}: {e}", exc_info=True)
+                logger.error(f"❌ Exception updating user {user_id}: {e}")
                 return False
 
     async def get_user_learning_status(self, user_id: int) -> Optional[bool]:
@@ -117,8 +114,6 @@ class AuthServiceClient:
             try:
                 url = f"{self.profile_url}/profile_interaction/get_profile/"
                 logger.info(f"🔍 Getting learning status for user {user_id} from {url}")
-                logger.info(f"📤 Request params: user_id={user_id}")
-                logger.info(f"📤 Headers: Authorization=Bearer {settings.SECRET_KEY[:10]}...")  # Логируем только начало токена
                 
                 response = await client.get(
                     url,
@@ -128,47 +123,32 @@ class AuthServiceClient:
                 )
                 
                 logger.info(f"📡 Response status: {response.status_code}")
-                logger.info(f"📦 Response headers: {dict(response.headers)}")
-                logger.info(f"📦 Response body: {response.text[:500]}")  # Первые 500 символов
+                logger.info(f"📦 Response body: {response.text}")
 
                 if response.status_code == 200:
                     user_data = response.json()
-                    logger.info(f"📊 Response type: {type(user_data)}")
-                    logger.info(f"📊 Full response data: {user_data}")
+                    logger.info(f"📊 User data type: {type(user_data)}")
+                    logger.info(f"📊 Full user data: {user_data}")
                     
-                    if isinstance(user_data, list):
-                        logger.info(f"📊 Response is list with length {len(user_data)}")
-                        if len(user_data) > 0:
-                            result = user_data[0].get("is_learned", False)
-                            logger.info(f"✅ Found status in list[0]: {result}")
-                            return result
-                        else:
-                            logger.warning("⚠️ Empty list returned")
-                            return False
-                    elif isinstance(user_data, dict):
-                        logger.info(f"📊 Response is dict with keys: {list(user_data.keys())}")
+                    # Profile сервис возвращает ОДНОГО пользователя как словарь
+                    if isinstance(user_data, dict):
                         result = user_data.get("is_learned", False)
                         logger.info(f"✅ Found status in dict: {result}")
                         return result
+                    # Если все же вернулся список
+                    elif isinstance(user_data, list) and len(user_data) > 0:
+                        result = user_data[0].get("is_learned", False)
+                        logger.info(f"✅ Found status in list: {result}")
+                        return result
                     else:
-                        logger.warning(f"⚠️ Unexpected response type: {type(user_data)}")
+                        logger.warning("⚠️ Unexpected response format")
                         return False
-                elif response.status_code == 401:
-                    logger.error("❌ Authentication failed - invalid token or insufficient permissions")
-                    return None
-                elif response.status_code == 404:
-                    logger.error(f"❌ User {user_id} not found in profile service")
-                    return None
                 else:
                     logger.error(f"❌ Failed to get user learning status: {response.status_code}")
-                    logger.error(f"❌ Response: {response.text}")
                     return None
 
-            except httpx.RequestError as e:
-                logger.error(f"❌ Network error getting user learning status: {e}")
-                return None
             except Exception as e:
-                logger.error(f"❌ Unexpected error getting user learning status: {e}", exc_info=True)
+                logger.error(f"❌ Error getting user learning status: {e}", exc_info=True)
                 return None
             
     async def bulk_update_learning_status(self, users_data: List[Dict]) -> bool:
