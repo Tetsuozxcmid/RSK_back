@@ -3,7 +3,9 @@ from typing import Optional, Dict, List
 from config import settings
 from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
-import logger
+
+import logging
+logger = logging.getLogger(__name__)
 ALGORITHM = settings.ALGORITHM
 
 ROLE_HIERARCHY = {
