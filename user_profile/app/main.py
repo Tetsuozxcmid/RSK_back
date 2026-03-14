@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, Histogram, generate_latest
 
 from routes.profile_routers.router import router
+from routes.profile_routers.internal import router as internal_router
 from services.rabbitmq import consume_user_created_events, consume_role_updated_events
 from config import settings
 from db.base import Base
@@ -146,6 +147,7 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(internal_router)
 
 
 @app.get("/metrics", include_in_schema=False)
