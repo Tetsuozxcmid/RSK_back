@@ -113,39 +113,92 @@ class AuthServiceClient:
         async with httpx.AsyncClient() as client:
             try:
                 url = f"{self.profile_url}/profile_interaction/get_profile/"
-                logger.info(f"🔍 Getting learning status for user {user_id} from {url}")
+                logger.info("="*60)
+                logger.info(f"🔍 GET_USER_LEARNING_STATUS CALLED for user {user_id}")
+                logger.info(f"📤 URL: {url}")
+                logger.info(f"📤 Admin cookie provided: {bool(admin_cookie)}")
                 
-                # Используем куки если есть, иначе Bearer токен
-                headers = {"Content-Type": "application/json"}
+                # Подготавливаем заголовки и куки
+                headers = {
+                    "Content-Type": "application/json",
+                }
                 cookies = {}
                 
                 if admin_cookie:
                     cookies["users_access_token"] = admin_cookie
-                    logger.info("Using cookie for auth")
+                    logger.info("🍪 Using admin cookie for authentication")
+                    logger.info(f"🍪 Cookie value: {admin_cookie[:20]}...")  # Логируем начало куки
                 else:
                     headers["Authorization"] = f"Bearer {settings.SECRET_KEY}"
-                    logger.info("Using Bearer token for auth")
+                    logger.info("🔑 Using Bearer token for authentication")
                 
+                logger.info(f"📤 Request params: user_id={user_id}")
+                logger.info(f"📤 Headers: {headers}")
+                logger.info(f"📤 Cookies: {cookies}")
+                
+                # Выполняем запрос
                 response = await client.get(
                     url,
                     params={"user_id": user_id},
                     headers=headers,
                     cookies=cookies,
                     timeout=10.0,
+                    follow_redirects=True
                 )
                 
                 logger.info(f"📡 Response status: {response.status_code}")
+                logger.info(f"📡 Response headers: {dict(response.headers)}")
                 logger.info(f"📦 Response body: {response.text}")
+                logger.info("="*60)
 
                 if response.status_code == 200:
-                    user_data = response.json()
-                    if isinstance(user_data, dict):
-                        return user_data.get("is_learned", False)
-                    elif isinstance(user_data, list) and len(user_data) > 0:
-                        return user_data[0].get("is_learned", False)
+                    try:
+                        user_data = response.json()
+                        logger.info(f"📊 Parsed JSON type: {type(user_data)}")
+                        logger.info(f"📊 Parsed JSON: {user_data}")
+                        
+                        # Profile сервис возвращает одного пользователя как словарь
+                        if isinstance(user_data, dict):
+                            logger.info(f"📊 Response is dict with keys: {list(user_data.keys())}")
+                            result = user_data.get("is_learned", False)
+                            logger.info(f"✅ Found status in dict: {result}")
+                            return result
+                        # Если вернулся список
+                        elif isinstance(user_data, list):
+                            logger.info(f"📊 Response is list with length: {len(user_data)}")
+                            if len(user_data) > 0:
+                                # Ищем пользователя с нужным id
+                                for i, u in enumerate(user_data):
+                                    logger.info(f"  Item {i}: {u}")
+                                    if isinstance(u, dict) and u.get("id") == user_id:
+                                        result = u.get("is_learned", False)
+                                        logger.info(f"✅ Found user {user_id} in list at index {i}, status: {result}")
+                                        return result
+                                logger.warning(f"⚠️ User {user_id} not found in response list")
+                            else:
+                                logger.warning("⚠️ Empty list returned")
+                            return None
+                        else:
+                            logger.warning(f"⚠️ Unexpected response type: {type(user_data)}")
+                            return None
+                    except ValueError as e:
+                        logger.error(f"❌ Failed to parse JSON response: {e}")
+                        return None
+                elif response.status_code == 401:
+                    logger.error("❌ Authentication failed - invalid token or cookie")
+                    return None
+                elif response.status_code == 404:
+                    logger.error(f"❌ User {user_id} not found in profile service")
+                    return None
+                else:
+                    logger.error(f"❌ Failed to get user learning status: {response.status_code}")
+                    return None
+
+            except httpx.RequestError as e:
+                logger.error(f"❌ Network error getting user learning status: {e}", exc_info=True)
                 return None
             except Exception as e:
-                logger.error(f"Error: {e}")
+                logger.error(f"❌ Unexpected error getting user learning status: {e}", exc_info=True)
                 return None
             
     async def bulk_update_learning_status(self, users_data: List[Dict]) -> bool:
