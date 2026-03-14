@@ -12,27 +12,21 @@ logger = logging.getLogger(__name__)
 
 async def update_single_user(user_id: int, db: AsyncSession, admin_cookie: str = None) -> bool:
     try:
-        # Проверяем, прошел ли пользователь все курсы
-        has_completed_all = await learning_status_crud.check_user_completed_all_courses(
-            db, user_id
-        )
+        has_completed_all = await learning_status_crud.check_user_completed_all_courses(db, user_id)
         
-        # Если пользователь прошел все курсы
         if has_completed_all:
-            # Проверяем текущий статус в профиле
-            current_status = await auth_client.get_user_learning_status(user_id)
+            # Передаем admin_cookie в метод получения статуса
+            current_status = await auth_client.get_user_learning_status(user_id, admin_cookie)
             
-            # Обновляем только если сейчас не True
             if current_status is False:
                 logger.info(f"User {user_id} completed all courses, updating to True")
-                # Здесь можно использовать admin_cookie если нужно для других запросов
                 return await auth_client.update_user_learning_status(user_id, True)
             else:
-                logger.debug(f"User {user_id} already has learning=True")
-                return True  # Считаем успехом, т.к. статус уже правильный
+                logger.debug(f"User {user_id} already has learning={current_status}")
+                return True
         else:
             logger.debug(f"User {user_id} hasn't completed all courses yet")
-            return True  # Ничего не делаем, но это не ошибка
+            return True
             
     except Exception as e:
         logger.error(f"Error updating user {user_id}: {e}")
@@ -63,7 +57,7 @@ async def bulk_update_all_users(admin_cookie: str = None):
                 )
                 
                 if has_completed_all:
-                    current_status = await auth_client.get_user_learning_status(user_id)
+                    current_status = await auth_client.get_user_learning_status(user_id, admin_cookie)
                     if current_status is False:
                         users_to_update.append({
                             "user_id": user_id,
