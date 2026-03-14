@@ -3,10 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 from typing import Optional
 
-from app.db.session import async_session_maker
-from app.services.learning_tasks import bulk_update_all_users, update_single_user
-from app.services.auth_client import auth_client, get_admin
-from app.crud.course_crud.learning_status_crud import learning_status_crud
+from db.session import async_session_maker
+from services.learning_tasks import bulk_update_all_users, update_single_user
+from services.auth_client import auth_client, get_admin
+from crud.course_crud.learning_status_crud import learning_status_crud
 
 logger = logging.getLogger(__name__)
 
