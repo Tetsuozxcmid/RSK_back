@@ -107,3 +107,63 @@ async def check_user_status(
     except Exception as e:
         logger.error(f"Error checking user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/sync-update-user/{user_id}")
+async def sync_update_user(
+    user_id: int,
+    request: Request,
+    _: str = Depends(get_admin)
+):
+
+    try:
+        admin_cookie = request.cookies.get("users_access_token")
+        logger.info(f"🔄 Синхронное обновление пользователя {user_id}")
+        
+        # Получаем пользователя
+        user = await auth_client.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+        
+        # Проверяем и обновляем
+        async with async_session_maker() as db:
+            has_completed = await learning_status_crud.check_user_completed_all_courses(db, user_id)
+            logger.info(f"📊 has_completed_all_courses: {has_completed}")
+            
+            if has_completed:
+                current_status = await auth_client.get_user_learning_status(user_id)
+                logger.info(f"📊 current_profile_status: {current_status}")
+                
+                if current_status is False:
+                    # Обновляем статус
+                    update_result = await auth_client.update_user_learning_status(user_id, True)
+                    logger.info(f"📤 update_result: {update_result}")
+                    
+                    # Проверяем новый статус
+                    new_status = await auth_client.get_user_learning_status(user_id)
+                    
+                    return {
+                        "success": True,
+                        "user_id": user_id,
+                        "has_completed_all_courses": has_completed,
+                        "old_status": current_status,
+                        "update_result": update_result,
+                        "new_status": new_status
+                    }
+                else:
+                    return {
+                        "success": True,
+                        "user_id": user_id,
+                        "message": "User already has learning=True",
+                        "current_status": current_status
+                    }
+            else:
+                return {
+                    "success": True,
+                    "user_id": user_id,
+                    "message": "User hasn't completed all courses",
+                    "has_completed_all_courses": has_completed
+                }
+                
+    except Exception as e:
+        logger.error(f"❌ Error in sync update: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
