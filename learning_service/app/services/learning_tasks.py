@@ -10,7 +10,7 @@ from services.auth_client import auth_client
 logger = logging.getLogger(__name__)
 
 
-async def update_single_user(user_id: int, db: AsyncSession) -> bool:
+async def update_single_user(user_id: int, db: AsyncSession, admin_cookie: str = None) -> bool:
     try:
         # Проверяем, прошел ли пользователь все курсы
         has_completed_all = await learning_status_crud.check_user_completed_all_courses(
@@ -25,6 +25,7 @@ async def update_single_user(user_id: int, db: AsyncSession) -> bool:
             # Обновляем только если сейчас не True
             if current_status is False:
                 logger.info(f"User {user_id} completed all courses, updating to True")
+                # Здесь можно использовать admin_cookie если нужно для других запросов
                 return await auth_client.update_user_learning_status(user_id, True)
             else:
                 logger.debug(f"User {user_id} already has learning=True")
@@ -38,10 +39,11 @@ async def update_single_user(user_id: int, db: AsyncSession) -> bool:
         return False
 
 
-async def bulk_update_all_users():
+async def bulk_update_all_users(admin_cookie: str = None):
     db = async_session_maker()
     try:
-        users = await auth_client.get_all_users()
+        # Передаем admin_cookie в get_all_users
+        users = await auth_client.get_all_users(admin_cookie=admin_cookie)
 
         if not users:
             logger.warning("No users found")
@@ -85,7 +87,7 @@ async def bulk_update_all_users():
                 else:
                     logger.error(f"Failed to update batch of users")
                 
-                # Небольшая задержка между батчами, но не между каждым пользователем
+                # Небольшая задержка между батчами
                 await asyncio.sleep(0.1)
         else:
             logger.info("No users need status update")
@@ -99,12 +101,21 @@ async def bulk_update_all_users():
 
 @shared_task(name="services.learning_tasks.update_all_users_learning_status")
 def update_all_users_learning_status():
+    """
+    Запланированная задача для обновления статусов.
+    Запускается без admin_cookie, поэтому не может получить список пользователей из auth.
+    """
     logger.info("Starting scheduled update of learning status")
-
+    logger.warning("Эта задача не сможет получить список пользователей без admin_cookie!")
+    
+    # Здесь проблема - нет admin_cookie при автоматическом запуске
+    # Нужно либо использовать сервис-сервис токен, либо другую ручку
+    
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        result = loop.run_until_complete(bulk_update_all_users())
+        # Без admin_cookie это не сработает!
+        result = loop.run_until_complete(bulk_update_all_users(admin_cookie=None))
         logger.info(f"Completed: {result}")
         return result
     finally:
