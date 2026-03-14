@@ -1,4 +1,3 @@
-# learning_service/services/profile_client.py
 import httpx
 import logging
 from typing import List, Dict

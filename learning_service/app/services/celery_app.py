@@ -24,9 +24,16 @@ celery_app.conf.update(
 
 
 celery_app.conf.beat_schedule = {
+    # Старая задача (для совместимости, запуск в 3 часа ночи)
     "update-learning-status-every-day": {
         "task": "app.services.learning_tasks.update_all_users_learning_status",
         "schedule": crontab(hour=3, minute=0),
+        "options": {"queue": "learning"},
+    },
+    # НОВАЯ задача - каждый час!
+    "update-learning-statuses-every-hour": {
+        "task": "services.learning_tasks.update_learning_statuses",  # ВАЖНО: правильный путь!
+        "schedule": crontab(minute=0),  # Каждый час в 00 минут
         "options": {"queue": "learning"},
     },
 }
