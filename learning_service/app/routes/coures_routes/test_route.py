@@ -116,7 +116,7 @@ async def sync_update_user(
 ):
 
     try:
-        admin_cookie = request.cookies.get("users_access_token")
+        admin_cookie = current_status = await auth_client.get_user_learning_status(user_id, admin_cookie)
         logger.info(f"🔄 Синхронное обновление пользователя {user_id}")
         
         # Получаем пользователя

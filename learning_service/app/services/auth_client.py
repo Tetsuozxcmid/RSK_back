@@ -109,16 +109,28 @@ class AuthServiceClient:
                 logger.error(f"❌ Exception updating user {user_id}: {e}")
                 return False
 
-    async def get_user_learning_status(self, user_id: int) -> Optional[bool]:
+    async def get_user_learning_status(self, user_id: int, admin_cookie: str = None) -> Optional[bool]:
         async with httpx.AsyncClient() as client:
             try:
                 url = f"{self.profile_url}/profile_interaction/get_profile/"
                 logger.info(f"🔍 Getting learning status for user {user_id} from {url}")
                 
+                # Используем куки если есть, иначе Bearer токен
+                headers = {"Content-Type": "application/json"}
+                cookies = {}
+                
+                if admin_cookie:
+                    cookies["users_access_token"] = admin_cookie
+                    logger.info("Using cookie for auth")
+                else:
+                    headers["Authorization"] = f"Bearer {settings.SECRET_KEY}"
+                    logger.info("Using Bearer token for auth")
+                
                 response = await client.get(
                     url,
                     params={"user_id": user_id},
-                    headers={"Authorization": f"Bearer {settings.SECRET_KEY}"},
+                    headers=headers,
+                    cookies=cookies,
                     timeout=10.0,
                 )
                 
@@ -127,28 +139,13 @@ class AuthServiceClient:
 
                 if response.status_code == 200:
                     user_data = response.json()
-                    logger.info(f"📊 User data type: {type(user_data)}")
-                    logger.info(f"📊 Full user data: {user_data}")
-                    
-                    # Profile сервис возвращает ОДНОГО пользователя как словарь
                     if isinstance(user_data, dict):
-                        result = user_data.get("is_learned", False)
-                        logger.info(f"✅ Found status in dict: {result}")
-                        return result
-                    # Если все же вернулся список
+                        return user_data.get("is_learned", False)
                     elif isinstance(user_data, list) and len(user_data) > 0:
-                        result = user_data[0].get("is_learned", False)
-                        logger.info(f"✅ Found status in list: {result}")
-                        return result
-                    else:
-                        logger.warning("⚠️ Unexpected response format")
-                        return False
-                else:
-                    logger.error(f"❌ Failed to get user learning status: {response.status_code}")
-                    return None
-
+                        return user_data[0].get("is_learned", False)
+                return None
             except Exception as e:
-                logger.error(f"❌ Error getting user learning status: {e}", exc_info=True)
+                logger.error(f"Error: {e}")
                 return None
             
     async def bulk_update_learning_status(self, users_data: List[Dict]) -> bool:
