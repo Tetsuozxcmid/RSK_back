@@ -8,6 +8,7 @@ from sqlalchemy import select, func
 
 from config import settings
 from routes.users_router.router import router as user_router
+from routes.users_router.internal import router as celery_router
 from services.rabbitmq import init_rabbitmq
 from services.role_consumer import consume_role_updated_events
 from db.session import async_session_maker
@@ -187,6 +188,7 @@ async def health():
 
 
 app.include_router(user_router)
+app.include_router(celery_router)
 
 
 @app.get("/update-metrics-now")

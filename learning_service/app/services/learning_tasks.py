@@ -106,7 +106,7 @@ async def find_users_to_update() -> List[Dict]:
     users_to_update = []
     
     # Получаем всех пользователей из auth сервиса
-    users = await auth_client.get_all_users()
+    users = await auth_client.get_all_users_internal()
     
     if not users:
         logger.warning("No users found from auth service")
