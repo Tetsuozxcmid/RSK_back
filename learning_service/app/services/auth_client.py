@@ -47,6 +47,10 @@ class AuthServiceClient:
                 print(f"Fetching all users from {self.auth_url}")
                 response = await client.get(
                     f"{self.auth_url}/users_interaction/get_users/",
+                    headers={
+                        "Authorization": f"Bearer {settings.SECRET_KEY}",  # ДОБАВИТЬ ЭТО
+                        "Content-Type": "application/json",
+                    },
                     timeout=30.0,
                 )
 
@@ -55,9 +59,7 @@ class AuthServiceClient:
                     print(f"Received {len(users)} users from auth_service")
                     return users
                 else:
-                    print(
-                        f"Failed to fetch users from auth_service: {response.status_code}"
-                    )
+                    print(f"Failed to fetch users from auth_service: {response.status_code}")
                     return []
             except Exception as e:
                 print(f"Error fetching users from auth service: {e}")
