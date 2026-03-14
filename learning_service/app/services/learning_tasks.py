@@ -3,9 +3,9 @@ from celery import shared_task
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-from app.db.session import async_session_maker
-from app.crud.course_crud.learning_status_crud import learning_status_crud
-from app.services.auth_client import auth_client
+from db.session import async_session_maker
+from crud.course_crud.learning_status_crud import learning_status_crud
+from services.auth_client import auth_client
 
 logger = logging.getLogger(__name__)
 
