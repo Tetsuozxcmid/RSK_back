@@ -48,7 +48,7 @@ async def update_user_profile_joined_team(
     return await ProfileCRUD.update_profile_joined_team(
         db=db,
         user_id=update_data.user_id,
-        team_name=update_data.team,
+        team_name=update_data.team, # pyright: ignore[reportArgumentType]
         team_id=update_data.team_id,
     )
 

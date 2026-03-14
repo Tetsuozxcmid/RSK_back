@@ -23,7 +23,7 @@ ROLE_MAPPING = {
 
 
 async def publish_role_update(
-    rabbitmq_connection, user_id: int, new_role: str, old_role: str = None
+    rabbitmq_connection, user_id: int, new_role: str, old_role: str = None # type: ignore
 ):
     try:
         logger.info(f"[PUBLISHER] Attempting to publish role update for user {user_id}: {old_role} -> {new_role}")
@@ -56,39 +56,35 @@ async def publish_role_update(
 
 
 async def consume_user_created_events(rabbitmq_url: str):
-    """
-    Consumer для создания профилей при регистрации новых пользователей
-    """
+    
     print(f"\n🔵 [CONSUMER] {'='*50}")
     print(f"🔵 [CONSUMER] Starting user.created consumer")
     print(f"🔵 [CONSUMER] RabbitMQ URL: {rabbitmq_url}")
     print(f"🔵 [CONSUMER] {'='*50}\n")
     
     try:
-        # Подключение к RabbitMQ
+        
         print(f"🔵 [CONSUMER] Connecting to RabbitMQ...")
         connection = await aio_pika.connect_robust(rabbitmq_url)
         print(f"✅ [CONSUMER] Connected to RabbitMQ")
         
-        # Создание канала
+        
         print(f"🔵 [CONSUMER] Creating channel...")
         channel = await connection.channel()
         print(f"✅ [CONSUMER] Channel created")
 
-        # Декларация exchange
+       
         print(f"🔵 [CONSUMER] Declaring exchange 'user_events'...")
         exchange = await channel.declare_exchange(
             "user_events", type="direct", durable=True
         )
         print(f"✅ [CONSUMER] Exchange 'user_events' declared")
 
-        # Декларация очереди
         print(f"🔵 [CONSUMER] Declaring queue 'user_profile_queue'...")
         queue = await channel.declare_queue("user_profile_queue", durable=True)
         print(f"✅ [CONSUMER] Queue 'user_profile_queue' declared")
         print(f"🔵 [CONSUMER] Queue details: {queue}")
 
-        # Привязка очереди к exchange
         print(f"🔵 [CONSUMER] Binding queue to exchange with routing_key='user.created'...")
         await queue.bind(exchange, routing_key="user.created")
         print(f"✅ [CONSUMER] Queue bound successfully")
@@ -97,10 +93,9 @@ async def consume_user_created_events(rabbitmq_url: str):
         print(f"✅ [CONSUMER] Waiting for user.created events...")
         print(f"✅ [CONSUMER] {'='*50}\n")
 
-        # Начинаем прослушивание очереди
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
-                # 👇 УБИРАЕМ `async with message.process()` - будем контролировать ack вручную
+                
                 max_retries = 3
                 retry_count = 0
                 processed = False
@@ -110,7 +105,7 @@ async def consume_user_created_events(rabbitmq_url: str):
                         print(f"\n📨 [CONSUMER] {'='*50}")
                         print(f"📨 [CONSUMER] Processing message (attempt {retry_count + 1}/{max_retries})")
                         
-                        # Получаем данные из сообщения
+                    
                         data = json.loads(message.body.decode())
                         print(f"📨 [CONSUMER] Body: {data}")
                         print(f"📨 [CONSUMER] Headers: {message.headers}")
@@ -129,7 +124,7 @@ async def consume_user_created_events(rabbitmq_url: str):
                         print(f"  - name: {name}")
                         print(f"  - role_raw: {role_raw}")
 
-                        # Преобразуем роль
+                    
                         role_str = str(role_raw).lower()
                         print(f"🔵 [CONSUMER] Role string: {role_str}")
                         
@@ -142,9 +137,9 @@ async def consume_user_created_events(rabbitmq_url: str):
                         user_role = ROLE_MAPPING[role_str]
                         print(f"✅ [CONSUMER] Mapped role: {user_role}")
 
-                        # Создаем профиль в БД
+                        
                         print(f"🔵 [CONSUMER] Connecting to database...")
-                        async with async_session_maker() as session:
+                        async with async_session_maker() as session: # type: ignore
                             print(f"🔵 [CONSUMER] Checking if user {user_id} exists in profile DB...")
                             result = await session.execute(
                                 select(User).where(User.id == user_id)
@@ -240,7 +235,7 @@ async def consume_role_updated_events(rabbitmq_url: str):
 
                 new_role_enum = ROLE_MAPPING[role_str]
 
-                async with async_session_maker() as session:
+                async with async_session_maker() as session: # type: ignore
                     result = await session.execute(
                         select(User).where(User.id == user_id)
                     )

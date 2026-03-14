@@ -9,6 +9,7 @@ from routes.coures_routes.route import router as courses_router
 from routes.submissons_routes.route import router as submissions_router
 from routes.moderator_assign.route import router as moderator_router
 from routes.coures_routes.user_route import router as profile_router
+from routes.coures_routes.test_route import router as test_route_update_learned
 from services.assignement import assignment_service
 from config import settings
 
@@ -85,6 +86,7 @@ app.include_router(
     tags=["moderator-assignments"],
 )
 app.include_router(profile_router, prefix="/api", tags=["profile"])
+app.include_router(test_route_update_learned,prefix="/api/learned",tags=["learned"])
 
 
 @app.get("/metrics", include_in_schema=False)

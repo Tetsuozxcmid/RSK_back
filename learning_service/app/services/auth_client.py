@@ -3,7 +3,7 @@ from typing import Optional, Dict, List
 from config import settings
 from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
-
+import logger
 ALGORITHM = settings.ALGORITHM
 
 ROLE_HIERARCHY = {
@@ -111,12 +111,37 @@ class AuthServiceClient:
                         return user_data.get("is_learned", False)
                     return False
                 else:
-                    print(f"Failed to get user learning status: {response.status_code}")
+                    logger.error(f"Failed to get user learning status: {response.status_code}")
                     return None
 
             except Exception as e:
-                print(f"Error getting user learning status: {e}")
+                logger.error(f"Error getting user learning status: {e}")
                 return None
+            
+    async def bulk_update_learning_status(self, users_data: List[Dict]) -> bool:
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    f"{self.profile_url}/profile_interaction/bulk_update_learning/",
+                    json={"users": users_data},
+                    headers={
+                        "Authorization": f"Bearer {settings.SECRET_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    timeout=30.0,
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    logger.info(f"✅ Bulk updated {result.get('updated', 0)} users")
+                    return True
+                else:
+                    logger.error(f"❌ Bulk update failed: {response.status_code}")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"❌ Exception in bulk update: {e}")
+                return False
 
 
 async def get_current_user_role(request: Request) -> str:
