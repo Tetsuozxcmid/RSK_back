@@ -80,6 +80,30 @@ class UserCRUD:
         )
         existing_user = result.scalar_one_or_none()
         if existing_user:
+            should_update = False
+
+            normalized_email = email.lower() if email else None
+            normalized_name = str(name or "").strip()
+
+            if normalized_email and not existing_user.email:
+                existing_user.email = normalized_email
+                should_update = True
+
+            if normalized_name and not str(existing_user.name or "").strip():
+                existing_user.name = normalized_name
+                should_update = True
+
+            if should_update:
+                try:
+                    await db.commit()
+                    await db.refresh(existing_user)
+                except Exception as e:
+                    await db.rollback()
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Error updating OAuth user: {str(e)}",
+                    )
+
             return existing_user, False
 
         new_user = User(

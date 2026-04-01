@@ -6,42 +6,39 @@ import hmac
 import logging
 
 from config import settings
+from cruds.profile_crud import ProfileCRUD
 from db.session import get_db
 from db.models.user import User
+from schemas.user import OAuthProfileSyncRequest
 
-# Настраиваем логирование
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/internal", tags=["Internal"])
 
-# Исправление: используем Request для получения сырого тела запроса
-@router.post("/bulk-update-learning-status")
-async def internal_bulk_update_learning_status(
-    request: Request,  # Принимаем весь request
-    db: AsyncSession = Depends(get_db),
-    authorization: str = Header(...)
-):
-    """
-    Внутренняя ручка для массового обновления статусов обучения.
-    Проверяет Authorization header с SECRET_KEY.
-    """
-    # Проверяем Authorization header
+
+def verify_internal_authorization(authorization: str) -> None:
     if not authorization.startswith("Bearer "):
         logger.warning("Invalid authorization header format")
         raise HTTPException(status_code=403, detail="Invalid authorization header")
-    
+
     token = authorization.replace("Bearer ", "")
-    
-    # Используем hmac.compare_digest для безопасного сравнения
     if not hmac.compare_digest(token, settings.SECRET_KEY):
         logger.warning("Invalid secret key provided")
         raise HTTPException(status_code=403, detail="Forbidden")
-    
+
+
+@router.post("/bulk-update-learning-status")
+async def internal_bulk_update_learning_status(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    authorization: str = Header(...),
+):
+    verify_internal_authorization(authorization)
+
     try:
-        # Получаем JSON из тела запроса
         body = await request.json()
         logger.info(f"Received bulk update request with body: {body}")
-        
+
         updates = body.get("updates", [])
         if not isinstance(updates, list):
             logger.error("Invalid request format: 'updates' must be a list")
@@ -49,26 +46,26 @@ async def internal_bulk_update_learning_status(
                 "status": "error",
                 "message": "Invalid request format: 'updates' must be a list",
                 "received": 0,
-                "updated": 0
+                "updated": 0,
             }
-        
+
         logger.info(f"Processing {len(updates)} updates")
-        
+
         updated_count = 0
         errors = []
-        
+
         for index, item in enumerate(updates):
             if not isinstance(item, dict):
                 errors.append({"index": index, "error": "Item is not a dictionary"})
                 continue
-                
+
             user_id = item.get("user_id")
             is_learned = item.get("is_learned")
-            
+
             if user_id is None or is_learned is None:
                 errors.append({"index": index, "error": "Missing user_id or is_learned"})
                 continue
-            
+
             try:
                 result = await db.execute(
                     update(User)
@@ -84,52 +81,42 @@ async def internal_bulk_update_learning_status(
             except Exception as e:
                 logger.error(f"Error updating user {user_id}: {e}")
                 errors.append({"index": index, "error": str(e)})
-        
+
         await db.commit()
-        
+
         response = {
             "status": "success",
             "received": len(updates),
-            "updated": updated_count
+            "updated": updated_count,
         }
-        
+
         if errors:
             response["errors"] = errors
             response["error_count"] = len(errors)
-        
+
         logger.info(f"Bulk update completed: {response}")
         return response
-        
+
     except Exception as e:
         logger.error(f"Error processing bulk update: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-# Альтернативный вариант с явным указанием response_model=None (тоже рабочий)
 @router.post("/bulk-update-learning-status-v2", response_model=None)
 async def internal_bulk_update_learning_status_v2(
-    data: Dict[str, List[Dict[str, Any]]],  # FastAPI пытается распарсить это автоматически
+    data: Dict[str, List[Dict[str, Any]]],
     db: AsyncSession = Depends(get_db),
-    authorization: str = Header(...)
+    authorization: str = Header(...),
 ):
-    """
-    Альтернативная версия с response_model=None
-    """
-    # Проверка авторизации (такая же как выше)
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=403, detail="Invalid authorization header")
-    
-    token = authorization.replace("Bearer ", "")
-    if not hmac.compare_digest(token, settings.SECRET_KEY):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    
+    verify_internal_authorization(authorization)
+
     updates = data.get("updates", [])
     updated = 0
-    
+
     for item in updates:
         user_id = item.get("user_id")
         is_learned = item.get("is_learned")
-        
+
         if user_id is not None and is_learned is not None:
             result = await db.execute(
                 update(User)
@@ -138,12 +125,21 @@ async def internal_bulk_update_learning_status_v2(
             )
             if result.rowcount > 0:
                 updated += 1
-    
+
     await db.commit()
-    
-    # Возвращаем обычный dict, не Pydantic модель
+
     return {
         "status": "success",
         "received": len(updates),
-        "updated": updated
+        "updated": updated,
     }
+
+
+@router.post("/sync-oauth-profile")
+async def internal_sync_oauth_profile(
+    sync_data: OAuthProfileSyncRequest,
+    db: AsyncSession = Depends(get_db),
+    authorization: str = Header(...),
+):
+    verify_internal_authorization(authorization)
+    return await ProfileCRUD.sync_oauth_profile(db=db, sync_data=sync_data)

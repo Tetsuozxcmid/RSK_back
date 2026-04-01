@@ -7,12 +7,16 @@ import aio_pika
 import json
 import time
 import traceback
-from sqlalchemy import select
 
 from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
-from db.models.user import User, UserRole
+from db.models.user import UserRole
 from services.jwt import create_access_token
+from services.oauth_profile import (
+    build_user_registered_event,
+    normalize_yandex_profile,
+)
+from services.profile_client import UserProfileClient
 from services.rabbitmq import get_rabbitmq_connection
 from config import settings
 
@@ -78,41 +82,45 @@ async def yandex_callback(
             )
             user_data = user_resp.json()
 
-        email = user_data.get("default_email")
+        provider_id = str(user_data.get("id") or "")
+        if not provider_id:
+            return RedirectResponse(
+                f"{settings.YANDEX_FRONTEND_URL}?error=user_not_received"
+            )
+
+        oauth_profile = normalize_yandex_profile(user_data)
+        email = oauth_profile["email"]
         if not email:
             return RedirectResponse(
                 f"{settings.YANDEX_FRONTEND_URL}?error=email_not_provided"
             )
 
-        result = await db.execute(
-            select(User).where(
-                User.provider_id == str(user_data["id"]),
-                User.auth_provider == "yandex",
+        try:
+            user, created = await UserCRUD.create_oauth_user(
+                db=db,
+                email=email,
+                name=oauth_profile["full_name"],
+                provider="yandex",
+                provider_id=provider_id,
+                role=UserRole.STUDENT,
             )
-        )
-        existing_user = result.scalar_one_or_none()
+            print(f"[YANDEX DEBUG] OAuth user resolved, id: {user.id}, created: {created}")
+        except Exception:
+            traceback.print_exc()
+            return RedirectResponse(
+                f"{settings.YANDEX_FRONTEND_URL}?error=user_creation_failed"
+            )
 
-        if existing_user:
-            user = existing_user
-            print(f"[YANDEX DEBUG] User already exists, id: {user.id}")
-        else:
-            try:
-                user, created= await UserCRUD.create_oauth_user(
-                    db=db,
-                    email=email,
-                    name=user_data.get("real_name")
-                    or user_data.get("display_name")
-                    or "",
-                    provider="yandex",
-                    provider_id=str(user_data["id"]),
-                    role=UserRole.STUDENT,
-                )
-                print(f"[YANDEX DEBUG] New user created, id: {user.id}")
-            except Exception:
-                traceback.print_exc()
-                return RedirectResponse(
-                    f"{settings.YANDEX_FRONTEND_URL}?error=user_creation_failed"
-                )
+        await UserProfileClient.sync_oauth_profile(
+            user_id=user.id,
+            email=user.email or email,
+            username=user.login or oauth_profile["username"] or f"user{user.id}",
+            first_name=oauth_profile["first_name"],
+            last_name=oauth_profile["last_name"],
+            patronymic=oauth_profile["patronymic"],
+            full_name=user.name or oauth_profile["full_name"],
+            role=user.role.value,
+        )
 
         try:
             channel = await rabbitmq.channel()
@@ -120,15 +128,16 @@ async def yandex_callback(
                 "user_events", type="direct", durable=True
             )
 
-            user_event = {
-                "user_id": user.id,
-                "email": user.email,
-                "username": user.login or f"user{user.id}",
-                "name": user.name,
-                "verified": True,
-                "event_type": "user_registered",
-                "role": user.role.value,
-            }
+            user_event = build_user_registered_event(
+                user_id=user.id,
+                email=user.email or email,
+                username=user.login or oauth_profile["username"] or f"user{user.id}",
+                first_name=oauth_profile["first_name"],
+                last_name=oauth_profile["last_name"],
+                patronymic=oauth_profile["patronymic"],
+                full_name=user.name or oauth_profile["full_name"],
+                role=user.role.value,
+            )
 
             message = aio_pika.Message(
                 body=json.dumps(user_event).encode(),

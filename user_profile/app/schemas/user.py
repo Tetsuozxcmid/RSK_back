@@ -86,6 +86,17 @@ class ProfileUpdate(BaseModel):
     Organization_id: Optional[int] = None
 
 
+class OAuthProfileSyncRequest(BaseModel):
+    user_id: int
+    email: Optional[str] = None
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    patronymic: Optional[str] = None
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+
+
 class ProfileJoinedTeamUpdate(BaseModel):
     user_id: int
     team: Optional[str] = None

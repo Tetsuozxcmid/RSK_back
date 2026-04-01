@@ -3,14 +3,139 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 
-from db.models.user_enum import UserEnum,UserEnumForAdmin,UserEnumForUser
+from db.models.user_enum import UserEnum, UserEnumForAdmin, UserEnumForUser
 from db.models.user import User
 from fastapi import HTTPException
-from schemas.user import OrganizationSimple, ProfileResponse, ProfileUpdate
+from schemas.user import (
+    OAuthProfileSyncRequest,
+    OrganizationSimple,
+    ProfileResponse,
+    ProfileUpdate,
+)
 from services.orgs_client import OrgsClient
 
 
 class ProfileCRUD:
+    @staticmethod
+    def _normalize_text(value: str | None) -> str:
+        return str(value or "").strip()
+
+    @staticmethod
+    def _split_full_name(full_name: str | None) -> tuple[str, str, str]:
+        parts = [part for part in ProfileCRUD._normalize_text(full_name).split() if part]
+        if len(parts) < 2:
+            return "", "", ""
+
+        first_name = parts[0]
+        last_name = parts[1]
+        patronymic = " ".join(parts[2:]).strip() if len(parts) > 2 else ""
+        return first_name, last_name, patronymic
+
+    @staticmethod
+    def _resolve_role(role_raw: str | UserEnum | None) -> UserEnum:
+        if isinstance(role_raw, UserEnum):
+            return role_raw
+
+        role_mapping = {
+            "student": UserEnum.Student,
+            "teacher": UserEnum.Teacher,
+            "moder": UserEnum.Moder,
+            "admin": UserEnum.Admin,
+        }
+        return role_mapping.get(
+            ProfileCRUD._normalize_text(str(role_raw or "")).lower(),
+            UserEnum.Student,
+        )
+
+    @classmethod
+    async def sync_oauth_profile(
+        cls, db: AsyncSession, sync_data: OAuthProfileSyncRequest
+    ):
+        first_name = cls._normalize_text(sync_data.first_name)
+        last_name = cls._normalize_text(sync_data.last_name)
+        patronymic = cls._normalize_text(sync_data.patronymic)
+        full_name = cls._normalize_text(sync_data.full_name)
+        email = cls._normalize_text(sync_data.email)
+        username = cls._normalize_text(sync_data.username) or f"user{sync_data.user_id}"
+
+        parsed_first_name, parsed_last_name, parsed_patronymic = cls._split_full_name(
+            full_name
+        )
+        if not first_name:
+            first_name = parsed_first_name
+        if not last_name:
+            last_name = parsed_last_name
+        if not patronymic:
+            patronymic = parsed_patronymic
+
+        incoming_short_name = " ".join(
+            part for part in [first_name, last_name] if part
+        ).strip()
+        incoming_full_name = full_name or " ".join(
+            part for part in [first_name, last_name, patronymic] if part
+        ).strip()
+
+        result = await db.execute(select(User).where(User.id == sync_data.user_id))
+        profile = result.scalar_one_or_none()
+        created = False
+
+        if not profile:
+            profile = User(
+                id=sync_data.user_id,
+                username=username,
+                email=email,
+                NameIRL=first_name,
+                Surname=last_name,
+                Patronymic=patronymic,
+                Type=cls._resolve_role(sync_data.role),
+            )
+            db.add(profile)
+            created = True
+        else:
+            current_name = cls._normalize_text(profile.NameIRL)
+            current_surname = cls._normalize_text(profile.Surname)
+            current_patronymic = cls._normalize_text(profile.Patronymic)
+
+            if not cls._normalize_text(profile.username):
+                profile.username = username
+
+            if email and not cls._normalize_text(profile.email):
+                profile.email = email
+
+            if first_name and not current_name:
+                profile.NameIRL = first_name
+                current_name = first_name
+
+            if last_name and not current_surname:
+                if current_name in {incoming_full_name, incoming_short_name}:
+                    profile.NameIRL = first_name or current_name
+                profile.Surname = last_name
+                current_surname = last_name
+
+            if patronymic and not current_patronymic:
+                profile.Patronymic = patronymic
+
+            if profile.Type is None:
+                profile.Type = cls._resolve_role(sync_data.role)
+
+        try:
+            await db.commit()
+            await db.refresh(profile)
+            return {
+                "status": "success",
+                "created": created,
+                "user_id": profile.id,
+                "profile_complete": bool(
+                    cls._normalize_text(profile.NameIRL)
+                    and cls._normalize_text(profile.Surname)
+                ),
+            }
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500, detail=f"Error syncing OAuth profile: {str(e)}"
+            )
+
     @staticmethod
     async def create_profile(db: AsyncSession, profile_data):
         exiting_profile = await db.execute(
@@ -134,27 +259,33 @@ class ProfileCRUD:
         except Exception as e:
             await db.rollback()
             raise HTTPException(
-                status_code=400, detail=f"Error updating role: {str(e)},must be student or teacher"
+                status_code=400,
+                detail=f"Error updating role: {str(e)},must be student or teacher",
             )
-        
+
     @staticmethod
-    async def update_user_role(db: AsyncSession, user_id: int, new_role: UserEnumForAdmin):
+    async def update_user_role(
+        db: AsyncSession, user_id: int, new_role: UserEnumForAdmin
+    ):
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
-        
+
         if not user:
             raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
-        
-        old_role = user.Type 
+
+        old_role = user.Type
         user.Type = new_role
-        
+
         try:
             await db.commit()
             await db.refresh(user)
-            return user, old_role  
+            return user, old_role
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=400, detail=f"Error updating role: {str(e)}, must be admin or moder")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error updating role: {str(e)}, must be admin or moder",
+            )
 
     @staticmethod
     async def get_all_users_profiles(db: AsyncSession):

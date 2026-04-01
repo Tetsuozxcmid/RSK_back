@@ -6,6 +6,8 @@ from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
 from db.models.user import UserRole
 from services.jwt import create_access_token
+from services.oauth_profile import build_user_registered_event, normalize_vk_profile
+from services.profile_client import UserProfileClient
 from services.rabbitmq import get_rabbitmq_connection
 
 from config import settings
@@ -15,16 +17,15 @@ import aio_pika
 import json
 
 vk_router = APIRouter(prefix="/auth/vk", tags=["VK OAuth"])
-user_crud = UserCRUD()
 COOKIE_NAME = "users_access_token"
 
 
 @vk_router.get("/callback")
 async def vk_callback(
     request: Request,
-    device_id: str | int = None,  
-    code: str = None, 
-    error: str = None,  
+    device_id: str | int = None,
+    code: str = None,
+    error: str = None,
     db: AsyncSession = Depends(get_db),
     rabbitmq: aio_pika.abc.AbstractRobustConnection = Depends(get_rabbitmq_connection),
 ):
@@ -63,75 +64,79 @@ async def vk_callback(
             data={"client_id": settings.VK_APP_ID, "access_token": access_token},
         )
         data = user_resp.json()
-        print(f"ДАТА - {data}")
-        user = data.get("user")
+        print(f"[VK DEBUG] user_info payload: {data}")
 
-        user_id = user.get("user_id")
-        user_first_name = user.get("first_name")
-        user_last_name = user.get("last_name")
-        user_email = user.get("email")
+    provider_user = data.get("user") or {}
+    provider_user_id = provider_user.get("user_id")
+    if not provider_user_id:
+        return RedirectResponse(f"{settings.FRONTEND_URL}?error=user_not_received")
 
-        user_name = f"{user_first_name} {user_last_name}"
+    oauth_profile = normalize_vk_profile(provider_user)
+    print(f"[VK DEBUG] Received email: {oauth_profile['email']}")
 
-        if not user_email:
-            user_email = None
-
-        print(f"[VK DEBUG] Полученный email: {user_email}")
-
-        user, created = await UserCRUD.create_oauth_user(  
+    user, created = await UserCRUD.create_oauth_user(
         db=db,
-        name=user_name,
+        name=oauth_profile["full_name"],
         provider="vk",
-        provider_id=str(user_id),
-        email=user_email,
+        provider_id=str(provider_user_id),
+        email=oauth_profile["email"] or None,
         role=UserRole.STUDENT,
-        )
-        
+    )
 
-        if created:
-            try:
-                channel = await rabbitmq.channel()
-                exchange = await channel.declare_exchange(
-                    "user_events", type="direct", durable=True
-                )
+    await UserProfileClient.sync_oauth_profile(
+        user_id=user.id,
+        email=user.email or oauth_profile["email"],
+        username=user.login or oauth_profile["username"] or f"vk_user_{provider_user_id}",
+        first_name=oauth_profile["first_name"],
+        last_name=oauth_profile["last_name"],
+        patronymic=oauth_profile["patronymic"],
+        full_name=user.name or oauth_profile["full_name"],
+        role=user.role.value,
+    )
 
-                
-                user_event = {
-                    "user_id": user.id,
-                    "email": user.email or user_email or "",  
-                    "username": user.login or f"vk_user_{user_id}",
-                    "name": user.name or user_name,
-                    "verified": True,
-                    "event_type": "user_registered",
-                    "role": user.role.value,
-                }
+    if created:
+        try:
+            channel = await rabbitmq.channel()
+            exchange = await channel.declare_exchange(
+                "user_events", type="direct", durable=True
+            )
 
-                message = aio_pika.Message(
-                    body=json.dumps(user_event).encode(),
-                    headers={"event_type": "user_events"},
-                    delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
-                )
+            user_event = build_user_registered_event(
+                user_id=user.id,
+                email=user.email or oauth_profile["email"],
+                username=user.login or oauth_profile["username"] or f"vk_user_{provider_user_id}",
+                first_name=oauth_profile["first_name"],
+                last_name=oauth_profile["last_name"],
+                patronymic=oauth_profile["patronymic"],
+                full_name=user.name or oauth_profile["full_name"],
+                role=user.role.value,
+            )
 
-                await exchange.publish(message, routing_key="user.created")
+            message = aio_pika.Message(
+                body=json.dumps(user_event).encode(),
+                headers={"event_type": "user_events"},
+                delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+            )
 
-            except Exception as e:
-                print(f"[RabbitMQ] Failed to publish VK OAuth user event: {e}")
+            await exchange.publish(message, routing_key="user.created")
+        except Exception as e:
+            print(f"[RabbitMQ] Failed to publish VK OAuth user event: {e}")
 
-        jwt_token = await create_access_token(
-            {"sub": str(user.id), "role": user.role.value}
-        )
+    jwt_token = await create_access_token(
+        {"sub": str(user.id), "role": user.role.value}
+    )
 
-        response = RedirectResponse(settings.FRONTEND_URL)  
-        response.set_cookie(
-            key=COOKIE_NAME,
-            value=jwt_token,
-            httponly=True,
-            secure=True,
-            samesite="none",
-            domain=".rosdk.ru",  
-            path="/",
-            max_age=3600 * 24 * 7,
-        )
+    response = RedirectResponse(settings.FRONTEND_URL)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=jwt_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        domain=".rosdk.ru",
+        path="/",
+        max_age=3600 * 24 * 7,
+    )
 
-        response.delete_cookie(key="vkid_sdk:codeVerifier")
-        return response
+    response.delete_cookie(key="vkid_sdk:codeVerifier")
+    return response

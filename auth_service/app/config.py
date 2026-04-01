@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     URL_FOR_TOKEN: str
 
     AUTH_SERVICE_URL: str
+    USER_PROFILE_URL: str = "http://rsk_profile_app:8003"
 
     VK_APP_ID: int
     VK_APP_SECRET: str

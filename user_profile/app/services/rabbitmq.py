@@ -1,15 +1,19 @@
 import asyncio
+import json
+import logging
+from datetime import datetime
 
 import aio_pika
-import json
-from datetime import datetime
+from aio_pika.abc import AbstractRobustConnection
+from fastapi import Request
 from sqlalchemy import select
+
+from cruds.profile_crud import ProfileCRUD
 from db.models.user import User
 from db.models.user_enum import UserEnum
 from db.session import async_session_maker
-from aio_pika.abc import AbstractRobustConnection
-from fastapi import Request
-import logging
+from schemas.user import OAuthProfileSyncRequest
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,11 +27,16 @@ ROLE_MAPPING = {
 
 
 async def publish_role_update(
-    rabbitmq_connection, user_id: int, new_role: str, old_role: str = None # type: ignore
+    rabbitmq_connection, user_id: int, new_role: str, old_role: str = None
 ):
     try:
-        logger.info(f"[PUBLISHER] Attempting to publish role update for user {user_id}: {old_role} -> {new_role}")
-        
+        logger.info(
+            "[PUBLISHER] Attempting to publish role update for user %s: %s -> %s",
+            user_id,
+            old_role,
+            new_role,
+        )
+
         channel = await rabbitmq_connection.channel()
         exchange = await channel.declare_exchange(
             "user_events", type="direct", durable=True
@@ -48,151 +57,91 @@ async def publish_role_update(
         )
 
         await exchange.publish(message, routing_key="user.role_updated")
-        logger.info(f"[PUBLISHER] ✅ Role update published for user {user_id}: {old_role} -> {new_role}")
+        logger.info(
+            "[PUBLISHER] Role update published for user %s: %s -> %s",
+            user_id,
+            old_role,
+            new_role,
+        )
 
     except Exception as e:
-        logger.error(f"[PUBLISHER] ❌ Failed to publish role update: {e}", exc_info=True)
+        logger.error("[PUBLISHER] Failed to publish role update: %s", e, exc_info=True)
         raise
 
 
 async def consume_user_created_events(rabbitmq_url: str):
-    
-    print(f"\n🔵 [CONSUMER] {'='*50}")
-    print(f"🔵 [CONSUMER] Starting user.created consumer")
-    print(f"🔵 [CONSUMER] RabbitMQ URL: {rabbitmq_url}")
-    print(f"🔵 [CONSUMER] {'='*50}\n")
-    
-    try:
-        
-        print(f"🔵 [CONSUMER] Connecting to RabbitMQ...")
-        connection = await aio_pika.connect_robust(rabbitmq_url)
-        print(f"✅ [CONSUMER] Connected to RabbitMQ")
-        
-        
-        print(f"🔵 [CONSUMER] Creating channel...")
-        channel = await connection.channel()
-        print(f"✅ [CONSUMER] Channel created")
+    logger.info("[CONSUMER] Starting user.created consumer")
 
-       
-        print(f"🔵 [CONSUMER] Declaring exchange 'user_events'...")
+    try:
+        connection = await aio_pika.connect_robust(rabbitmq_url)
+        channel = await connection.channel()
         exchange = await channel.declare_exchange(
             "user_events", type="direct", durable=True
         )
-        print(f"✅ [CONSUMER] Exchange 'user_events' declared")
-
-        print(f"🔵 [CONSUMER] Declaring queue 'user_profile_queue'...")
         queue = await channel.declare_queue("user_profile_queue", durable=True)
-        print(f"✅ [CONSUMER] Queue 'user_profile_queue' declared")
-        print(f"🔵 [CONSUMER] Queue details: {queue}")
-
-        print(f"🔵 [CONSUMER] Binding queue to exchange with routing_key='user.created'...")
         await queue.bind(exchange, routing_key="user.created")
-        print(f"✅ [CONSUMER] Queue bound successfully")
 
-        print(f"\n✅ [CONSUMER] {'='*50}")
-        print(f"✅ [CONSUMER] Waiting for user.created events...")
-        print(f"✅ [CONSUMER] {'='*50}\n")
+        logger.info("[CONSUMER] Waiting for user.created events")
 
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
-                
                 max_retries = 3
                 retry_count = 0
                 processed = False
-                
+
                 while retry_count < max_retries and not processed:
                     try:
-                        print(f"\n📨 [CONSUMER] {'='*50}")
-                        print(f"📨 [CONSUMER] Processing message (attempt {retry_count + 1}/{max_retries})")
-                        
-                    
                         data = json.loads(message.body.decode())
-                        print(f"📨 [CONSUMER] Body: {data}")
-                        print(f"📨 [CONSUMER] Headers: {message.headers}")
-                        print(f"📨 [CONSUMER] Routing key: {message.routing_key}")
+                        logger.info("[CONSUMER] Processing user.created payload: %s", data)
 
                         user_id = data.get("user_id")
-                        email = data.get("email", "")
-                        username = data.get("username", "")
-                        name = data.get("name", "")
-                        role_raw = data.get("role", "")
-
-                        print(f"🔵 [CONSUMER] Extracted data:")
-                        print(f"  - user_id: {user_id}")
-                        print(f"  - email: {email}")
-                        print(f"  - username: {username}")
-                        print(f"  - name: {name}")
-                        print(f"  - role_raw: {role_raw}")
-
-                    
-                        role_str = str(role_raw).lower()
-                        print(f"🔵 [CONSUMER] Role string: {role_str}")
-                        
-                        if role_str not in ROLE_MAPPING:
-                            print(f"❌ [CONSUMER] Unknown role: {role_raw}, user_id={user_id}")
+                        if not user_id:
+                            logger.warning("[CONSUMER] Missing user_id in payload: %s", data)
                             await message.ack()
                             processed = True
                             continue
 
-                        user_role = ROLE_MAPPING[role_str]
-                        print(f"✅ [CONSUMER] Mapped role: {user_role}")
-
-                        
-                        print(f"🔵 [CONSUMER] Connecting to database...")
-                        async with async_session_maker() as session: # type: ignore
-                            print(f"🔵 [CONSUMER] Checking if user {user_id} exists in profile DB...")
-                            result = await session.execute(
-                                select(User).where(User.id == user_id)
+                        async with async_session_maker() as session:  # type: ignore
+                            sync_result = await ProfileCRUD.sync_oauth_profile(
+                                db=session,
+                                sync_data=OAuthProfileSyncRequest(
+                                    user_id=user_id,
+                                    email=data.get("email", ""),
+                                    username=data.get("username", ""),
+                                    first_name=data.get("first_name"),
+                                    last_name=data.get("last_name"),
+                                    patronymic=data.get("patronymic"),
+                                    full_name=data.get("full_name") or data.get("name"),
+                                    role=data.get("role"),
+                                ),
                             )
-                            user = result.scalar_one_or_none()
 
-                            if not user:
-                                print(f"🔵 [CONSUMER] User {user_id} not found, creating profile...")
-                                new_profile = User(
-                                    id=user_id,
-                                    username=username,
-                                    NameIRL=name or "",
-                                    email=email,
-                                    Surname="",
-                                    Type=user_role,
-                                )
-                                session.add(new_profile)
-                                await session.commit()
-                                print(f"✅ [CONSUMER] Profile CREATED for user_id={user_id}")
-                                print(f"✅ [CONSUMER] Profile details: id={new_profile.id}, username={new_profile.username}")
-                            else:
-                                print(f"✅ [CONSUMER] Profile already exists for user_id={user_id}")
-                                print(f"✅ [CONSUMER] Existing profile: {user}")
-
-                        # Сообщение обработано успешно
+                        logger.info(
+                            "[CONSUMER] Profile sync result for user_id=%s: %s",
+                            user_id,
+                            sync_result,
+                        )
                         await message.ack()
-                        print(f"✅ [CONSUMER] Message acknowledged")
                         processed = True
-                        print(f"📨 [CONSUMER] {'='*50}\n")
 
                     except Exception as e:
                         retry_count += 1
-                        print(f"❌ [CONSUMER] Error processing message (attempt {retry_count}/{max_retries}): {e}")
-                        print(f"❌ [CONSUMER] Error type: {type(e)}")
-                        import traceback
-                        traceback.print_exc()
-                        
+                        logger.error(
+                            "[CONSUMER] Error processing user.created (attempt %s/%s): %s",
+                            retry_count,
+                            max_retries,
+                            e,
+                            exc_info=True,
+                        )
+
                         if retry_count < max_retries:
-                            # Ждем перед повторной попыткой
-                            wait_time = retry_count * 2  # 2, 4, 6 секунд
-                            print(f"⏳ [CONSUMER] Waiting {wait_time} seconds before retry...")
-                            await asyncio.sleep(wait_time)
+                            await asyncio.sleep(retry_count * 2)
                         else:
-                            # Исчерпали все попытки - не возвращаем в очередь
-                            print(f"💔 [CONSUMER] Max retries ({max_retries}) reached, rejecting message")
                             await message.nack(requeue=False)
                             processed = True
 
     except Exception as e:
-        print(f"❌ [CONSUMER] Fatal error in consumer: {e}")
-        print(f"❌ [CONSUMER] Error type: {type(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error("[CONSUMER] Fatal error in user.created consumer: %s", e, exc_info=True)
         raise
 
 
@@ -212,7 +161,7 @@ async def consume_role_updated_events(rabbitmq_url: str):
 
     await queue.bind(exchange, routing_key="user.role_updated")
 
-    print("[CONSUMER] Waiting for user.role_updated events...")
+    logger.info("[CONSUMER] Waiting for user.role_updated events")
 
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:
@@ -223,19 +172,26 @@ async def consume_role_updated_events(rabbitmq_url: str):
                 new_role = data.get("new_role")
                 old_role = data.get("old_role")
 
-                print(
-                    f"[CONSUMER] Received role update for user {user_id}: {old_role} -> {new_role}"
+                logger.info(
+                    "[CONSUMER] Received role update for user %s: %s -> %s",
+                    user_id,
+                    old_role,
+                    new_role,
                 )
 
                 role_str = str(new_role).lower()
                 if role_str not in ROLE_MAPPING:
-                    print(f"[CONSUMER] Unknown role: {new_role}, user_id={user_id}")
+                    logger.warning(
+                        "[CONSUMER] Unknown role %s for user_id=%s",
+                        new_role,
+                        user_id,
+                    )
                     await message.ack()
                     continue
 
                 new_role_enum = ROLE_MAPPING[role_str]
 
-                async with async_session_maker() as session: # type: ignore
+                async with async_session_maker() as session:  # type: ignore
                     result = await session.execute(
                         select(User).where(User.id == user_id)
                     )
@@ -244,14 +200,20 @@ async def consume_role_updated_events(rabbitmq_url: str):
                     if user:
                         user.Type = new_role_enum
                         await session.commit()
-                        print(
-                            f"[CONSUMER] Role updated for user_id={user_id} to {new_role}"
+                        logger.info(
+                            "[CONSUMER] Role updated for user_id=%s to %s",
+                            user_id,
+                            new_role,
                         )
                     else:
-                        print(f"[CONSUMER] User {user_id} not found")
+                        logger.warning("[CONSUMER] User %s not found", user_id)
 
                 await message.ack()
 
             except Exception as e:
-                print(f"[CONSUMER] Error processing message: {e}")
+                logger.error(
+                    "[CONSUMER] Error processing user.role_updated: %s",
+                    e,
+                    exc_info=True,
+                )
                 await message.nack(requeue=False)
