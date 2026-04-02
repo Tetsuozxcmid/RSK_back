@@ -7,16 +7,53 @@ from db.models.user import User, UserRole
 from routes.users_router.auth_logic import pass_settings
 from schemas.user_schemas.user_get import UserOut
 from fastapi import HTTPException
+from services.oauth_profile import build_full_name, clean_text
+
+
+def _normalize_text(value: str | None) -> str:
+    return clean_text(value)
+
+
+def _truncate_text(value: str | None, max_length: int) -> str:
+    normalized = _normalize_text(value)
+    if len(normalized) <= max_length:
+        return normalized
+    return normalized[:max_length].rstrip()
+
+
+def _resolve_registration_names(user_data) -> tuple[str, str, str]:
+    first_name = _normalize_text(getattr(user_data, "first_name", None))
+    last_name = _normalize_text(getattr(user_data, "last_name", None))
+    raw_name = _normalize_text(getattr(user_data, "name", None))
+
+    if first_name or last_name:
+        return first_name, last_name, build_full_name(first_name, last_name)
+
+    if not raw_name:
+        return "", "", ""
+
+    raw_parts = [part for part in raw_name.split() if part]
+    if len(raw_parts) >= 2:
+        first_name = raw_parts[0]
+        last_name = " ".join(raw_parts[1:]).strip()
+
+    return first_name or raw_name, last_name, raw_name
+
+
+def _default_login_for_user_id(user_id: int) -> str:
+    return f"user{user_id}"
 
 
 class UserCRUD:
     @staticmethod
     async def create_user(db: AsyncSession, user_data):
+        normalized_email = user_data.email.lower()
         existing_user = await db.execute(
-            select(User).where(User.email == user_data.email.lower())
+            select(User).where(User.email == normalized_email)
         )
         existing_user = existing_user.scalar_one_or_none()
         user_role = user_data.role if hasattr(user_data, "role") else UserRole.STUDENT
+        _, _, full_name = _resolve_registration_names(user_data)
 
         if existing_user and existing_user.verified:
             raise HTTPException(
@@ -31,7 +68,7 @@ class UserCRUD:
 
         new_user = User(
             name="",
-            email=user_data.email.lower(),
+            email=normalized_email,
             hashed_password="",
             login=None,
             role=user_role,
@@ -39,7 +76,7 @@ class UserCRUD:
             confirmation_token=confirmation_token,
             auth_provider=None,
             provider_id=None,
-            temp_name=user_data.name if user_data.name else "",
+            temp_name=_truncate_text(full_name, 50),
             temp_password=pass_settings.get_password_hash(
                 user_data.password.get_secret_value()
             ),
@@ -53,7 +90,7 @@ class UserCRUD:
             await db.commit()
             await db.refresh(new_user)
 
-            temp_login = f"user{new_user.id}"
+            temp_login = _default_login_for_user_id(new_user.id)
             new_user.temp_login = temp_login
             await db.commit()
             await db.refresh(new_user)
@@ -84,13 +121,18 @@ class UserCRUD:
 
             normalized_email = email.lower() if email else None
             normalized_name = str(name or "").strip()
+            normalized_login = _default_login_for_user_id(existing_user.id)
 
             if normalized_email and not existing_user.email:
                 existing_user.email = normalized_email
                 should_update = True
 
             if normalized_name and not str(existing_user.name or "").strip():
-                existing_user.name = normalized_name
+                existing_user.name = _truncate_text(normalized_name, 50)
+                should_update = True
+
+            if not _normalize_text(existing_user.login):
+                existing_user.login = normalized_login
                 should_update = True
 
             if should_update:
@@ -107,7 +149,7 @@ class UserCRUD:
             return existing_user, False
 
         new_user = User(
-            name=name,
+            name=_truncate_text(name, 50),
             email=email.lower() if email else None,
             hashed_password="",
             login=None,
@@ -121,6 +163,12 @@ class UserCRUD:
         try:
             await db.commit()
             await db.refresh(new_user)
+
+            if not _normalize_text(new_user.login):
+                new_user.login = _default_login_for_user_id(new_user.id)
+                await db.commit()
+                await db.refresh(new_user)
+
             return new_user, True
         except Exception as e:
             await db.rollback()

@@ -113,6 +113,7 @@ async def consume_user_created_events(rabbitmq_url: str):
                                     patronymic=data.get("patronymic"),
                                     full_name=data.get("full_name") or data.get("name"),
                                     role=data.get("role"),
+                                    auth_provider=data.get("auth_provider"),
                                 ),
                             )
 

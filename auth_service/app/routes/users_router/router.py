@@ -22,6 +22,7 @@ from db.session import get_db
 from cruds.users_crud.crud import UserCRUD
 from services.jwt import create_access_token
 from services.emailsender import send_confirmation_email, send_new_password_email
+from services.oauth_profile import build_full_name, clean_text
 import asyncio
 from fastapi.responses import HTMLResponse
 from pathlib import Path
@@ -73,6 +74,24 @@ def update_active_users_metric(active_count: int):
         print(f"⚠ Could not update metric: metric={metric}, service={service_name}")
 
 
+def _resolve_registration_payload_names(user_data: UserRegister) -> tuple[str, str, str]:
+    first_name = clean_text(getattr(user_data, "first_name", None))
+    last_name = clean_text(getattr(user_data, "last_name", None))
+    raw_name = clean_text(getattr(user_data, "name", None))
+
+    if first_name or last_name:
+        return first_name, last_name, build_full_name(first_name, last_name)
+
+    if not raw_name:
+        return "", "", ""
+
+    raw_parts = [part for part in raw_name.split() if part]
+    if len(raw_parts) >= 2:
+        return raw_parts[0], " ".join(raw_parts[1:]).strip(), raw_name
+
+    return raw_name, "", raw_name
+
+
 @auth_router.post("/register/")
 async def register_user(
     user_data: UserRegister,
@@ -81,6 +100,7 @@ async def register_user(
     background_tasks: BackgroundTasks = None,
 ):
     try:
+        first_name, last_name, full_name = _resolve_registration_payload_names(user_data)
         user, confirmation_token, temp_login = await UserCRUD.create_user(db, user_data)
 
         if background_tasks:
@@ -102,7 +122,10 @@ async def register_user(
                 "user_id": user.id,
                 "email": user.email,
                 "username": temp_login,
-                "name": user.temp_name,
+                "name": full_name or user.temp_name,
+                "full_name": full_name or user.temp_name,
+                "first_name": first_name,
+                "last_name": last_name,
                 "verified": False,
                 "event_type": "user_registered",
                 "role": user.role.value,
@@ -269,10 +292,14 @@ async def resend_confirmation(
     user.confirmation_token = new_token
     await db.commit()
 
+    login_for_email = user.temp_login or user.login or f"user{user.id}"
+
     if background_tasks:
-        background_tasks.add_task(send_confirmation_email, user.email, new_token)
+        background_tasks.add_task(
+            send_confirmation_email, user.email, new_token, login_for_email
+        )
     else:
-        await send_confirmation_email(user.email, new_token)
+        await send_confirmation_email(user.email, new_token, login_for_email)
 
     return {"message": "Confirmation email sent successfully"}
 

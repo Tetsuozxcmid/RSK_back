@@ -82,16 +82,18 @@ async def vk_callback(
         email=oauth_profile["email"] or None,
         role=UserRole.STUDENT,
     )
+    resolved_username = user.login or f"user{user.id}"
 
     await UserProfileClient.sync_oauth_profile(
         user_id=user.id,
         email=user.email or oauth_profile["email"],
-        username=user.login or oauth_profile["username"] or f"vk_user_{provider_user_id}",
+        username=resolved_username,
         first_name=oauth_profile["first_name"],
         last_name=oauth_profile["last_name"],
         patronymic=oauth_profile["patronymic"],
         full_name=user.name or oauth_profile["full_name"],
         role=user.role.value,
+        auth_provider="vk",
     )
 
     if created:
@@ -104,12 +106,13 @@ async def vk_callback(
             user_event = build_user_registered_event(
                 user_id=user.id,
                 email=user.email or oauth_profile["email"],
-                username=user.login or oauth_profile["username"] or f"vk_user_{provider_user_id}",
+                username=resolved_username,
                 first_name=oauth_profile["first_name"],
                 last_name=oauth_profile["last_name"],
                 patronymic=oauth_profile["patronymic"],
                 full_name=user.name or oauth_profile["full_name"],
                 role=user.role.value,
+                auth_provider="vk",
             )
 
             message = aio_pika.Message(

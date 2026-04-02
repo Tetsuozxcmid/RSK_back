@@ -20,6 +20,7 @@ class UserProfileClient:
         patronymic: str = "",
         full_name: str = "",
         role: str = "student",
+        auth_provider: str = "",
     ):
         payload = {
             "user_id": user_id,
@@ -30,6 +31,7 @@ class UserProfileClient:
             "patronymic": patronymic,
             "full_name": full_name,
             "role": role,
+            "auth_provider": auth_provider,
         }
 
         try:

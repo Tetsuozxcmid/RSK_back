@@ -47,6 +47,24 @@ class ProfileCRUD:
             UserEnum.Student,
         )
 
+    @staticmethod
+    def _should_replace_username(
+        current_username: str | None,
+        incoming_username: str | None,
+        auth_provider: str | None,
+    ) -> bool:
+        current = ProfileCRUD._normalize_text(current_username)
+        incoming = ProfileCRUD._normalize_text(incoming_username)
+        provider = ProfileCRUD._normalize_text(auth_provider).lower()
+
+        if not incoming:
+            return False
+        if not current:
+            return True
+        if current == incoming:
+            return False
+        return provider in {"vk", "yandex"}
+
     @classmethod
     async def sync_oauth_profile(
         cls, db: AsyncSession, sync_data: OAuthProfileSyncRequest
@@ -57,6 +75,7 @@ class ProfileCRUD:
         full_name = cls._normalize_text(sync_data.full_name)
         email = cls._normalize_text(sync_data.email)
         username = cls._normalize_text(sync_data.username) or f"user{sync_data.user_id}"
+        auth_provider = cls._normalize_text(sync_data.auth_provider).lower()
 
         parsed_first_name, parsed_last_name, parsed_patronymic = cls._split_full_name(
             full_name
@@ -96,7 +115,7 @@ class ProfileCRUD:
             current_surname = cls._normalize_text(profile.Surname)
             current_patronymic = cls._normalize_text(profile.Patronymic)
 
-            if not cls._normalize_text(profile.username):
+            if cls._should_replace_username(profile.username, username, auth_provider):
                 profile.username = username
 
             if email and not cls._normalize_text(profile.email):

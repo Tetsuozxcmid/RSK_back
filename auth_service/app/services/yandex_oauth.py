@@ -110,16 +110,18 @@ async def yandex_callback(
             return RedirectResponse(
                 f"{settings.YANDEX_FRONTEND_URL}?error=user_creation_failed"
             )
+        resolved_username = user.login or f"user{user.id}"
 
         await UserProfileClient.sync_oauth_profile(
             user_id=user.id,
             email=user.email or email,
-            username=user.login or oauth_profile["username"] or f"user{user.id}",
+            username=resolved_username,
             first_name=oauth_profile["first_name"],
             last_name=oauth_profile["last_name"],
             patronymic=oauth_profile["patronymic"],
             full_name=user.name or oauth_profile["full_name"],
             role=user.role.value,
+            auth_provider="yandex",
         )
 
         try:
@@ -131,12 +133,13 @@ async def yandex_callback(
             user_event = build_user_registered_event(
                 user_id=user.id,
                 email=user.email or email,
-                username=user.login or oauth_profile["username"] or f"user{user.id}",
+                username=resolved_username,
                 first_name=oauth_profile["first_name"],
                 last_name=oauth_profile["last_name"],
                 patronymic=oauth_profile["patronymic"],
                 full_name=user.name or oauth_profile["full_name"],
                 role=user.role.value,
+                auth_provider="yandex",
             )
 
             message = aio_pika.Message(

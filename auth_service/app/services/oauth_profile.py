@@ -93,6 +93,7 @@ def build_user_registered_event(
     patronymic: str = "",
     full_name: str = "",
     role: str = "student",
+    auth_provider: str = "",
 ) -> dict[str, str | int | bool]:
     normalized_full_name = clean_text(full_name) or build_full_name(
         first_name, last_name, patronymic
@@ -110,4 +111,5 @@ def build_user_registered_event(
         "verified": True,
         "event_type": "user_registered",
         "role": clean_text(role) or "student",
+        "auth_provider": clean_text(auth_provider),
     }

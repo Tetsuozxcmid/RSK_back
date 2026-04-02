@@ -95,6 +95,7 @@ class OAuthProfileSyncRequest(BaseModel):
     patronymic: Optional[str] = None
     full_name: Optional[str] = None
     role: Optional[str] = None
+    auth_provider: Optional[str] = None
 
 
 class ProfileJoinedTeamUpdate(BaseModel):
