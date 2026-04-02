@@ -277,14 +277,21 @@ async def resend_confirmation(
     db: AsyncSession = Depends(get_db),
     background_tasks: BackgroundTasks = None,
 ):
-    result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
-
-    if not user:
+    users = await UserCRUD.get_users_by_email(db, email)
+    if not users:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user.verified:
+    unverified_users = [user for user in users if not user.verified]
+    if not unverified_users:
         raise HTTPException(status_code=400, detail="Email already verified")
+
+    user = UserCRUD.select_primary_user(unverified_users)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    duplicate_users = [duplicate for duplicate in unverified_users if duplicate.id != user.id]
+    for duplicate_user in duplicate_users:
+        await db.delete(duplicate_user)
 
     import uuid
 

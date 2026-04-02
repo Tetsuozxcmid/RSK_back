@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,25 +44,132 @@ def _default_login_for_user_id(user_id: int) -> str:
     return f"user{user_id}"
 
 
+def _normalize_email(value: str | None) -> str:
+    return _normalize_text(value).lower()
+
+
+def _has_text(value: str | None) -> bool:
+    return bool(_normalize_text(value))
+
+
+def _user_priority(user: User) -> tuple[int, int, int, int, int]:
+    return (
+        1 if user.verified else 0,
+        1 if _has_text(user.login) else 0,
+        1 if _has_text(user.name) else 0,
+        1 if _has_text(user.auth_provider) else 0,
+        int(user.id or 0),
+    )
+
+
+def _select_primary_user(users: list[User]) -> User | None:
+    if not users:
+        return None
+    return max(users, key=_user_priority)
+
+
 class UserCRUD:
     @staticmethod
-    async def create_user(db: AsyncSession, user_data):
-        normalized_email = user_data.email.lower()
-        existing_user = await db.execute(
-            select(User).where(User.email == normalized_email)
+    async def _lock_email(db: AsyncSession, normalized_email: str) -> None:
+        if not normalized_email:
+            return
+
+        await db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
+            {"lock_key": f"auth-users-email:{normalized_email}"},
         )
-        existing_user = existing_user.scalar_one_or_none()
+
+    @staticmethod
+    async def get_users_by_email(db: AsyncSession, email: str | None) -> list[User]:
+        normalized_email = _normalize_email(email)
+        if not normalized_email:
+            return []
+
+        result = await db.execute(
+            select(User)
+            .where(User.email == normalized_email)
+            .order_by(User.verified.desc(), User.id.desc())
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
+    def select_primary_user(users: list[User]) -> User | None:
+        return _select_primary_user(users)
+
+    @staticmethod
+    def _sync_oauth_fields(
+        user: User,
+        *,
+        name: str,
+        provider: str,
+        provider_id: str,
+        email: str | None,
+    ) -> bool:
+        should_update = False
+        normalized_email = _normalize_email(email)
+        normalized_name = _truncate_text(name, 50)
+
+        if normalized_email and not _has_text(user.email):
+            user.email = normalized_email
+            should_update = True
+
+        if not _has_text(user.name):
+            promoted_name = _truncate_text(user.temp_name, 50) if _has_text(user.temp_name) else normalized_name
+            if promoted_name:
+                user.name = promoted_name
+                should_update = True
+
+        if not _has_text(user.login):
+            promoted_login = _normalize_text(user.temp_login) or _default_login_for_user_id(user.id)
+            user.login = promoted_login
+            should_update = True
+
+        if not user.verified:
+            if _has_text(user.temp_password):
+                user.hashed_password = user.temp_password
+            if user.temp_role is not None:
+                user.role = user.temp_role
+
+            user.temp_name = None
+            user.temp_password = None
+            user.temp_role = None
+            user.temp_login = None
+            user.verified = True
+            user.confirmation_token = None
+            should_update = True
+
+        if normalized_name and not _has_text(user.name):
+            user.name = normalized_name
+            should_update = True
+
+        normalized_provider_id = str(provider_id)
+        if not _has_text(user.auth_provider):
+            user.auth_provider = provider
+            user.provider_id = normalized_provider_id
+            should_update = True
+        elif user.auth_provider == provider and not _has_text(user.provider_id):
+            user.provider_id = normalized_provider_id
+            should_update = True
+
+        return should_update
+
+    @staticmethod
+    async def create_user(db: AsyncSession, user_data):
+        normalized_email = _normalize_email(user_data.email)
+        await UserCRUD._lock_email(db, normalized_email)
+
+        existing_users = await UserCRUD.get_users_by_email(db, normalized_email)
         user_role = user_data.role if hasattr(user_data, "role") else UserRole.STUDENT
         _, _, full_name = _resolve_registration_names(user_data)
 
-        if existing_user and existing_user.verified:
+        if any(user.verified for user in existing_users):
             raise HTTPException(
-                status_code=400, detail="User with this email already registered"
+                status_code=400,
+                detail="Пользователь с этой электронной почтой уже зарегистрирован",
             )
 
-        if existing_user and not existing_user.verified:
+        for existing_user in existing_users:
             await db.delete(existing_user)
-            await db.commit()
 
         confirmation_token = str(uuid.uuid4())
 
@@ -102,6 +209,7 @@ class UserCRUD:
                 status_code=500, detail=f"Error while registering user: {str(e)}"
             )
 
+    @staticmethod
     async def create_oauth_user(
         db: AsyncSession,
         name: str,
@@ -117,23 +225,13 @@ class UserCRUD:
         )
         existing_user = result.scalar_one_or_none()
         if existing_user:
-            should_update = False
-
-            normalized_email = email.lower() if email else None
-            normalized_name = str(name or "").strip()
-            normalized_login = _default_login_for_user_id(existing_user.id)
-
-            if normalized_email and not existing_user.email:
-                existing_user.email = normalized_email
-                should_update = True
-
-            if normalized_name and not str(existing_user.name or "").strip():
-                existing_user.name = _truncate_text(normalized_name, 50)
-                should_update = True
-
-            if not _normalize_text(existing_user.login):
-                existing_user.login = normalized_login
-                should_update = True
+            should_update = UserCRUD._sync_oauth_fields(
+                existing_user,
+                name=name,
+                provider=provider,
+                provider_id=str(provider_id),
+                email=email,
+            )
 
             if should_update:
                 try:
@@ -148,9 +246,50 @@ class UserCRUD:
 
             return existing_user, False
 
+        normalized_email = _normalize_email(email)
+        if normalized_email:
+            await UserCRUD._lock_email(db, normalized_email)
+            existing_email_users = await UserCRUD.get_users_by_email(db, normalized_email)
+            if existing_email_users:
+                primary_user = UserCRUD.select_primary_user(existing_email_users)
+                if primary_user is None:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Error resolving OAuth user by email",
+                    )
+
+                duplicate_users = [
+                    user
+                    for user in existing_email_users
+                    if user.id != primary_user.id and not user.verified
+                ]
+                for duplicate_user in duplicate_users:
+                    await db.delete(duplicate_user)
+
+                should_update = UserCRUD._sync_oauth_fields(
+                    primary_user,
+                    name=name,
+                    provider=provider,
+                    provider_id=str(provider_id),
+                    email=normalized_email,
+                )
+
+                if should_update or duplicate_users:
+                    try:
+                        await db.commit()
+                        await db.refresh(primary_user)
+                    except Exception as e:
+                        await db.rollback()
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"Error updating OAuth user by email: {str(e)}",
+                        )
+
+                return primary_user, False
+
         new_user = User(
             name=_truncate_text(name, 50),
-            email=email.lower() if email else None,
+            email=normalized_email or None,
             hashed_password="",
             login=None,
             role=role,

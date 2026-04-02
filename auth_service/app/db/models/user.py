@@ -54,13 +54,26 @@ class User(Base):
             print(f"Password length: {len(password)}")
 
             result = await db.execute(
-                select(cls).where(or_(cls.login == login, cls.email == login.lower()))
+                select(cls)
+                .where(or_(cls.login == login, cls.email == login.lower()))
+                .order_by(cls.verified.desc(), cls.id.desc())
             )
-            user = result.scalar_one_or_none()
+            users = list(result.scalars().all())
 
-            if not user:
+            if not users:
                 print(f"DEBUG: No user found with login/email: {login}")
                 return None
+
+            exact_login_users = [user for user in users if user.login == login]
+            email_users = [user for user in users if user.email == login.lower()]
+            candidates = exact_login_users or email_users or users
+            verified_candidates = [user for user in candidates if user.verified]
+            user = verified_candidates[0] if verified_candidates else candidates[0]
+
+            if len(users) > 1:
+                print(
+                    f"WARNING: Multiple auth users found for {login}: {[candidate.id for candidate in users]}. Using user {user.id}"
+                )
 
             print(f"DEBUG: User found - ID: {user.id}, Email: {user.email}")
             print(f"DEBUG: User verified: {user.verified}")
