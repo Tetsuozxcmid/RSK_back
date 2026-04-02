@@ -8,6 +8,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _send_message_via_smtp(message: MIMEMultipart, recipient_email: str) -> None:
+    use_ssl = settings.SMTP_PORT == 465
+    smtp_client = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
+
+    with smtp_client(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=20) as server:
+        if not use_ssl:
+            server.ehlo()
+            if server.has_extn("starttls"):
+                server.starttls()
+                server.ehlo()
+
+        server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+        server.sendmail(settings.SENDER_EMAIL, recipient_email, message.as_string())
+
+
 async def send_confirmation_email(recipient_email: str, token: str, login: str):
     try:
         message = MIMEMultipart()
@@ -203,16 +218,14 @@ async def send_confirmation_email(recipient_email: str, token: str, login: str):
 
         message.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-            server.starttls()
-            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            server.sendmail(settings.SENDER_EMAIL, recipient_email, message.as_string())
+        _send_message_via_smtp(message, recipient_email)
 
         logger.info(f"Confirmation email sent to {recipient_email}")
 
     except Exception as e:
         logger.error(
-            f"Failed to send confirmation email to {recipient_email}: {str(e)}"
+            f"Failed to send confirmation email to {recipient_email}: {str(e)}",
+            exc_info=True,
         )
 
 
@@ -434,15 +447,13 @@ async def send_new_password_email(
 
         message.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-            server.starttls()
-            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            server.sendmail(settings.SENDER_EMAIL, recipient_email, message.as_string())
+        _send_message_via_smtp(message, recipient_email)
 
         logger.info(f"New password email sent to {recipient_email}")
 
     except Exception as e:
         logger.error(
-            f"Failed to send new password email to {recipient_email}: {str(e)}"
+            f"Failed to send new password email to {recipient_email}: {str(e)}",
+            exc_info=True,
         )
         raise

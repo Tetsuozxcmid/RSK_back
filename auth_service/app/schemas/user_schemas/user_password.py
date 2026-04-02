@@ -1,5 +1,4 @@
-from pydantic import BaseModel, SecretStr
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AliasChoices, BaseModel, Field, SecretStr
 
 
 class ChangePasswordSchema(BaseModel):
@@ -8,4 +7,8 @@ class ChangePasswordSchema(BaseModel):
 
 
 class PasswordResetRequest(BaseModel):
-    email_or_login: str = Field(..., description="Email или логин пользователя")
+    email_or_login: str = Field(
+        ...,
+        validation_alias=AliasChoices("email_or_login", "email", "login"),
+        description="Email or login for password reset",
+    )

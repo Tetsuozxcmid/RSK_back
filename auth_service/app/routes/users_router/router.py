@@ -1,4 +1,5 @@
 import json
+import logging
 from services.password_generator import generate_random_password
 import aio_pika
 from fastapi import (
@@ -35,6 +36,7 @@ import time
 
 
 router = APIRouter(prefix="/users_interaction")
+logger = logging.getLogger(__name__)
 
 auth_router = APIRouter(tags=["Authentication"])
 email_router = APIRouter(tags=["Email Management"])
@@ -359,30 +361,51 @@ async def delete_user(
 async def reset_password(
     reset_data: PasswordResetRequest,
     db: AsyncSession = Depends(get_db),
-    background_tasks: BackgroundTasks = None,
 ):
     try:
         new_password = generate_random_password(12)
+        user = await UserCRUD.get_user_for_password_reset(
+            db=db, email_or_login=reset_data.email_or_login
+        )
+        old_hashed_password = user.hashed_password
 
-        user = await UserCRUD.reset_password_by_email_or_login(
-            db=db, email_or_login=reset_data.email_or_login, new_password=new_password
+        user = await UserCRUD.update_password(
+            db=db,
+            user=user,
+            new_password=new_password,
         )
 
-        if background_tasks:
-            background_tasks.add_task(
-                send_new_password_email,
+        try:
+            await send_new_password_email(
                 recipient_email=user.email,
                 new_password=new_password,
                 login=user.login,
             )
-        else:
-            asyncio.create_task(
-                send_new_password_email(
-                    recipient_email=user.email,
-                    new_password=new_password,
-                    login=user.login,
+        except Exception as email_error:
+            try:
+                await UserCRUD.update_password_hash(
+                    db=db,
+                    user=user,
+                    password_hash=old_hashed_password,
                 )
-            )
+            except HTTPException as rollback_error:
+                logger.error(
+                    "Failed to rollback password reset for %s after email delivery error: %s",
+                    user.email,
+                    rollback_error.detail,
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "Password was reset, but the email could not be delivered. "
+                        "Please contact support."
+                    ),
+                ) from email_error
+
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to send reset password email. Please try again later.",
+            ) from email_error
 
         return {
             "message": "New password has been sent to your email",

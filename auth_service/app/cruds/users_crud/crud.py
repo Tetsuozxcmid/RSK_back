@@ -429,9 +429,7 @@ class UserCRUD:
         return {"name": user.name, "email": user.email, "role": user.role}
 
     @staticmethod
-    async def reset_password_by_email_or_login(
-        db: AsyncSession, email_or_login: str, new_password: str
-    ):
+    async def get_user_for_password_reset(db: AsyncSession, email_or_login: str):
         result = await db.execute(
             select(User)
             .where(
@@ -463,9 +461,13 @@ class UserCRUD:
                 detail="User is not verified. Please confirm email first.",
             )
 
-        new_hashed_password = pass_settings.get_password_hash(new_password)
+        return user
 
-        user.hashed_password = new_hashed_password
+    @staticmethod
+    async def update_password_hash(
+        db: AsyncSession, user: User, password_hash: str
+    ) -> User:
+        user.hashed_password = password_hash
 
         try:
             await db.commit()
@@ -476,3 +478,17 @@ class UserCRUD:
             raise HTTPException(
                 status_code=500, detail=f"Error resetting password: {str(e)}"
             )
+
+    @staticmethod
+    async def update_password(
+        db: AsyncSession, user: User, new_password: str
+    ) -> User:
+        password_hash = pass_settings.get_password_hash(new_password)
+        return await UserCRUD.update_password_hash(db, user, password_hash)
+
+    @staticmethod
+    async def reset_password_by_email_or_login(
+        db: AsyncSession, email_or_login: str, new_password: str
+    ):
+        user = await UserCRUD.get_user_for_password_reset(db, email_or_login)
+        return await UserCRUD.update_password(db, user, new_password)
