@@ -236,9 +236,23 @@ async def confirm_email(
     db: AsyncSession = Depends(get_db),
     rabbitmq: AbstractRobustConnection = Depends(get_rabbitmq_connection),
 ):
-    user = await UserCRUD.confirm_user_email(db, token)
-
+    logger.info(f"=== Confirm email endpoint called ===")
+    logger.info(f"Token received: {token[:20]}..." if len(token) > 20 else f"Token received: {token}")
+    
     try:
+        logger.info("Attempting to confirm user email...")
+        user = await UserCRUD.confirm_user_email(db, token)
+        logger.info(f"✓ User confirmed successfully - ID: {user.id}, Email: {user.email}, Login: {user.login}")
+    except HTTPException as e:
+        logger.error(f"✗ HTTP Exception during confirmation: {e.status_code} - {e.detail}")
+        raise
+    except Exception as e:
+        logger.error(f"✗ Unexpected error during confirmation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Confirmation failed: {str(e)}")
+
+    
+    try:
+        logger.info("Attempting to send RabbitMQ message...")
         channel = await rabbitmq.channel()
         exchange = await channel.declare_exchange(
             "user_events", type="direct", durable=True
@@ -260,17 +274,39 @@ async def confirm_email(
             delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
         )
         await exchange.publish(message, routing_key="user.verified")
+        logger.info(f"✓ RabbitMQ message sent successfully for user {user.id}")
     except Exception as e:
-        print(f"Failed to send RabbitMQ message: {e}")
+        logger.error(f"✗ Failed to send RabbitMQ message: {e}", exc_info=True)
+        
 
+    
     current_dir = Path(__file__).parent
     html_file_path = current_dir / "mailsend.html"
+    
+    logger.info(f"Looking for HTML template at: {html_file_path}")
+    
     if html_file_path.exists():
-        html_content = html_file_path.read_text(encoding="utf-8")
-        html_content = html_content.replace("{User_NAME}", user.name)
-        return HTMLResponse(content=html_content, status_code=200)
+        logger.info(f"✓ HTML template found, reading file...")
+        try:
+            html_content = html_file_path.read_text(encoding="utf-8")
+            user_name = user.name if user.name else "Пользователь"
+            html_content = html_content.replace("{User_NAME}", user_name)
+            logger.info(f"✓ HTML template processed successfully for user: {user_name}")
+            return HTMLResponse(content=html_content, status_code=200)
+        except Exception as e:
+            logger.error(f"✗ Error reading/processing HTML template: {e}", exc_info=True)
+            
+            return HTMLResponse(
+                content=f"<h1>Email подтвержден!</h1><p>Добро пожаловать, {user.name or 'пользователь'}!</p>", 
+                status_code=200
+            )
     else:
-        return HTMLResponse(content="<h1>confirmed</h1>", status_code=200)
+        logger.warning(f"✗ HTML template not found at {html_file_path}")
+        logger.info("Using fallback HTML response")
+        return HTMLResponse(
+            content=f"<h1>Email подтвержден!</h1><p>Ваш email {user.email} успешно подтвержден. Теперь вы можете войти в систему.</p>", 
+            status_code=200
+        )
 
 
 @email_router.post("/resend-confirmation/")
