@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict,Field
 from typing import List, Optional
 from db.models.user_enum import UserEnum,UserEnumForAdmin,UserEnumForUser
 
@@ -83,7 +83,7 @@ class ProfileUpdate(BaseModel):
     Description: Optional[str] = None
     Region: Optional[str] = None
     Type: Optional[UserEnum] = None
-    Organization_id: Optional[int] = None
+    Organization_id: Optional[int] = Field(None, alias="organization_id")
 
 
 class OAuthProfileSyncRequest(BaseModel):

@@ -17,11 +17,7 @@ async def internal_get_all_users(
     db: AsyncSession = Depends(get_db),
     x_internal_secret: str = Header(...)
 ):
-    """
-    Внутренняя ручка для получения всех пользователей.
-    Требует специальный internal secret key.
-    """
-    # Проверяем internal секрет
+
     if not hmac.compare_digest(x_internal_secret, settings.SECRET_KEY):
         logger.warning("Invalid internal secret key")
         raise HTTPException(status_code=403, detail="Forbidden")
