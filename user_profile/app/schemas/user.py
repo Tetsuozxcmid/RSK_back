@@ -1,4 +1,4 @@
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 from typing import List, Optional
 from db.models.user_enum import UserEnum,UserEnumForAdmin,UserEnumForUser
 
@@ -87,6 +87,23 @@ class ProfileUpdate(BaseModel):
         default=None,
         validation_alias=AliasChoices("Organization_id", "organization_id"),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def drop_blank_organization_id_keys(cls, data):
+        """Убираем пустую строку и JSON null для id организации: иначе int_parsing или случайный сброс поля при exclude_unset=False в дампе.
+
+        Явно задать «снять организацию» через PATCH этой схемой нельзя — только положительный int обновляет Organization_id.
+        """
+        if not isinstance(data, dict):
+            return data
+        for key in ("Organization_id", "organization_id"):
+            if key not in data:
+                continue
+            v = data[key]
+            if v is None or v == "" or (isinstance(v, str) and not v.strip()):
+                del data[key]
+        return data
 
 
 class OAuthProfileSyncRequest(BaseModel):
