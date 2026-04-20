@@ -73,6 +73,8 @@ services:
     depends_on:
       rsk_profile_db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "8003:8003"

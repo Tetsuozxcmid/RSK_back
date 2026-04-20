@@ -28,6 +28,7 @@ import asyncio
 from fastapi.responses import HTMLResponse
 from pathlib import Path
 from services.rabbitmq import get_rabbitmq_connection
+from services.profile_client import UserProfileClient
 from services.auth_client import get_moderator, get_admin  
 from aio_pika.abc import AbstractRobustConnection
 from services.yandex_oauth import yandex_router
@@ -92,6 +93,17 @@ def _resolve_registration_payload_names(user_data: UserRegister) -> tuple[str, s
         return raw_parts[0], " ".join(raw_parts[1:]).strip(), raw_name
 
     return raw_name, "", raw_name
+
+
+def _resolve_display_name_from_string(name: str | None) -> tuple[str, str, str]:
+    """Split a single display name string into first/last/full for profile sync."""
+    raw_name = clean_text(name)
+    if not raw_name:
+        return "", "", ""
+    raw_parts = [part for part in raw_name.split() if part]
+    if len(raw_parts) >= 2:
+        return raw_parts[0], " ".join(raw_parts[1:]).strip(), raw_name
+    return raw_parts[0], "", raw_name
 
 
 @auth_router.post("/register/")
@@ -250,7 +262,39 @@ async def confirm_email(
         logger.error(f"✗ Unexpected error during confirmation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Confirmation failed: {str(e)}")
 
-    
+    first_name, last_name, full_name = _resolve_display_name_from_string(user.name)
+    display_full = full_name or clean_text(user.name) or ""
+    role_val = user.role.value if hasattr(user.role, "value") else str(user.role)
+    login_val = (clean_text(user.login) or f"user{user.id}").strip()
+
+    sync_result = None
+    for attempt in range(3):
+        sync_result = await UserProfileClient.sync_oauth_profile(
+            user_id=user.id,
+            email=clean_text(user.email) or "",
+            username=login_val,
+            first_name=first_name,
+            last_name=last_name,
+            patronymic="",
+            full_name=display_full,
+            role=role_val,
+            auth_provider="email",
+        )
+        if sync_result is not None:
+            logger.info(
+                "✓ User profile synced after email confirm for user %s (attempt %s)",
+                user.id,
+                attempt + 1,
+            )
+            break
+        await asyncio.sleep(0.5 * (attempt + 1))
+
+    if sync_result is None:
+        logger.error(
+            "✗ User profile sync failed after 3 attempts for user %s — login may fail until profile exists",
+            user.id,
+        )
+
     try:
         logger.info("Attempting to send RabbitMQ message...")
         channel = await rabbitmq.channel()

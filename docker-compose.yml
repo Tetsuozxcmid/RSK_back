@@ -75,6 +75,8 @@ services:
     depends_on:
       rsk_profile_db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: on-failure
     env_file:
       - ./user_profile/.env
